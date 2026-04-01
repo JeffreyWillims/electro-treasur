@@ -11,6 +11,7 @@ import { BalanceCards } from '@/components/dashboard/BalanceCards';
 import { QuickEntry } from '@/components/dashboard/QuickEntry';
 import { TransactionList } from '@/components/dashboard/TransactionList';
 import { Sparkles } from 'lucide-react';
+import { FeedbackWidget } from '@/components/layout/FeedbackWidget';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -106,6 +107,7 @@ export default function App() {
             </Route>
           </Routes>
         </BrowserRouter>
+        <FeedbackWidget />
         <Toaster position="top-right" richColors />
       </AuthProvider>
     </QueryClientProvider>

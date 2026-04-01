@@ -64,8 +64,20 @@ export function QuickEntry() {
 
   const filteredCategories = categories.filter(c => c.type === type);
 
-  const catTranslate: Record<string, string> = { "leisure (lifestyle)": "Отдых и развлечения", "housing": "Жилье", "transport": "Транспорт", "food": "Еда и продукты", "health": "Здоровье", "income": "Доход", "shopping": "Покупки", "utilities": "ЖКХ" };
-
+  const getRussianCategoryName = (rawName: string) => {
+    const cleanName = rawName.toLowerCase().replace(/\s*\(lifestyle\)\s*/i, "").trim();
+    const dictionary: Record<string, string> = {
+      "housing": "Жилье",
+      "food": "Еда и продукты",
+      "transport": "Транспорт",
+      "leisure": "Отдых и развлечения",
+      "health": "Здоровье",
+      "income": "Доход",
+      "shopping": "Покупки",
+      "utilities": "ЖКХ"
+    };
+    return dictionary[cleanName] || rawName;
+  };
 
   return (
     <div className="premium-card p-7">
@@ -145,7 +157,7 @@ export function QuickEntry() {
                 <option value="" disabled>Выберите</option>
                 {filteredCategories.map(cat => (
                   <option key={cat.id} value={cat.id.toString()}>
-                    {catTranslate[cat.name.toLowerCase()] || cat.name}
+                    {getRussianCategoryName(cat.name)}
                   </option>
                 ))}
               </select>

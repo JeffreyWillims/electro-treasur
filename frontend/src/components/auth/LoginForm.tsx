@@ -30,9 +30,9 @@ export function LoginForm() {
   return (
     <div className="min-h-screen bg-slate-50 relative overflow-hidden flex items-center justify-center">
       {/* 50% Mesh Gradient */}
-      <div className="absolute w-96 h-96 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob bg-emerald-300 top-0 left-10" />
-      <div className="absolute w-96 h-96 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob bg-amber-200 top-0 right-10" style={{ animationDelay: '2s' }} />
-      <div className="absolute w-96 h-96 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob bg-teal-300 -bottom-8 left-40" style={{ animationDelay: '4s' }} />
+      <div className="absolute top-0 -left-4 w-[400px] h-[400px] bg-emerald-300 rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-blob"></div>
+      <div className="absolute top-0 -right-4 w-[400px] h-[400px] bg-amber-300 rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-blob animation-delay-2000"></div>
+      <div className="absolute -bottom-8 left-20 w-[400px] h-[400px] bg-teal-300 rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-blob animation-delay-4000"></div>
 
       <motion.div
         variants={{
@@ -55,13 +55,13 @@ export function LoginForm() {
             hidden: { opacity: 0, y: 40 },
             visible: { opacity: 1, y: 0, transition: { duration: 1, ease: [0.22, 1, 0.36, 1] } }
           }}
-          className="text-left flex flex-col items-start"
+          className="w-full flex flex-col items-center justify-center text-center mb-10"
         >
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-900 rounded-full mb-6">
-            <Wallet className="text-white w-5 h-5" />
-            <span className="text-white font-semibold text-sm tracking-wide">Aura Wealth</span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-900 rounded-full mb-6">
+            <Wallet className="text-white w-6 h-6" />
+            <span className="text-white font-bold text-lg tracking-widest">Aura Wealth</span>
           </div>
-          <h1 className="text-emerald-700 text-4xl font-extrabold tracking-tight mb-8">
+          <h1 className="text-3xl font-semibold text-emerald-800 tracking-tight">
             Вход в систему
           </h1>
         </motion.div>

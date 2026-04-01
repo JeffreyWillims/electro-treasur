@@ -195,22 +195,14 @@ h1, h2, h3, h4, h5, h6 {
 /* ── International Phone Input Styling ── */
 @import 'react-phone-number-input/style.css';
 
-.PhoneInput {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  height: 100%;
-}
-
-.PhoneInputCountry { width: 80px; display: flex; justify-content: center; align-items: center; background: #f8fafc; height: 100%; border-right: 1px dashed #cbd5e1; margin-right: 12px; }
-
-.PhoneInputInput { flex: 1; border: none; outline: none; background: transparent; font-size: 1.125rem; color: #0f172a; padding-right: 16px; }
-
-.PhoneInputCountrySelectArrow {
-  @apply opacity-50 ml-2 text-slate-500;
-}
-
-.PhoneInputCountryIcon { width: 24px; height: 16px; }
+.PhoneInput { display: flex; gap: 12px; width: 100%; align-items: center; }
+/* Левый блок (Страна) */
+.PhoneInputCountry { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 0.75rem; padding: 0 16px; height: 3.5rem; display: flex; align-items: center; justify-content: center; min-width: 80px; transition: all 0.2s; }
+.PhoneInputCountry:focus-within { border-color: #10b981; box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2); }
+.PhoneInputCountryIcon { width: 28px; height: 20px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+/* Правый блок (Номер) */
+.PhoneInputInput { flex: 1; height: 3.5rem; border: 1px solid #cbd5e1; border-radius: 0.75rem; padding: 0 16px; font-size: 1.125rem; color: #0f172a; outline: none; background: #ffffff; transition: all 0.2s; }
+.PhoneInputInput:focus { border-color: #10b981; box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2); }
 
 
 /* ── Smooth Theme Transitions ─────────────────────────────────────────── */
@@ -227,3 +219,13 @@ html.transitioning *::after {
   transition-duration: 500ms !important;
   transition-timing-function: ease !important;
 }
+
+@keyframes blob {
+  0% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+.animate-blob { animation: blob 10s infinite alternate; }
+.animation-delay-2000 { animation-delay: 2s; }
+.animation-delay-4000 { animation-delay: 4s; }
