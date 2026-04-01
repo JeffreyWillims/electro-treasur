@@ -34,7 +34,8 @@ export function BalanceCards() {
   const expensePct = totalFlow > 0 ? Math.round((monthlyExpense / totalFlow) * 100) : 0;
 
   return (
-    <Card className="animate-slide-up premium-card border-aura-gold/10 aura-glow p-8">
+    <div className="transform scale-[0.97] origin-top-left w-full">
+      <Card className="animate-slide-up premium-card border-aura-gold/10 aura-glow p-8">
       <div className="flex items-center justify-between mb-10">
         <div>
           <h2 className="text-premium text-3xl font-serif font-bold tracking-tight">Общее состояние</h2>
@@ -127,6 +128,7 @@ export function BalanceCards() {
           </div>
         </div>
       </div>
-    </Card>
+      </Card>
+    </div>
   );
 }

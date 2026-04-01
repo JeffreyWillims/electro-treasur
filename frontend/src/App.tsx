@@ -10,7 +10,7 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { BalanceCards } from '@/components/dashboard/BalanceCards';
 import { QuickEntry } from '@/components/dashboard/QuickEntry';
 import { TransactionList } from '@/components/dashboard/TransactionList';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Wallet } from 'lucide-react';
 import { FeedbackWidget } from '@/components/layout/FeedbackWidget';
 
 const queryClient = new QueryClient({
@@ -43,11 +43,12 @@ function Overview() {
         {/* Hero Header Section */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
           <div>
-            <h1 
-              className="text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-slate-900 to-slate-500 pb-2"
-            >
-              Капитал
-            </h1>
+            <div className="flex items-center gap-3 mb-2">
+              <Wallet className="w-10 h-10 text-emerald-600 drop-shadow-sm" strokeWidth={2} />
+              <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight" style={{ textShadow: "1px 1px 0px rgba(255,255,255,0.8), -1px -1px 0px rgba(0,0,0,0.05), 0px 4px 10px rgba(0,0,0,0.05)" }}>
+                Electro Treasur
+              </h1>
+            </div>
           </div>
           
           <button className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-10 py-4 rounded-2xl font-bold text-lg shadow-lg shadow-emerald-600/20 transition-all active:scale-[0.98] h-fit">

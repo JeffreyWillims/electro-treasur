@@ -65,18 +65,17 @@ export function QuickEntry() {
   const filteredCategories = categories.filter(c => c.type === type);
 
   const getRussianCategoryName = (rawName: string) => {
-    const cleanName = rawName.toLowerCase().replace(/\s*\(lifestyle\)\s*/i, "").trim();
-    const dictionary: Record<string, string> = {
-      "housing": "Жилье",
-      "food": "Еда и продукты",
-      "transport": "Транспорт",
-      "leisure": "Отдых и развлечения",
-      "health": "Здоровье",
-      "income": "Доход",
-      "shopping": "Покупки",
-      "utilities": "ЖКХ"
-    };
-    return dictionary[cleanName] || rawName;
+    const name = rawName.toLowerCase();
+    if (name.includes('leisure')) return 'Отдых и развлечения';
+    if (name.includes('housing')) return 'Жилье';
+    if (name.includes('transport')) return 'Транспорт';
+    if (name.includes('food')) return 'Еда и продукты';
+    if (name.includes('health')) return 'Здоровье';
+    if (name.includes('income')) return 'Доход';
+    if (name.includes('shopping')) return 'Покупки';
+    if (name.includes('growth') || name.includes('invest')) return 'Инвестиции и Рост';
+    if (name.includes('utilit') || name.includes('operation')) return 'ЖКХ и Операции';
+    return rawName;
   };
 
   return (
@@ -95,31 +94,14 @@ export function QuickEntry() {
 
       <form onSubmit={handleSave} className="space-y-5">
         {/* Type Toggle */}
-        <div className="flex bg-aura-graphite/[0.03] dark:bg-white/[0.03] p-1 rounded-2xl border border-aura-gold/[0.04]">
-          <button
-            type="button"
-            onClick={() => { setType('expense'); setCategory(''); }}
-            className={cn(
-              "flex-1 py-3 text-lg font-bold transition-all duration-300 rounded-xl",
-              type === 'expense'
-                ? "bg-white dark:bg-aura-graphite text-expense shadow-sm"
-                : "text-aura-graphite/30 dark:text-aura-ivory/30"
-            )}
-          >
-            Расход
-          </button>
-          <button
-            type="button"
-            onClick={() => { setType('income'); setCategory(''); }}
-            className={cn(
-              "flex-1 py-3 text-lg font-bold transition-all duration-300 rounded-xl",
-              type === 'income'
-                ? "bg-white dark:bg-aura-graphite text-aura-emerald shadow-sm"
-                : "text-aura-graphite/30 dark:text-aura-ivory/30"
-            )}
-          >
-            Доход
-          </button>
+        <div className="relative flex bg-slate-100 p-1 rounded-xl w-full mb-6">
+          {/* Плавающий желтый фон (Ползунок) */}
+          <div className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-[#EBE7DF] border border-[#DFD8C8] rounded-lg transition-transform duration-300 ease-out shadow-sm ${type === 'income' ? 'translate-x-full left-0' : 'translate-x-0 left-1'}`} />
+          
+          {/* Кнопки */}
+          <button type="button" onClick={() => { setType('expense'); setCategory(''); }} className={`relative z-10 flex-1 py-3 text-lg font-bold transition-colors duration-300 ${type === 'expense' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>Расход</button>
+          
+          <button type="button" onClick={() => { setType('income'); setCategory(''); }} className={`relative z-10 flex-1 py-3 text-lg font-bold transition-colors duration-300 ${type === 'income' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>Доход</button>
         </div>
 
         {/* Amount + Currency */}

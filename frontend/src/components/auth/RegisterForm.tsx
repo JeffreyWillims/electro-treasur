@@ -33,9 +33,9 @@ export function RegisterForm() {
   return (
     <div className="min-h-screen bg-slate-50 relative overflow-hidden flex items-center justify-center">
       {/* 50% Mesh Gradient */}
-      <div className="absolute top-0 -left-4 w-[400px] h-[400px] bg-emerald-300 rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-blob"></div>
-      <div className="absolute top-0 -right-4 w-[400px] h-[400px] bg-amber-300 rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-blob animation-delay-2000"></div>
-      <div className="absolute -bottom-8 left-20 w-[400px] h-[400px] bg-teal-300 rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-blob animation-delay-4000"></div>
+      <div className="absolute top-0 -left-4 w-[400px] h-[400px] bg-emerald-400 rounded-full mix-blend-multiply filter blur-3xl opacity-80 animate-blob"></div>
+      <div className="absolute top-0 -right-4 w-[400px] h-[400px] bg-amber-400 rounded-full mix-blend-multiply filter blur-3xl opacity-80 animate-blob animation-delay-2000"></div>
+      <div className="absolute -bottom-8 left-20 w-[400px] h-[400px] bg-teal-400 rounded-full mix-blend-multiply filter blur-3xl opacity-80 animate-blob animation-delay-4000"></div>
 
       <motion.div
         variants={{
@@ -50,7 +50,7 @@ export function RegisterForm() {
         }}
         initial="hidden"
         animate="visible"
-        className="w-full max-w-md z-10"
+        className="w-full max-w-[460px] z-10"
 
       >
         <motion.div 
@@ -62,7 +62,7 @@ export function RegisterForm() {
         >
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-900 rounded-full mb-6">
             <Wallet className="text-white w-6 h-6" />
-            <span className="text-white font-bold text-lg tracking-widest">Aura Wealth</span>
+            <span className="text-white font-bold text-xl tracking-widest">Aura Wealth</span>
           </div>
           <h1 className="text-3xl font-semibold text-emerald-800 tracking-tight">
             Создание аккаунта
@@ -75,7 +75,7 @@ export function RegisterForm() {
             hidden: { opacity: 0, y: 40 },
             visible: { opacity: 1, y: 0, transition: { duration: 1, ease: [0.22, 1, 0.36, 1] } }
           }}
-          className="relative w-full max-w-md bg-white/60 backdrop-blur-2xl border border-white/50 shadow-[0_8px_32px_rgba(0,0,0,0.05)] rounded-3xl p-10 z-10"
+          className="relative w-full max-w-[460px] bg-white/60 backdrop-blur-2xl border border-white/50 shadow-[0_8px_32px_rgba(0,0,0,0.05)] rounded-3xl p-12 z-10"
         >
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 gap-5">
@@ -124,12 +124,12 @@ export function RegisterForm() {
                 className="group relative"
               >
                 <label className="text-lg font-medium text-slate-900 mb-2 block">Телефон</label>
-                <div className="flex items-center w-full h-14 bg-white/80 border border-slate-300 rounded-xl focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200/50 transition-all overflow-hidden">
-                  <span className="pl-4 pr-1 text-slate-400 font-medium text-lg pointer-events-none">+</span>
+                <div className="relative flex items-center w-full h-14 bg-white/80 border border-slate-300 rounded-xl focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200/50 transition-all overflow-hidden">
+                  <span className="absolute left-4 text-slate-400 font-medium text-lg pointer-events-none">+</span>
                   <input 
                     type="tel" 
-                    className="flex-1 bg-transparent py-3 px-2 outline-none text-slate-900 text-lg" 
-                    placeholder="7 (999) 000-00-00"
+                    placeholder="7 (900) 000-00-00" 
+                    className="w-full h-full pl-8 pr-4 bg-transparent outline-none text-slate-900 text-lg"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                   />

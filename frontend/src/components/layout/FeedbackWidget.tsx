@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, X } from 'lucide-react';
+import { Feather, X } from 'lucide-react';
 
 export function FeedbackWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -11,7 +11,7 @@ export function FeedbackWidget() {
         onClick={() => setIsOpen(!isOpen)}
         className="fixed bottom-8 right-8 z-50 bg-emerald-600 text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform"
       >
-        {isOpen ? <X className="w-6 h-6" /> : <MessageSquare className="w-6 h-6" />}
+        {isOpen ? <X className="w-6 h-6" /> : <Feather className="w-6 h-6" />}
       </button>
 
       <AnimatePresence>
