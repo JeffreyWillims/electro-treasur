@@ -1,0 +1,42 @@
+D:\programmer\Anti_project\electro-treasur\backend\run_arq.py:6: DeprecationWarning: 'asyncio.WindowsSelectorEventLoopPolicy' is deprecated and slated for removal in Python 3.16
+  asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+D:\programmer\Anti_project\electro-treasur\backend\run_arq.py:6: DeprecationWarning: 'asyncio.set_event_loop_policy' is deprecated and slated for removal in Python 3.16
+  asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+Traceback (most recent call last):
+  File "D:\programmer\Anti_project\electro-treasur\backend\run_arq.py", line 13, in <module>
+    run_worker(WorkerSettings)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "D:\programmer\Anti_project\electro-treasur\backend\.venv\Lib\site-packages\arq\worker.py", line 895, in run_worker
+    worker.run()
+    ~~~~~~~~~~^^
+  File "D:\programmer\Anti_project\electro-treasur\backend\.venv\Lib\site-packages\arq\worker.py", line 314, in run
+    self.loop.run_until_complete(self.close())
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "C:\Users\jacki\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "D:\programmer\Anti_project\electro-treasur\backend\.venv\Lib\site-packages\arq\worker.py", line 870, in close
+    await self.pool.delete(self.health_check_key)
+  File "D:\programmer\Anti_project\electro-treasur\backend\.venv\Lib\site-packages\redis\asyncio\client.py", line 641, in execute_command
+    conn = self.connection or await pool.get_connection()
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\programmer\Anti_project\electro-treasur\backend\.venv\Lib\site-packages\redis\asyncio\connection.py", line 1100, in get_connection
+    await self.ensure_connection(connection)
+  File "D:\programmer\Anti_project\electro-treasur\backend\.venv\Lib\site-packages\redis\asyncio\connection.py", line 1133, in ensure_connection
+    await connection.connect()
+  File "D:\programmer\Anti_project\electro-treasur\backend\.venv\Lib\site-packages\redis\asyncio\connection.py", line 305, in connect
+    await self.on_connect()
+  File "D:\programmer\Anti_project\electro-treasur\backend\.venv\Lib\site-packages\redis\asyncio\connection.py", line 422, in on_connect
+    await self.read_response()
+  File "D:\programmer\Anti_project\electro-treasur\backend\.venv\Lib\site-packages\redis\asyncio\connection.py", line 562, in read_response
+    response = await self._parser.read_response(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        disable_decoding=disable_decoding
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\programmer\Anti_project\electro-treasur\backend\.venv\Lib\site-packages\redis\_parsers\hiredis.py", line 211, in read_response
+    await self.read_from_socket()
+  File "D:\programmer\Anti_project\electro-treasur\backend\.venv\Lib\site-packages\redis\_parsers\hiredis.py", line 191, in read_from_socket
+    raise ConnectionError(SERVER_CLOSED_CONNECTION_ERROR) from None
+redis.exceptions.ConnectionError: Connection closed by server.

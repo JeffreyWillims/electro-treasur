@@ -1,0 +1,90 @@
+---
+# PgBouncer Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgbouncer
+  labels:
+    app: electro-treasur
+    component: pooler
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: electro-treasur
+      component: pooler
+  template:
+    metadata:
+      labels:
+        app: electro-treasur
+        component: pooler
+    spec:
+      containers:
+        - name: pgbouncer
+          image: edoburu/pgbouncer:latest
+          ports:
+            - containerPort: 6432
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: electro-secrets
+                  key: upstream-database-url  # Points to Cloud SQL
+            - name: POOL_MODE
+              value: "transaction"
+            - name: MAX_CLIENT_CONN
+              value: "10000"
+            - name: DEFAULT_POOL_SIZE
+              value: "100"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            tcpSocket:
+              port: 6432
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+# PgBouncer Service used by FastAPI/ARQ
+apiVersion: v1
+kind: Service
+metadata:
+  name: pgbouncer-service
+  labels:
+    app: electro-treasur
+    component: pooler
+spec:
+  ports:
+    - port: 6432
+      targetPort: 6432
+      protocol: TCP
+  selector:
+    app: electro-treasur
+    component: pooler
+  type: ClusterIP
+---
+# ExternalName Service for Managed Cloud SQL (Placeholder)
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloud-sql
+spec:
+  type: ExternalName
+  externalName: managed-postgres-instance.region.sql.cloud
+  ports:
+    - port: 5432
+---
+# ExternalName Service for Managed MemoryStore/Redis (Placeholder)
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloud-redis
+spec:
+  type: ExternalName
+  externalName: managed-redis-instance.region.redis.cloud
+  ports:
+    - port: 6379

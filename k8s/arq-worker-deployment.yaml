@@ -1,0 +1,43 @@
+---
+# ARQ Worker Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: arq-worker
+  labels:
+    app: electro-treasur
+    component: worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: electro-treasur
+      component: worker
+  template:
+    metadata:
+      labels:
+        app: electro-treasur
+        component: worker
+    spec:
+      containers:
+        - name: arq
+          image: ghcr.io/electro-treasur/backend:latest
+          command: ["arq", "src.infrastructure.workers.llm_worker.WorkerSettings"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: electro-secrets
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: electro-secrets
+                  key: redis-url
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"

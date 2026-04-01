@@ -1,0 +1,53 @@
+/* ── Aura Wealth — App-Level Utilities ─────────────────────────────── */
+
+/* Base layout container */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+  transition: background-color 0.5s ease;
+}
+
+.main-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+  transition: all 0.3s ease;
+}
+
+/* ── Decorative Dividers ─────────────────────────────────────────────── */
+.divider-gold {
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--aura-gold), transparent);
+  opacity: 0.15;
+}
+
+.divider-fade {
+  height: 1px;
+  background: linear-gradient(to right, var(--aura-gold), transparent);
+  opacity: 0.1;
+}
+
+/* ── Number Formatting ───────────────────────────────────────────────── */
+.mono-amount {
+  font-family: 'Space Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* ── Ambient Background Elements ─────────────────────────────────────── */
+.ambient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  opacity: 0.03;
+}
+
+.ambient-orb.gold {
+  background: var(--aura-gold);
+}
+
+.ambient-orb.emerald {
+  background: var(--aura-emerald);
+}
