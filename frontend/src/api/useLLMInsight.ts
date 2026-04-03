@@ -32,7 +32,7 @@ interface UseLLMInsightReturn {
   reset: () => void;
 }
 
-export function useLLMInsight(year: number, userId: number = 1): UseLLMInsightReturn {
+export function useLLMInsight(startDate: string, endDate: string, userId: number = 1): UseLLMInsightReturn {
   const [taskId, setTaskId] = useState<string | null>(null);
   const [isEnqueuing, setIsEnqueuing] = useState(false);
   const [enqueueError, setEnqueueError] = useState<string | null>(null);
@@ -64,14 +64,14 @@ export function useLLMInsight(year: number, userId: number = 1): UseLLMInsightRe
     setEnqueueError(null);
     setIsEnqueuing(true);
     try {
-      const response = await enqueueInsight({ user_id: userId, year });
+      const response = await enqueueInsight({ start_date: startDate, end_date: endDate } as any);
       setTaskId(response.task_id);
     } catch (err) {
       setEnqueueError(err instanceof Error ? err.message : 'Failed to enqueue');
     } finally {
       setIsEnqueuing(false);
     }
-  }, [userId, year]);
+  }, [userId, startDate, endDate]);
 
   // ── Phase C: Reset ─────────────────────────────────────────────────
   const reset = useCallback(() => {

@@ -8,7 +8,6 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { PlusCircle, Calendar as CalendarIcon, ChevronDown, Tag } from 'lucide-react';
 import { createTransaction, fetchCategories } from '@/api/client';
-import { cn } from '@/lib/utils';
 
 const CURRENCIES = ['RUB', 'USD', 'EUR'];
 
@@ -79,7 +78,7 @@ export function QuickEntry() {
   };
 
   return (
-    <div className="premium-card p-7">
+    <div className="w-full bg-[#F4F5F6]/80 dark:bg-[#121212]/80 backdrop-blur-3xl border border-white/60 dark:border-white/5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.8)] rounded-3xl p-8 transition-all duration-700">
       <div className="flex items-center gap-3 mb-7">
         <div className="p-2.5 bg-aura-gold/[0.06] rounded-xl">
           <PlusCircle className="w-[18px] h-[18px] text-aura-gold" />
@@ -94,14 +93,14 @@ export function QuickEntry() {
 
       <form onSubmit={handleSave} className="space-y-5">
         {/* Type Toggle */}
-        <div className="relative flex bg-slate-100 p-1 rounded-xl w-full mb-6">
+        <div className="relative flex bg-slate-200 dark:bg-slate-900/50 p-1 rounded-xl w-full mb-6 transition-colors duration-500">
           {/* Плавающий желтый фон (Ползунок) */}
-          <div className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-[#EBE7DF] border border-[#DFD8C8] rounded-lg transition-transform duration-300 ease-out shadow-sm ${type === 'income' ? 'translate-x-full left-0' : 'translate-x-0 left-1'}`} />
+          <div className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white dark:bg-aura-gold border border-slate-300 dark:border-aura-gold/50 rounded-lg transition-transform duration-300 ease-out shadow-sm ${type === 'income' ? 'translate-x-full left-0' : 'translate-x-0 left-1'}`} />
           
           {/* Кнопки */}
-          <button type="button" onClick={() => { setType('expense'); setCategory(''); }} className={`relative z-10 flex-1 py-3 text-lg font-bold transition-colors duration-300 ${type === 'expense' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>Расход</button>
+          <button type="button" onClick={() => { setType('expense'); setCategory(''); }} className={`relative z-10 flex-1 py-3 text-lg font-bold transition-colors duration-300 ${type === 'expense' ? 'text-slate-900 dark:text-[#121212]' : 'text-slate-500 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300'}`}>Расход</button>
           
-          <button type="button" onClick={() => { setType('income'); setCategory(''); }} className={`relative z-10 flex-1 py-3 text-lg font-bold transition-colors duration-300 ${type === 'income' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>Доход</button>
+          <button type="button" onClick={() => { setType('income'); setCategory(''); }} className={`relative z-10 flex-1 py-3 text-lg font-bold transition-colors duration-300 ${type === 'income' ? 'text-slate-900 dark:text-[#121212]' : 'text-slate-500 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300'}`}>Доход</button>
         </div>
 
         {/* Amount + Currency */}
@@ -134,11 +133,11 @@ export function QuickEntry() {
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="input-aura appearance-none pr-10 text-base font-semibold text-slate-900 cursor-pointer"
+                className="input-aura appearance-none pr-10 text-base font-semibold text-slate-900 dark:text-slate-100 cursor-pointer bg-white/50 dark:bg-slate-800/40 border-slate-200 dark:border-white/5 transition-all outline-none"
               >
                 <option value="" disabled>Выберите</option>
                 {filteredCategories.map(cat => (
-                  <option key={cat.id} value={cat.id.toString()}>
+                  <option key={cat.id} value={cat.id.toString()} className="bg-white dark:bg-aura-graphite">
                     {getRussianCategoryName(cat.name)}
                   </option>
                 ))}

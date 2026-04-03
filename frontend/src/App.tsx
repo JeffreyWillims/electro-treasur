@@ -12,6 +12,9 @@ import { QuickEntry } from '@/components/dashboard/QuickEntry';
 import { TransactionList } from '@/components/dashboard/TransactionList';
 import { Sparkles, Wallet } from 'lucide-react';
 import { FeedbackWidget } from '@/components/layout/FeedbackWidget';
+import { InsightModal } from '@/components/insights/InsightModal';
+import { useState } from 'react';
+import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,7 +28,7 @@ const queryClient = new QueryClient({
 
 function DashboardLayout() {
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-white dark:bg-[#0A0A0A] transition-colors duration-500">
       <Sidebar />
 
       {/* Main Content Area */}
@@ -37,27 +40,60 @@ function DashboardLayout() {
 }
 
 function Overview() {
+  const { isDarkMode } = useTheme();
+  const [startDate, setStartDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(1);
+    return d.toISOString().split('T')[0] as string;
+  });
+  
+  const [endDate, setEndDate] = useState<string>(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + 1);
+    d.setDate(0);
+    return d.toISOString().split('T')[0] as string;
+  });
+
+  const [isInsightOpen, setIsInsightOpen] = useState(false);
+
   return (
     <div className="max-w-7xl mx-auto pt-12 pb-24">
       <div className="flex flex-col gap-16">
         {/* Hero Header Section */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
           <div>
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center gap-4 mb-4">
               <Wallet className="w-10 h-10 text-emerald-600 drop-shadow-sm" strokeWidth={2} />
-              <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight" style={{ textShadow: "1px 1px 0px rgba(255,255,255,0.8), -1px -1px 0px rgba(0,0,0,0.05), 0px 4px 10px rgba(0,0,0,0.05)" }}>
+              <h1 
+                className="text-[2.5rem] font-extrabold text-slate-800 dark:text-slate-100 tracking-tight transition-colors duration-500" 
+                style={{ 
+                  textShadow: isDarkMode 
+                    ? "1px 1px 0px rgba(0,0,0,0.8), -1px -1px 0px rgba(255,255,255,0.1), 0px 4px 10px rgba(0,0,0,0.5)" 
+                    : "1px 1px 0px rgba(255,255,255,1), 0px 4px 12px rgba(0,0,0,0.06)" 
+                }}
+              >
                 Electro Treasur
               </h1>
             </div>
           </div>
           
-          <button className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-10 py-4 rounded-2xl font-bold text-lg shadow-lg shadow-emerald-600/20 transition-all active:scale-[0.98] h-fit">
-            <Sparkles className="animate-[spin_4s_linear_infinite]" />
-            AI Анализ года
+          <button 
+            className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2.5 px-6 rounded-full shadow-lg dark:shadow-emerald-500/20 transition-all active:scale-[0.98]"
+            onClick={() => setIsInsightOpen(true)}
+          >
+            <Sparkles className="animate-pulse w-5 h-5" />
+            AI Анализ потоков
           </button>
         </div>
 
-        <BalanceCards />
+        <InsightModal 
+          isOpen={isInsightOpen} 
+          onClose={() => setIsInsightOpen(false)} 
+          startDate={startDate} 
+          endDate={endDate} 
+        />
+
+        <BalanceCards startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} />
         <QuickEntry />
       </div>
     </div>
@@ -89,28 +125,30 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            {/* Public Auth Routes */}
-            <Route path="/login" element={<PublicRoute><LoginForm /></PublicRoute>} />
-            <Route path="/register" element={<PublicRoute><RegisterForm /></PublicRoute>} />
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <BrowserRouter>
+            <Routes>
+              {/* Public Auth Routes */}
+              <Route path="/login" element={<PublicRoute><LoginForm /></PublicRoute>} />
+              <Route path="/register" element={<PublicRoute><RegisterForm /></PublicRoute>} />
 
-            {/* Protected Application Routes */}
-            <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
-              <Route path="/" element={<Overview />} />
-              <Route path="/transactions" element={<div className="p-4"><TransactionList /></div>} />
-              <Route path="/budgets" element={<div className="p-4"><BudgetList /></div>} />
-              <Route path="/analytics" element={<div className="p-4"><MainAnalytics /></div>} />
-              <Route path="/savings-navigator" element={<div className="p-4"><SavingsNavigator /></div>} />
-              <Route path="/settings/profile" element={<ProfileSettings />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
-        <FeedbackWidget />
-        <Toaster position="top-right" richColors />
-      </AuthProvider>
-    </QueryClientProvider>
+              {/* Protected Application Routes */}
+              <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+                <Route path="/" element={<Overview />} />
+                <Route path="/transactions" element={<div className="p-4"><TransactionList /></div>} />
+                <Route path="/budgets" element={<div className="p-4"><BudgetList /></div>} />
+                <Route path="/analytics" element={<div className="p-4"><MainAnalytics /></div>} />
+                <Route path="/savings-navigator" element={<div className="p-4"><SavingsNavigator /></div>} />
+                <Route path="/settings/profile" element={<ProfileSettings />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+          <FeedbackWidget />
+          <Toaster position="top-right" richColors />
+        </AuthProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }

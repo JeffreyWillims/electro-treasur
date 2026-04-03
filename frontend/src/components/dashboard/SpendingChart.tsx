@@ -11,8 +11,11 @@ function createChartData(dashboard: { rows: CategoryRowSchema[] } | undefined, c
   const incomeIds = new Set(categories.filter(c => c.type === 'income').map(c => c.id));
   const expenseIds = new Set(categories.filter(c => c.type === 'expense').map(c => c.id));
 
+  // Determine the length of the time series from the first row's day cells
+  const dayCount = dashboard.rows[0]?.days.length || 0;
+  
   // Initialize day arrays
-  const days = Array.from({ length: 31 }, (_, i) => ({
+  const days = Array.from({ length: dayCount }, (_, i) => ({
     day: i + 1,
     income: 0,
     expense: 0,
@@ -22,12 +25,15 @@ function createChartData(dashboard: { rows: CategoryRowSchema[] } | undefined, c
     const isIncome = incomeIds.has(row.category_id);
     const isExpense = expenseIds.has(row.category_id) || (!isIncome);
 
-    row.days.forEach(dayCell => {
+    row.days?.forEach(dayCell => {
       const idx = dayCell.day - 1;
-      const amt = parseFloat(dayCell.amount) || 0;
-      if (idx >= 0 && idx < 31) {
-        if (isIncome) days[idx].income += amt;
-        if (isExpense) days[idx].expense += amt;
+      const amt = parseFloat(dayCell.amount?.toString() || '0');
+      if (idx >= 0 && idx < dayCount) {
+        const day = days[idx];
+        if (day) {
+          if (isIncome) day.income += amt;
+          if (isExpense) day.expense += amt;
+        }
       }
     });
   });
@@ -38,9 +44,9 @@ function createChartData(dashboard: { rows: CategoryRowSchema[] } | undefined, c
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white/90 dark:bg-aura-graphite/90 backdrop-blur-md border border-aura-gold/20 p-4 rounded-xl shadow-premium">
-        <p className="text-[10px] font-mono text-aura-gold/80 mb-2 uppercase font-bold">{label} Число</p>
-        <div className="space-y-1 text-sm font-semibold tracking-tight">
+      <div className="bg-white/95 dark:bg-[#1A1A1A]/90 backdrop-blur-md border border-aura-gold/20 dark:border-slate-800 p-4 rounded-xl shadow-premium">
+        <p className="text-[10px] font-mono text-aura-gold/80 mb-2 uppercase font-bold dark:text-slate-400">{label} Число</p>
+        <div className="space-y-1 text-sm font-semibold tracking-tight dark:text-slate-200">
           <p className="text-aura-emerald">
             + {(payload[0]?.value ?? 0).toLocaleString('ru-RU')} ₽ <span className="text-[10px] font-normal opacity-70 ml-1">поступления</span>
           </p>
@@ -54,10 +60,10 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export function SpendingChart() {
+export function SpendingChart({ startDate, endDate }: { startDate: string; endDate: string }) {
   const { data: dashboard, isLoading: dashLoading } = useQuery({
-    queryKey: ['dashboard'],
-    queryFn: () => fetchDashboard(new Date().getMonth() + 1, new Date().getFullYear()),
+    queryKey: ['dashboard', startDate, endDate],
+    queryFn: () => fetchDashboard(startDate, endDate),
   });
 
   const { data: categories = [], isLoading: catLoading } = useQuery({
@@ -74,14 +80,14 @@ export function SpendingChart() {
 
   if (isLoading) {
     return (
-      <div className="premium-card p-8 h-[400px] flex items-center justify-center">
+      <div className="premium-card p-8 h-[400px] flex items-center justify-center bg-white dark:bg-[#121212]/80 border dark:border-white/5 transition-colors duration-700">
         <div className="w-8 h-8 border-2 border-aura-gold/20 border-t-aura-gold rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="premium-card p-8 group">
+    <div className="premium-card p-8 group bg-white dark:bg-[#121212]/80 border dark:border-white/5 shadow-premium dark:shadow-[0_8px_30px_rgba(0,0,0,0.8)] transition-all duration-700">
       <div className="flex items-start justify-between mb-8">
         <div>
           <h3 className="text-premium text-2xl leading-none">Ликвидность</h3>

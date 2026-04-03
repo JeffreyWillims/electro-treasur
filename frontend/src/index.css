@@ -30,11 +30,12 @@
 }
 
 .dark {
-  --bg-primary: var(--aura-graphite);
-  --text-primary: var(--aura-ash);
-  --border-subtle: rgba(240, 240, 240, 0.06);
-  --card-bg: rgba(26, 26, 26, 0.85);
-  --card-border: rgba(240, 240, 240, 0.06);
+  --aura-ivory: #0A0A0A;
+  --bg-primary: #0A0A0A;
+  --text-primary: #ECECEC;
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --card-bg: rgba(18, 18, 18, 0.8);
+  --card-border: rgba(255, 255, 255, 0.05);
 }
 
 html {
@@ -49,7 +50,7 @@ body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   background-attachment: fixed;
-  transition: background-color 0.5s ease, color 0.5s ease;
+  transition: background-color 0.6s cubic-bezier(0.4, 0, 0.2, 1), color 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ── Typography ───────────────────────────────────────────────────────── */
@@ -73,13 +74,13 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ── Selection ───────────────────────────────────────────────────────── */
 ::selection {
-  background-color: rgba(26, 26, 26, 0.1);
-  color: var(--aura-graphite-light);
+  background-color: rgba(197, 160, 89, 0.2);
+  color: inherit;
 }
 
 .dark ::selection {
-  background-color: rgba(240, 240, 240, 0.1);
-  color: var(--aura-ash);
+  background-color: rgba(197, 160, 89, 0.3);
+  color: #FFFFFF;
 }
 
 /* ── Scrollbar ────────────────────────────────────────────────────────── */
@@ -136,7 +137,7 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .text-gold {
-    @apply text-aura-gold font-bold;
+    @apply text-aura-gold font-bold tracking-[0.05em];
   }
 
 
@@ -205,19 +206,18 @@ h1, h2, h3, h4, h5, h6 {
 .PhoneInputInput:focus { border-color: #10b981; box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2); }
 
 
-/* ── Smooth Theme Transitions ─────────────────────────────────────────── */
 *,
 *::before,
 *::after {
-  transition-property: background-color, border-color, color, fill, stroke;
+  transition-property: background-color, border-color, color, fill, stroke, box-shadow;
   transition-duration: 0ms;
 }
 
 html.transitioning *,
 html.transitioning *::before,
 html.transitioning *::after {
-  transition-duration: 500ms !important;
-  transition-timing-function: ease !important;
+  transition-duration: 600ms !important;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 @keyframes blob {

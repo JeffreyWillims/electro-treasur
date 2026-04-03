@@ -58,7 +58,8 @@ async def enqueue_insight(
     await pool.enqueue_job(
         "generate_annual_llm_insight",
         current_user.id,
-        body.year,
+        body.start_date,
+        body.end_date,
         _job_id=task_id,
     )
 

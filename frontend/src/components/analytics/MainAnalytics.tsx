@@ -11,6 +11,18 @@ const MOCK_DATA = Array.from({ length: 30 }).map((_, i) => ({
 }));
 
 export function MainAnalytics() {
+  const [startDate, setStartDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(1);
+    return d.toISOString().split('T')[0] as string;
+  });
+  const [endDate, setEndDate] = useState<string>(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + 1);
+    d.setDate(0);
+    return d.toISOString().split('T')[0] as string;
+  });
+  
   const [timeframe, setTimeframe] = useState<'День' | 'Месяц' | 'Год'>('Месяц');
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
@@ -33,18 +45,39 @@ export function MainAnalytics() {
           <h1 className="text-premium text-4xl mb-2 tracking-tighter font-serif font-bold">Аналитика</h1>
           <p className="text-[10px] font-mono text-aura-gold uppercase tracking-[0.3em] font-bold">Режим исследования</p>
         </div>
-        <div className="flex bg-slate-100/80 p-1 rounded-xl">
-          {['День', 'Месяц', 'Год'].map((period) => (
-            <button
-              key={period}
-              onClick={() => setTimeframe(period as any)}
-              className={`px-4 py-1.5 rounded-lg text-[10px] uppercase font-mono tracking-widest transition-all ${
-                timeframe === period ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              {period}
-            </button>
-          ))}
+        <div className="flex flex-col md:flex-row items-center gap-6">
+          {/* Date Picker */}
+          <div className="flex items-center gap-3 bg-slate-100 dark:bg-slate-800/50 p-1.5 rounded-xl border border-slate-200 dark:border-white/5 transition-colors">
+            <input 
+              type="date" 
+              value={startDate} 
+              onChange={(e) => setStartDate(e.target.value)} 
+              className="bg-transparent border-none text-[10px] uppercase font-mono font-bold text-slate-600 dark:text-slate-300 outline-none p-1 transition-all"
+            />
+            <span className="text-slate-300 dark:text-slate-600">—</span>
+            <input 
+              type="date" 
+              value={endDate} 
+              onChange={(e) => setEndDate(e.target.value)} 
+              className="bg-transparent border-none text-[10px] uppercase font-mono font-bold text-slate-600 dark:text-slate-300 outline-none p-1 transition-all"
+            />
+          </div>
+
+          <div className="flex bg-slate-100/80 dark:bg-slate-800/50 p-1 rounded-xl border border-slate-200 dark:border-white/5 transition-colors">
+            {['День', 'Месяц', 'Год'].map((period) => (
+              <button
+                key={period}
+                onClick={() => setTimeframe(period as any)}
+                className={`px-4 py-1.5 rounded-lg text-[10px] uppercase font-mono tracking-widest transition-all ${
+                  timeframe === period 
+                    ? 'bg-white dark:bg-aura-gold text-brand-600 dark:text-aura-graphite shadow-sm' 
+                    : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                }`}
+              >
+                {period}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -69,7 +102,7 @@ export function MainAnalytics() {
           </div>
           <p className="text-sm font-mono text-aura-gold/60 mt-2">Эвалюация изменения свободного капитала во времени.</p>
         </div>
-        <div className="bg-white/60 backdrop-blur-md border border-surface-border rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-80 w-full hover:shadow-[0_12px_40px_rgb(0,0,0,0.08)] transition-all">
+        <div className="bg-white/60 dark:bg-[#121212]/80 backdrop-blur-3xl border border-slate-100 dark:border-white/5 rounded-[2.5rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.8)] h-80 w-full hover:shadow-[0_12px_40px_rgba(0,0,0,0.08)] transition-all duration-700">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={filteredData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
@@ -120,16 +153,16 @@ export function MainAnalytics() {
           </div>
           <p className="text-sm font-mono text-aura-gold/60 mt-2">Ежедневный анализ интенсивности сгорания капитала.</p>
         </div>
-        <SpendingChart />
+        <SpendingChart startDate={startDate} endDate={endDate} />
       </div>
 
       {/* 3. Capital Structure */}
-      <div className="pt-8 border-t border-slate-100 pb-16">
+      <div className="pt-8 border-t border-slate-100 dark:border-white/5 pb-16">
         <div className="mb-6">
-          <h2 className="text-2xl font-serif font-bold text-premium">Структура Капитала</h2>
+          <h2 className="text-2xl font-serif font-bold text-premium dark:text-slate-100">Структура Капитала</h2>
           <p className="text-sm font-mono text-aura-gold/60 mt-2">Распределение затраченных активов по категориям.</p>
         </div>
-        <CategoryPieChart />
+        <CategoryPieChart startDate={startDate} endDate={endDate} />
       </div>
 
     </div>

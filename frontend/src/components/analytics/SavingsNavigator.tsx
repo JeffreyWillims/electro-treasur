@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, CartesianGrid } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -43,11 +43,11 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         <div className="space-y-2">
           <div className="flex justify-between items-center text-sm">
             <span className="text-slate-500 flex items-center gap-1.5"><Clock className="w-3.5 h-3.5"/> Текущий:</span>
-            <span className="font-bold text-slate-800">{Math.round(baseSavings).toLocaleString('ru')} ₽</span>
+            <span className="font-bold text-slate-800 dark:text-slate-200">{Math.round(baseSavings).toLocaleString('ru')} ₽</span>
           </div>
           <div className="flex justify-between items-center text-sm">
             <span className="text-[#10b981] font-medium flex items-center gap-1.5"><TrendingUp className="w-3.5 h-3.5"/> Оптимизированный:</span>
-            <span className="font-bold text-slate-800">{Math.round(optSavings).toLocaleString('ru')} ₽</span>
+            <span className="font-bold text-slate-800 dark:text-slate-200">{Math.round(optSavings).toLocaleString('ru')} ₽</span>
           </div>
         </div>
         {delta > 0 && (
@@ -79,6 +79,17 @@ export function SavingsNavigator() {
   const [targetName, setTargetName] = useState('Ремонт кухни');
   const [targetAmount, setTargetAmount] = useState('500000');
   const [initialSavings, setInitialSavings] = useState('50000');
+  const [startDate, setStartDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(1);
+    return d.toISOString().split('T')[0] as string;
+  });
+  const [endDate, setEndDate] = useState<string>(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + 1);
+    d.setDate(0);
+    return d.toISOString().split('T')[0] as string;
+  });
   const [monthlyIncome, setMonthlyIncome] = useState(0);
   const [coffeeCups, setCoffeeCups] = useState(15);
   const [bankRate, setBankRate] = useState(16);
@@ -156,7 +167,7 @@ export function SavingsNavigator() {
   const accelerationDays = simulation?.days_saved || 0;
 
   const [isAdvisorOpen, setIsAdvisorOpen] = useState(false);
-  const { trigger, isLoading: isLlmLoading, isError: isLlmError, error: llmError, data: advisorData, reset: resetAdvisor } = useLLMInsight(2026);
+  const { trigger, isLoading: isLlmLoading, isError: isLlmError, error: llmError, data: advisorData, reset: resetAdvisor } = useLLMInsight(startDate, endDate);
 
   const handleOpenAdvisor = () => {
     setIsAdvisorOpen(true);
@@ -199,7 +210,7 @@ export function SavingsNavigator() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            className="p-5 bg-white/70 backdrop-blur-md rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between"
+            className="p-5 bg-white/70 dark:bg-[#121212]/80 backdrop-blur-3xl rounded-2xl shadow-sm border border-slate-100 dark:border-white/5 flex flex-col justify-between transition-all duration-700"
           >
             <div className="flex justify-between items-start mb-2">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{stat.label}</span>
@@ -210,7 +221,7 @@ export function SavingsNavigator() {
             <div className="mt-1">
               {typeof stat.value === 'number' ? (
                 <div className="flex items-baseline gap-1">
-                  <span className="text-2xl font-black text-slate-800 tracking-tight">
+                  <span className="text-2xl font-black text-slate-800 dark:text-slate-200 tracking-tight">
                     <AnimatedNumber value={stat.value} />
                   </span>
                   <span className="text-sm font-bold text-slate-400">{stat.suffix}</span>
@@ -237,7 +248,7 @@ export function SavingsNavigator() {
            <div className="w-20 h-20 bg-brand-50 rounded-full flex items-center justify-center mb-6">
              <PiggyBank className="w-10 h-10 text-brand-500" />
            </div>
-           <h3 className="text-2xl font-bold text-slate-800 mb-3 tracking-tight font-serif text-premium">Пока здесь пусто</h3>
+           <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-3 tracking-tight font-serif text-premium">Пока здесь пусто</h3>
            <p className="text-slate-500 max-w-md mx-auto mb-8 font-medium">Добавьте вашу первую операцию, чтобы активировать Финплан и персональные советы искусственного интеллекта.</p>
         </div>
       ) : (
@@ -245,22 +256,42 @@ export function SavingsNavigator() {
         {/* LEFT COLUMN: Control Center */}
         <div className="w-full lg:w-1/3 flex flex-col gap-6">
           
-          <div className="p-6 bg-white/50 backdrop-blur-md rounded-2xl shadow-sm border border-slate-100 space-y-6">
+          <div className="p-6 bg-white/50 dark:bg-[#121212]/80 backdrop-blur-3xl rounded-2xl shadow-sm border border-slate-100 dark:border-white/5 space-y-6 transition-all duration-700">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-indigo-50 rounded-lg">
                  <PiggyBank className="w-5 h-5 text-indigo-600" />
               </div>
-              <h2 className="text-lg font-bold text-slate-800 tracking-tight">Центр управления</h2>
+              <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 tracking-tight">Центр управления</h2>
             </div>
             
             <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">С начала</label>
+                  <input 
+                    type="date" 
+                    value={startDate} 
+                    onChange={e => setStartDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-white/50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5 rounded-xl text-[10px] font-mono font-bold text-slate-600 dark:text-slate-300 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">По конец</label>
+                  <input 
+                    type="date" 
+                    value={endDate} 
+                    onChange={e => setEndDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-white/50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5 rounded-xl text-[10px] font-mono font-bold text-slate-600 dark:text-slate-300 outline-none"
+                  />
+                </div>
+              </div>
               <div>
                 <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Месячный доход (₽)</label>
                 <input 
                   type="number" 
                   value={monthlyIncome} 
                   onChange={e => setMonthlyIncome(parseFloat(e.target.value) || 0)}
-                  className="w-full px-4 py-3 bg-white/80 border-slate-100 border rounded-xl focus:ring-2 focus:ring-brand-500 outline-none transition-all font-bold text-slate-800"
+                  className="w-full px-4 py-3 bg-white/80 border-slate-100 border rounded-xl focus:ring-2 focus:ring-brand-500 outline-none transition-all font-bold text-slate-800 dark:text-slate-200"
                 />
               </div>
 
@@ -294,8 +325,8 @@ export function SavingsNavigator() {
             </div>
           </div>
 
-          <div className="p-6 bg-white rounded-2xl shadow-sm border border-slate-100 space-y-6">
-            <h3 className="font-bold text-slate-800 flex items-center gap-2">
+          <div className="p-6 bg-white dark:bg-[#121212]/80 rounded-2xl shadow-sm border border-slate-100 dark:border-white/5 space-y-6 transition-all duration-700">
+            <h3 className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-emerald-500" />
               Оптимизация трат
             </h3>
@@ -343,8 +374,8 @@ export function SavingsNavigator() {
 
         {/* RIGHT COLUMN: Chart & Banks */}
         <div className="flex-1 flex flex-col gap-6">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-[450px] flex flex-col">
-            <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+          <div className="bg-white dark:bg-[#121212]/80 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-white/5 h-[450px] flex flex-col transition-all duration-700">
+            <h3 className="font-bold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
               <Clock className="w-4 h-4 text-indigo-500" />
               Прогноз цели: {targetName}
             </h3>
@@ -389,13 +420,13 @@ export function SavingsNavigator() {
                { label: 'Сумма цели (₽)', value: targetAmount, set: setTargetAmount, type: 'number' },
                { label: 'Уже накоплено (₽)', value: initialSavings, set: setInitialSavings, type: 'number' },
              ].map(f => (
-               <div key={f.label} className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
+               <div key={f.label} className="p-4 bg-white dark:bg-[#1A1A1A]/50 rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm transition-all duration-700">
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{f.label}</label>
                   <input 
                     type={f.type}
                     value={f.value}
                     onChange={e => f.set(e.target.value)}
-                    className="w-full text-sm font-bold text-slate-800 bg-transparent outline-none focus:text-brand-600 transition-colors"
+                    className="w-full text-sm font-bold text-slate-800 dark:text-slate-200 bg-transparent outline-none focus:text-brand-600 transition-colors"
                   />
                </div>
              ))}
@@ -416,7 +447,7 @@ export function SavingsNavigator() {
                     ВЫБРАНО
                   </div>
                 )}
-                <div className="text-xl font-black text-slate-800">{bank.rate}%</div>
+                <div className="text-xl font-black text-slate-800 dark:text-slate-200">{bank.rate}%</div>
                 <div className="text-xs font-bold text-slate-500 mb-4">{bank.name}</div>
                 <button 
                   onClick={() => setBankRate(bank.rate)}
@@ -451,7 +482,7 @@ export function SavingsNavigator() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-lg bg-white rounded-[2rem] shadow-2xl p-8 overflow-hidden" 
+              className="relative w-full max-w-lg bg-white dark:bg-[#121212]/90 backdrop-blur-3xl rounded-[2rem] shadow-2xl p-8 overflow-hidden border dark:border-white/5" 
               onClick={e => e.stopPropagation()}
             >
               <button onClick={handleCloseAdvisor} className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-100 transition-colors">
@@ -486,15 +517,15 @@ export function SavingsNavigator() {
                     <div className="grid grid-cols-3 gap-3">
                       <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 text-center">
                         <p className="text-[10px] font-bold text-emerald-600 uppercase mb-1">Доход</p>
-                        <p className="text-sm font-black text-slate-800">₽{Number(advisorData.summary.total_income.replace(/_/g, '')).toLocaleString()}</p>
+                        <p className="text-sm font-black text-slate-800 dark:text-slate-200">₽{Number(advisorData.summary.total_income.replace(/_/g, '')).toLocaleString()}</p>
                       </div>
                       <div className="p-4 bg-red-50 rounded-2xl border border-red-100 text-center">
                         <p className="text-[10px] font-bold text-red-600 uppercase mb-1">Расход</p>
-                        <p className="text-sm font-black text-slate-800">₽{Number(advisorData.summary.total_expense.replace(/_/g, '')).toLocaleString()}</p>
+                        <p className="text-sm font-black text-slate-800 dark:text-slate-200">₽{Number(advisorData.summary.total_expense.replace(/_/g, '')).toLocaleString()}</p>
                       </div>
                       <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 text-center">
                         <p className="text-[10px] font-bold text-indigo-600 uppercase mb-1">Сбережения</p>
-                        <p className="text-sm font-black text-slate-800">{advisorData.summary.savings_rate}</p>
+                        <p className="text-sm font-black text-slate-800 dark:text-slate-200">{advisorData.summary.savings_rate}</p>
                       </div>
                     </div>
                   </div>

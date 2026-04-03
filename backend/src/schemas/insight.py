@@ -9,7 +9,8 @@ from pydantic import BaseModel, Field
 class InsightRequest(BaseModel):
     """POST /api/v1/insights/ body."""
 
-    year: int = Field(..., ge=2000, le=2100)
+    start_date: str
+    end_date: str
 
 
 class InsightEnqueueResponse(BaseModel):

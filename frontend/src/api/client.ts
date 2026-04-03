@@ -86,8 +86,8 @@ export function fetchTransactions(limit = 10, offset = 0): Promise<TransactionRe
 }
 
 // ── Dashboard ──────────────────────────────────────────────────────────
-export function fetchDashboard(month: number, year: number): Promise<DashboardResponse> {
-  return request<DashboardResponse>(`/v1/dashboard/?month=${month}&year=${year}`);
+export function fetchDashboard(startDate: string, endDate: string): Promise<DashboardResponse> {
+  return request<DashboardResponse>(`/v1/dashboard/?start_date=${startDate}&end_date=${endDate}`);
 }
 
 // ── LLM Insights ───────────────────────────────────────────────────────

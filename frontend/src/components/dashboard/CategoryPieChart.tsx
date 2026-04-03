@@ -15,7 +15,7 @@ const COLORS = [
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white/95 dark:bg-aura-graphite/95 backdrop-blur-md border border-aura-gold/20 px-5 py-3 rounded-2xl shadow-premium">
+      <div className="bg-white/95 dark:bg-[#1A1A1A]/90 backdrop-blur-md border border-aura-gold/20 dark:border-white/5 px-5 py-3 rounded-2xl shadow-premium">
         <p className="text-[10px] font-mono text-aura-gold/80 mb-1 uppercase font-bold tracking-widest">{payload[0].name}</p>
         <p className="text-xl font-serif tracking-tight font-semibold text-aura-graphite dark:text-aura-ivory">
           {payload[0].value.toLocaleString('ru-RU')} <span className="text-xs text-aura-gold ml-0.5">₽</span>
@@ -26,15 +26,15 @@ const CustomTooltip = ({ active, payload }: any) => {
   return null;
 };
 
-export function CategoryPieChart() {
+export function CategoryPieChart({ startDate, endDate }: { startDate: string; endDate: string }) {
   const { data: dashboard, isLoading } = useQuery({
-    queryKey: ['dashboard'],
-    queryFn: () => fetchDashboard(new Date().getMonth() + 1, new Date().getFullYear()),
+    queryKey: ['dashboard', startDate, endDate],
+    queryFn: () => fetchDashboard(startDate, endDate),
   });
 
   if (isLoading) {
     return (
-      <div className="premium-card p-8 h-[400px] flex items-center justify-center">
+      <div className="premium-card p-8 h-[400px] flex items-center justify-center bg-white dark:bg-[#121212]/80 border dark:border-white/5 transition-colors duration-700">
         <div className="w-8 h-8 border-2 border-aura-gold/20 border-t-aura-gold rounded-full animate-spin" />
       </div>
     );
@@ -51,7 +51,7 @@ export function CategoryPieChart() {
     .sort((a, b) => b.value - a.value) || [];
 
   return (
-    <div className="premium-card p-8 relative overflow-hidden group">
+    <div className="premium-card p-8 relative overflow-hidden group bg-white dark:bg-[#121212]/80 border dark:border-white/5 shadow-premium dark:shadow-[0_8px_30_rgba(0,0,0,0.8)] transition-all duration-700">
       {/* Decorative gradient */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full opacity-5 bg-[radial-gradient(circle,_var(--aura-gold)_0%,_transparent_70%)] pointer-events-none transition-opacity duration-700 group-hover:opacity-10" />
 

@@ -60,8 +60,11 @@ export interface CategoryRowSchema {
 }
 
 export interface DashboardResponse {
-  month: number;
-  year: number;
+  start_date?: string;
+  end_date?: string;
+  total_balance_all_time: string;
+  period_income: string;
+  period_expense: string;
   rows: CategoryRowSchema[];
 }
 

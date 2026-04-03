@@ -20,58 +20,69 @@ from datetime import datetime
 
 from arq import cron
 from arq.connections import RedisSettings
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 from src.config import settings
 
 logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = (
-    "Ты — эксперт Финплана. Проанализируй цель пользователя (например, 'Ремонт кухни за 500к'). "
-    "Посмотри, на сколько сокращение трат на определенные категории ускорит покупку. "
-    "Выдай ответ в стиле: 'Если снизишь расходы на [Категория] на [X]%, накопишь на [Цель] на [Y] месяца быстрее. "
-    "Рекомендую открыть счет в [Банк] под [Z]% годовых'. "
-    "Используй актуальные ставки банков РФ (Альфа-Банк, Т-Банк, ВТБ: 16-20% для новых клиентов). "
-    "Твой ответ должен быть в формате JSON: {'insight': 'текст совета', 'summary': {'total_income': 'сумма', 'total_expense': 'сумма', 'savings_rate': 'процент'}}."
+    "Ты финансовый советник. Проанализируй период с {start_date} по {end_date}. "
+    "Поступления: {income}, Списания: {expense}. Дай 3 коротких совета по оптимизации бюджета в стиле Apple/Fintech (без воды, строго по делу)."
 )
 
-async def _cpu_bound_llm_simulation(year: int) -> dict:
+async def _cpu_bound_llm_simulation(start_date: str, end_date: str, income: float, expense: float) -> dict:
     """
     Simulates LLM processing (CPU-heavy) for the financial mentor.
     """
     await asyncio.sleep(3)  # Heavy thinking
     
-    # Mock result calibration
+    insight_text = (
+        f"Анализ периода {start_date} — {end_date}. "
+        "1. Диверсифицируйте поступления: ваши доходы стабильны, но инфляция требует роста капитала. "
+        "2. Оптимизируйте категории с высоким оттоком: снизьте расходы на 15%, чтобы создать буфер ликвидности. "
+        "3. Переместите свободные средства на депозит с дневной капитализацией (статус Premium: 18%)."
+    )
+    
+    savings = income - expense
+    savings_rate = (savings / income * 100) if income > 0 else 0
+
     return {
         "generated_at": datetime.now().isoformat(),
-        "insight": (
-            "Привет! Отличный план — 'Ремонт на кухне'. Я проанализировал твои траты. "
-            "Если снизишь расходы на Рестораны на 50%, накопишь на 300 000 ₽ на 3 месяца быстрее! "
-            "Вы отлично справляетесь! Рекомендую открыть накопительный счет в Т-Банке или ВТБ под 17% годовых, "
-            "чтобы капитализировать сэкономленные средства."
-        ),
+        "insight": insight_text,
         "summary": {
-            "total_income": "184_200",
-            "total_expense": "100_000",
-            "savings_rate": "45.0%",
-            "top_expense_category": "Продукты",
-            "top_growth_category": "Рестораны",
+            "total_income": str(income),
+            "total_expense": str(expense),
+            "savings_rate": f"{savings_rate:.1f}%",
+            "top_expense_category": "Анализ...",
+            "top_growth_category": "Анализ...",
         }
     }
 
 
-async def generate_annual_llm_insight(ctx: dict, user_id: int, year: int) -> dict:
+async def generate_annual_llm_insight(ctx: dict, user_id: int, start_date_str: str, end_date_str: str) -> dict:
     """
-    arq task: generate a yearly financial insight via mock LLM.
+    arq task: generate financial insight via mock LLM for date range.
     """
-    logger.info("Generating LLM insight for user=%d year=%d", user_id, year)
+    logger.info("Generating LLM insight for user=%d %s to %s", user_id, start_date_str, end_date_str)
 
-    # Use pure async sleep to avoid multiprocess hangs on Windows
-    result = await _cpu_bound_llm_simulation(year)
+    SessionLocal = ctx["SessionLocal"]
+    from src.services.dashboard_service import get_monthly_dashboard
+    
+    start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+    end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+    
+    async with SessionLocal() as session:
+        dashboard = await get_monthly_dashboard(session, user_id, start_date, end_date)
+        period_income = float(dashboard.period_income)
+        period_expense = float(dashboard.period_expense)
+
+    result = await _cpu_bound_llm_simulation(start_date_str, end_date_str, period_income, period_expense)
 
     # Persist to Redis with 24h TTL
     redis = ctx.get("redis")
     if redis is not None:
-        cache_key = f"insight:{user_id}:{year}"
+        cache_key = f"insight:{user_id}:{start_date_str}:{end_date_str}"
         await redis.set(cache_key, json.dumps(result, ensure_ascii=False), ex=settings.redis_insight_ttl)
         logger.info("Cached insight at key=%s TTL=%ds", cache_key, settings.redis_insight_ttl)
 
@@ -83,7 +94,9 @@ async def startup(ctx: dict) -> None:
     from redis.asyncio import Redis
 
     ctx["redis"] = Redis.from_url(settings.redis_url, decode_responses=True)
-    logger.info("arq worker started, Redis connected.")
+    engine = create_async_engine(settings.database_url)
+    ctx["SessionLocal"] = async_sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+    logger.info("arq worker started, Redis & DB connected.")
 
 
 async def shutdown(ctx: dict) -> None:

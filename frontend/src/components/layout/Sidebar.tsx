@@ -25,6 +25,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 
 const NAV_ITEMS = [
   { name: 'Обзор', path: '/', icon: LayoutDashboard },
@@ -36,74 +37,50 @@ const NAV_ITEMS = [
 ];
 
 function ThemeToggle() {
-  const [isDark, setIsDark] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return document.documentElement.classList.contains('dark') ||
-        localStorage.getItem('theme') === 'dark';
-    }
-    return false;
-  });
-
-  useEffect(() => {
-    // Add transitioning class for smooth theme change
-    document.documentElement.classList.add('transitioning');
-
-    if (isDark) {
-      document.documentElement.classList.remove('light');
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      document.documentElement.classList.add('light');
-      localStorage.setItem('theme', 'light');
-    }
-
-    // Remove transitioning class after animation completes
-    const timer = setTimeout(() => {
-      document.documentElement.classList.remove('transitioning');
-    }, 600);
-    return () => clearTimeout(timer);
-  }, [isDark]);
+  const { isDarkMode, toggleTheme } = useTheme();
 
   return (
     <div className="flex items-center justify-between px-3">
-      <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-aura-gold/40 font-bold">
+      <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-aura-gold/50 font-bold">
         Тема
       </span>
       <button
-        onClick={() => setIsDark(!isDark)}
-        className="w-14 h-7 rounded-full bg-aura-gold/10 dark:bg-white/5 relative p-1 flex items-center border border-aura-gold/10 hover:border-aura-gold/20 transition-colors"
+        onClick={toggleTheme}
+        className="w-14 h-8 rounded-full bg-slate-200 dark:bg-slate-800 relative p-1 flex items-center cursor-pointer transition-colors duration-500"
         aria-label="Переключить тему"
       >
         <motion.div
-          animate={{ x: isDark ? 26 : 0 }}
+          className="w-6 h-6 rounded-full bg-white dark:bg-aura-gold flex items-center justify-center shadow-md overflow-hidden"
+          layout
           transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-          className="w-5 h-5 rounded-full bg-aura-gold flex items-center justify-center shadow-lg"
         >
           <AnimatePresence mode="wait">
-            {isDark ? (
+            {isDarkMode ? (
               <motion.div
                 key="moon"
-                initial={{ scale: 0, rotate: -180, y: 10 }}
-                animate={{ scale: 1, rotate: 0, y: 0 }}
-                exit={{ scale: 0, rotate: 180, y: -10 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                initial={{ rotate: -180, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                exit={{ rotate: 180, opacity: 0 }}
+                transition={{ duration: 0.3 }}
               >
-                <Moon size={11} className="text-aura-graphite" />
+                <Moon size={12} className="text-[#121212]" />
               </motion.div>
             ) : (
               <motion.div
                 key="sun"
-                initial={{ scale: 0, rotate: 180, y: -10 }}
-                animate={{ scale: 1, rotate: 0, y: 0 }}
-                exit={{ scale: 0, rotate: -180, y: 10 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                initial={{ rotate: 180, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                exit={{ rotate: -180, opacity: 0 }}
+                transition={{ duration: 0.3 }}
               >
-                <Sun size={11} className="text-aura-graphite" />
+                <Sun size={12} className="text-amber-500" />
               </motion.div>
             )}
           </AnimatePresence>
         </motion.div>
+        
+        {/* Fill logic for sliding */}
+        <div className={`flex-1 ${isDarkMode ? '' : 'order-last'}`} />
       </button>
     </div>
   );
@@ -237,7 +214,7 @@ export function Sidebar() {
       <aside
         className={cn(
           "flex flex-col w-72 min-h-screen p-7 transition-all duration-500 border-r z-50",
-          "bg-aura-ivory dark:bg-aura-graphite border-aura-gold/[0.06]",
+          "bg-aura-ivory dark:bg-[#0A0A0A] border-aura-gold/[0.06] dark:border-white/5",
           // Mobile
           "fixed lg:relative",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"

@@ -8,6 +8,7 @@ Time Complexity of building the response: O(N) where N = number of transactions 
 """
 from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -24,17 +25,18 @@ class CategoryRowSchema(BaseModel):
     """
     One row of the budget matrix.
 
-    Invariant: len(days) == 31.  Empty days carry amount=0.00.
+    Dynamic rows now correspond to the selected date range.
     Delta = planned - fact.  Positive delta means under-spend.
     """
 
     category_id: int
     category_name: str
+    type: str | None = None
     planned: Decimal = Field(default=Decimal("0.00"), max_digits=12, decimal_places=2)
     fact: Decimal = Field(default=Decimal("0.00"), max_digits=12, decimal_places=2)
     delta: Decimal = Field(default=Decimal("0.00"), max_digits=12, decimal_places=2)
     days: list[DayCellSchema] = Field(
-        ..., min_length=31, max_length=31, description="Exactly 31 cells, day 1–31"
+        ..., description="Dynamic array of cells depending on bucketing length"
     )
 
 
@@ -46,8 +48,13 @@ class DashboardResponse(BaseModel):
     categories with zero transactions (they still appear with plan data).
     """
 
-    month: int = Field(..., ge=1, le=12)
-    year: int = Field(..., ge=2000, le=2100)
+    month: int | None = Field(default=None)
+    year: int | None = Field(default=None)
+    start_date: date | None = None
+    end_date: date | None = None
+    total_balance_all_time: Decimal = Field(default=Decimal("0.00"), max_digits=12, decimal_places=2)
+    period_income: Decimal = Field(default=Decimal("0.00"), max_digits=12, decimal_places=2)
+    period_expense: Decimal = Field(default=Decimal("0.00"), max_digits=12, decimal_places=2)
     rows: list[CategoryRowSchema]
 
     model_config = ConfigDict(from_attributes=True)
