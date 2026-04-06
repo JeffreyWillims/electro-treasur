@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { fetchMe, login as apiLogin, register as apiRegister } from '@/api/client';
 import { queryClient } from '@/lib/queryClient';

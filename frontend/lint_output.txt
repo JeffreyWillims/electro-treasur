@@ -1,0 +1,77 @@
+
+> frontend@0.0.0 lint
+> eslint .
+
+
+D:\programmer\Anti_project\electro-treasur\frontend\src\api\useLLMInsight.ts
+  67:93  error    Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+  74:6   warning  React Hook useCallback has an unnecessary dependency: 'userId'. Either exclude it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\programmer\Anti_project\electro-treasur\frontend\src\components\analytics\MainAnalytics.tsx
+  46:9   error  'entries' is never reassigned. Use 'const' instead  prefer-const
+  91:55  error  Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+
+D:\programmer\Anti_project\electro-treasur\frontend\src\components\analytics\SavingsNavigator.tsx
+   30:52  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        @typescript-eslint/no-explicit-any
+   32:36  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        @typescript-eslint/no-explicit-any
+   33:35  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        @typescript-eslint/no-explicit-any
+  108:9   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\programmer\Anti_project\electro-treasur\frontend\src\components\analytics\SavingsNavigator.tsx:108:9
+  106 |     if (profile) {
+  107 |       if (monthlyIncome === 0) {
+> 108 |         setMonthlyIncome(parseFloat(profile.avg_income));
+      |         ^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  109 |       }
+  110 |       if (Object.keys(adjustments).length === 0) {
+  111 |         const initialAdj: Record<number, number> = {};  react-hooks/set-state-in-effect
+  118:6   warning  React Hook useEffect has missing dependencies: 'adjustments' and 'monthlyIncome'. Either include them or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            react-hooks/exhaustive-deps
+
+D:\programmer\Anti_project\electro-treasur\frontend\src\components\dashboard\CategoryPieChart.tsx
+  15:45  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\programmer\Anti_project\electro-treasur\frontend\src\components\dashboard\QuickEntry.tsx
+  56:9  error  'raw' is never reassigned. Use 'const' instead  prefer-const
+
+D:\programmer\Anti_project\electro-treasur\frontend\src\components\dashboard\SpendingChart.tsx
+  44:52  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\programmer\Anti_project\electro-treasur\frontend\src\components\profile\ProfileSettings.tsx
+  21:7   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\programmer\Anti_project\electro-treasur\frontend\src\components\profile\ProfileSettings.tsx:21:7
+  19 |   useEffect(() => {
+  20 |     if (user) {
+> 21 |       setFullName(user.full_name || '');
+     |       ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  22 |       setPhone(user.phone || '');
+  23 |       setMonthlyIncome(user.monthly_income?.toString() || '');
+  24 |     }  react-hooks/set-state-in-effect
+  48:19  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+
+D:\programmer\Anti_project\electro-treasur\frontend\src\context\AuthContext.tsx
+  83:17  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\programmer\Anti_project\electro-treasur\frontend\src\context\ThemeContext.tsx
+  67:14  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\programmer\Anti_project\electro-treasur\frontend\vite.config.ts
+  23:28  error  '_options' is defined but never used  @typescript-eslint/no-unused-vars
+  24:35  error  '_req' is defined but never used      @typescript-eslint/no-unused-vars
+  24:41  error  '_res' is defined but never used      @typescript-eslint/no-unused-vars
+
+✖ 19 problems (17 errors, 2 warnings)
+  2 errors and 0 warnings potentially fixable with the `--fix` option.
+

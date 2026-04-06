@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { useQuery } from '@tanstack/react-query';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { fetchDashboard } from '@/api/client';

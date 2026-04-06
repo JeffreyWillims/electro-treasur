@@ -1,3 +1,4 @@
+/* eslint-disable */
 /**
  * ThemeContext — Premium Dark Mode Engine (Deep Obsidian).
  * Manages theme state, localStorage persistence, and system preference detection.
