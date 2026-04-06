@@ -54,7 +54,7 @@ export function InsightModal({
 
             {/* Header */}
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#FF7A00] to-[#FFA011] flex items-center justify-center shadow-lg shadow-[#FF7A00]/20">
                 <Sparkles className="w-6 h-6 text-white" />
               </div>
               <div>

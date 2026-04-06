@@ -9,7 +9,7 @@ export function FeedbackWidget() {
     <>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-8 right-8 z-50 bg-emerald-600 text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform"
+        className="fixed bottom-8 right-8 z-50 bg-[#FF7A00] text-white w-14 h-14 rounded-full shadow-2xl shadow-[#FF7A00]/20 flex items-center justify-center hover:scale-110 hover:bg-[#EA6A00] transition-all duration-300"
       >
         {isOpen ? <X className="w-6 h-6" /> : <Feather className="w-6 h-6" />}
       </button>
@@ -34,7 +34,7 @@ export function FeedbackWidget() {
             </div>
             
             <input 
-              value="support@aurawealth.com" 
+              value="support@citrinevault.com" 
               readOnly 
               className="w-full bg-slate-100 text-slate-500 text-sm p-3 rounded-lg mb-4 outline-none" 
             />

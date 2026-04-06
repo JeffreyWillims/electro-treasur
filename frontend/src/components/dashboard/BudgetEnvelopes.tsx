@@ -14,17 +14,22 @@ const ENVELOPE_ICONS = ['🏠', '🛒', '🚗', '📱', '🎭', '💊', '🎓', 
 export function BudgetEnvelopes() {
   const { data: dashboard, isLoading } = useQuery({
     queryKey: ['dashboard'],
-    queryFn: () => fetchDashboard(new Date().getMonth() + 1, new Date().getFullYear()),
+    queryFn: () => {
+      const d = new Date();
+      const start = new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0] as string;
+      const end = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0] as string;
+      return fetchDashboard(start, end);
+    },
   });
 
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         {[1, 2, 3, 4].map(i => (
-          <div key={i} className="premium-card p-6 animate-pulse">
-            <div className="h-4 w-1/3 bg-aura-gold/10 rounded mb-4" />
-            <div className="h-8 w-2/3 bg-aura-gold/10 rounded mb-6" />
-            <div className="h-1 bg-aura-gold/10 rounded-full" />
+          <div key={i} className="premium-card p-6 animate-pulse backdrop-blur-3xl backdrop-saturate-150 bg-white/40 dark:bg-[#111111]/40 border border-white/20">
+            <div className="h-4 w-1/3 bg-[#FF7A00]/10 rounded mb-4" />
+            <div className="h-8 w-2/3 bg-[#FF7A00]/10 rounded mb-6" />
+            <div className="h-1 bg-[#FF7A00]/10 rounded-full" />
           </div>
         ))}
       </div>
@@ -38,12 +43,12 @@ export function BudgetEnvelopes() {
 
   if (expenseRows.length === 0) {
     return (
-      <div className="premium-card p-10 text-center">
-        <Banknote className="w-8 h-8 text-aura-gold/20 mx-auto mb-4" />
-        <p className="font-serif text-lg text-aura-graphite/30 dark:text-aura-ivory/20 italic">
+      <div className="premium-card p-10 text-center backdrop-blur-3xl backdrop-saturate-150 bg-white/40 dark:bg-[#111111]/40 border border-white/20">
+        <Banknote className="w-8 h-8 text-[#FF7A00]/20 mx-auto mb-4" />
+        <p className="font-serif text-lg text-[#1C3F35]/40 dark:text-[#FDFBF7]/30 italic">
           Бюджетных конвертов пока нет
         </p>
-        <p className="text-[10px] font-mono text-aura-gold/30 mt-2 uppercase tracking-wider">
+        <p className="text-[10px] font-mono text-[#FF7A00]/50 mt-2 uppercase tracking-wider font-bold">
           Создайте бюджет на текущий месяц
         </p>
       </div>
@@ -66,86 +71,89 @@ export function BudgetEnvelopes() {
             key={row.category_id}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
+            whileHover={{ scale: 1.05, rotate: 1 }}
             transition={{ delay: index * 0.08, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             className={cn(
-              "premium-card p-8 min-h-[240px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.08)] transition-all group cursor-default dark:shadow-[0_8px_30px_rgba(255,255,255,0.02)]",
-              isOver && "border-expense/10"
+              "premium-card p-8 min-h-[240px] backdrop-blur-3xl backdrop-saturate-150 bg-white/40 dark:bg-[#111111]/40 border border-white/20",
+              "shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(255,255,255,0.02)] transition-all cursor-default",
+              "hover:shadow-[0_0_30px_rgba(255,122,0,0.25)] hover:border-[#FF7A00]/40 z-10",
+              isOver && "border-rose-500/30"
             )}
           >
             {/* Header */}
             <div className="flex justify-between items-start mb-5">
-              <span className="text-2xl">{icon}</span>
+              <span className="text-3xl filter drop-shadow-md">{icon}</span>
               <div className={cn(
                 "px-2.5 py-1 rounded-full text-[9px] font-mono font-bold uppercase tracking-wider",
                 isOver
-                  ? "bg-expense/[0.06] text-expense"
+                  ? "bg-rose-500/[0.1] text-rose-600 dark:text-rose-400"
                   : isWarning
-                  ? "bg-amber-500/[0.06] text-amber-600 dark:text-amber-400"
-                  : "bg-aura-emerald/[0.06] text-aura-emerald"
+                  ? "bg-amber-500/[0.1] text-amber-600 dark:text-amber-400"
+                  : "bg-[#1C3F35]/[0.08] dark:bg-emerald-500/[0.1] text-[#1C3F35] dark:text-emerald-400"
               )}>
                 {isOver ? "Превышен" : isWarning ? "Внимание" : "В норме"}
               </div>
             </div>
 
             {/* Category Name */}
-            <h3 className="text-premium text-base mb-1 leading-tight">{row.category_name}</h3>
-            <p className="text-[9px] font-mono text-aura-gold/35 uppercase tracking-wider mb-5">
+            <h3 className="text-xl font-serif font-bold text-[#1C3F35] dark:text-[#FDFBF7] mb-1 leading-tight">{row.category_name}</h3>
+            <p className="text-[10px] font-mono text-[#FF7A00]/50 font-bold uppercase tracking-wider mb-5">
               Конверт #{row.category_id}
             </p>
 
             {/* Amounts */}
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="flex justify-between items-end">
                 <div>
-                  <span className="font-mono text-3xl font-bold text-aura-graphite dark:text-aura-ivory shadow-[1px_1px_0px_rgba(255,255,255,0.5),-1px_-1px_1px_rgba(0,0,0,0.1),0px_4px_6px_rgba(0,0,0,0.05)]">
+                  <span className="font-mono text-4xl font-bold text-[#1C3F35] dark:text-[#FDFBF7] tracking-tighter">
                     {fact.toLocaleString('ru-RU', { maximumFractionDigits: 0 })}
                   </span>
-                  <span className="text-[10px] font-mono text-aura-gold/40 ml-1.5">
+                  <span className="text-[10px] font-mono text-[#FF7A00]/60 ml-2 font-bold uppercase tracking-widest">
                     потрачено
                   </span>
                 </div>
-                <span className="text-[10px] font-mono text-aura-gold/40">
+                <span className="text-[10px] font-mono text-[#1C3F35]/40 dark:text-[#FDFBF7]/40 font-bold uppercase tracking-wider">
                   из {planned.toLocaleString('ru-RU', { maximumFractionDigits: 0 })}
                 </span>
               </div>
 
               {/* Progress Bar — "Envelope Fill" */}
-              <div className="h-1.5 bg-aura-gold/[0.06] rounded-full overflow-hidden">
+              <div className="h-2 bg-[#FF7A00]/[0.06] rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${Math.min(100, percent)}%` }}
-                  transition={{ duration: 1, delay: index * 0.1, ease: 'easeOut' }}
+                  transition={{ duration: 1.2, delay: index * 0.1, ease: 'easeOut' }}
                   className={cn(
                     "h-full rounded-full transition-colors",
                     isOver
-                      ? "bg-expense shadow-[0_0_8px_rgba(192,57,43,0.2)]"
+                      ? "bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.4)]"
                       : isWarning
-                      ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.15)]"
-                      : "bg-aura-gold shadow-[0_0_8px_rgba(197,160,89,0.2)]"
+                      ? "bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.3)]"
+                      : "bg-[#FF7A00] shadow-[0_0_12px_rgba(255,122,0,0.3)]"
                   )}
                 />
               </div>
 
               {/* Footer info */}
-              <div className="flex justify-between items-center pt-1">
-                <div className="flex items-center gap-1.5 text-[9px] font-mono font-bold uppercase tracking-wider">
+              <div className="flex justify-between items-center pt-2">
+                <div className="flex items-center gap-2 text-[10px] font-mono font-bold uppercase tracking-wider">
                   {isOver ? (
                     <>
-                      <AlertCircle size={10} className="text-expense" />
-                      <span className="text-expense">
+                      <AlertCircle size={12} className="text-rose-500" />
+                      <span className="text-rose-500">
                         +{(fact - planned).toLocaleString('ru-RU', { maximumFractionDigits: 0 })} сверх
                       </span>
                     </>
                   ) : (
                     <>
-                      <TrendingDown size={10} className="text-aura-emerald" />
-                      <span className="text-aura-emerald/70">
+                      <TrendingDown size={12} className="text-emerald-600 dark:text-emerald-500" />
+                      <span className="text-emerald-700 dark:text-emerald-400">
                         {remaining.toLocaleString('ru-RU', { maximumFractionDigits: 0 })} осталось
                       </span>
                     </>
                   )}
                 </div>
-                <span className="text-[10px] font-mono font-bold text-aura-gold/50">
+                <span className="text-sm font-mono font-bold text-[#1C3F35] dark:text-[#FDFBF7]">
                   {percent.toFixed(0)}%
                 </span>
               </div>

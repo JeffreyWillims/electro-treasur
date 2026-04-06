@@ -20,7 +20,7 @@ export function RegisterForm() {
     setIsSubmitting(true);
     try {
       await register({ email, password, full_name: fullName, phone: phone || '' });
-      toast.success('Аккаунт Aura Wealth создан');
+      toast.success('Аккаунт Citrine Vault создан');
       navigate('/');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Ошибка регистрации';
@@ -31,11 +31,11 @@ export function RegisterForm() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 relative overflow-hidden flex items-center justify-center">
-      {/* 50% Mesh Gradient */}
-      <div className="absolute top-0 -left-4 w-[400px] h-[400px] bg-emerald-400 rounded-full mix-blend-multiply filter blur-3xl opacity-80 animate-blob"></div>
-      <div className="absolute top-0 -right-4 w-[400px] h-[400px] bg-amber-400 rounded-full mix-blend-multiply filter blur-3xl opacity-80 animate-blob animation-delay-2000"></div>
-      <div className="absolute -bottom-8 left-20 w-[400px] h-[400px] bg-teal-400 rounded-full mix-blend-multiply filter blur-3xl opacity-80 animate-blob animation-delay-4000"></div>
+    <div className="min-h-screen bg-[#FDFBF7] relative overflow-hidden flex items-center justify-center">
+      {/* California Sunset Mesh Gradient */}
+      <div className="absolute top-0 -left-4 w-[400px] h-[400px] bg-orange-400 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
+      <div className="absolute top-0 -right-4 w-[400px] h-[400px] bg-amber-300 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
+      <div className="absolute -bottom-8 left-20 w-[400px] h-[400px] bg-emerald-300 rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-blob animation-delay-4000"></div>
 
       <motion.div
         variants={{
@@ -60,11 +60,11 @@ export function RegisterForm() {
           }}
           className="w-full flex flex-col items-center justify-center text-center mb-10"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-900 rounded-full mb-6">
+          <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#FF7A00] to-[#FFA011] rounded-full mb-6 shadow-lg shadow-[#FF7A00]/20">
             <Wallet className="text-white w-6 h-6" />
-            <span className="text-white font-bold text-xl tracking-widest">Aura Wealth</span>
+            <span className="text-white font-extrabold text-xl tracking-wider">Citrine Vault</span>
           </div>
-          <h1 className="text-3xl font-semibold text-emerald-800 tracking-tight">
+          <h1 className="text-3xl font-semibold text-[#1C3F35] tracking-tight">
             Создание аккаунта
           </h1>
         </motion.div>
@@ -75,7 +75,7 @@ export function RegisterForm() {
             hidden: { opacity: 0, y: 40 },
             visible: { opacity: 1, y: 0, transition: { duration: 1, ease: [0.22, 1, 0.36, 1] } }
           }}
-          className="relative w-full max-w-[460px] bg-white/60 backdrop-blur-2xl border border-white/50 shadow-[0_8px_32px_rgba(0,0,0,0.05)] rounded-3xl p-12 z-10"
+          className="relative w-full max-w-[460px] bg-white/60 backdrop-blur-2xl border border-white/50 shadow-[0_8px_32px_rgba(28,63,53,0.05)] rounded-3xl p-12 z-10"
         >
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 gap-5">
@@ -87,7 +87,7 @@ export function RegisterForm() {
                 }}
                 className="group relative"
               >
-                <label className="block mb-2 text-lg font-medium text-slate-900 dark:text-slate-100 transition-transform duration-500 group-focus-within:-translate-y-1">Полное имя</label>
+                <label className="block mb-2 text-lg font-medium text-[#1C3F35] transition-transform duration-500 group-focus-within:-translate-y-1">Полное имя</label>
                 <input
                   type="text"
                   required
@@ -105,7 +105,7 @@ export function RegisterForm() {
                 }}
                 className="group relative"
               >
-                <label className="block mb-2 text-lg font-medium text-slate-900 dark:text-slate-100 transition-transform duration-500 group-focus-within:-translate-y-1">Email</label>
+                <label className="block mb-2 text-lg font-medium text-[#1C3F35] transition-transform duration-500 group-focus-within:-translate-y-1">Email</label>
                 <input
                   type="email"
                   required
@@ -123,13 +123,13 @@ export function RegisterForm() {
                 }}
                 className="group relative"
               >
-                <label className="text-lg font-medium text-slate-900 mb-2 block">Телефон</label>
-                <div className="relative flex items-center w-full h-14 bg-white/80 border border-slate-300 rounded-xl focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200/50 transition-all overflow-hidden">
-                  <span className="absolute left-4 text-slate-400 font-medium text-lg pointer-events-none">+</span>
+                <label className="text-lg font-medium text-[#1C3F35] mb-2 block">Телефон</label>
+                <div className="relative flex items-center w-full h-14 bg-white/60 border border-vault-pine/10 rounded-xl focus-within:border-[#1C3F35] focus-within:ring-2 focus-within:ring-[#1C3F35]/10 transition-all overflow-hidden">
+                  <span className="absolute left-4 text-vault-pine/30 font-medium text-lg pointer-events-none">+</span>
                   <input 
                     type="tel" 
                     placeholder="7 (900) 000-00-00" 
-                    className="w-full h-full pl-8 pr-4 bg-transparent outline-none text-slate-900 text-lg"
+                    className="w-full h-full pl-8 pr-4 bg-transparent outline-none text-[#1C3F35] text-lg"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                   />
@@ -144,7 +144,7 @@ export function RegisterForm() {
                 }}
                 className="group relative"
               >
-                <label className="block mb-2 text-lg font-medium text-slate-900 dark:text-slate-100 transition-transform duration-500 group-focus-within:-translate-y-1">Пароль</label>
+                <label className="block mb-2 text-lg font-medium text-[#1C3F35] transition-transform duration-500 group-focus-within:-translate-y-1">Пароль</label>
                 <input
                   type="password"
                   required
@@ -187,12 +187,12 @@ export function RegisterForm() {
             hidden: { opacity: 0 },
             visible: { opacity: 1, transition: { delay: 1, duration: 1 } }
           }}
-          className="text-center mt-12 text-sm text-aura-graphite-light/30 dark:text-aura-ivory/20"
+          className="text-center mt-12 text-sm text-vault-pine/30"
         >
           Уже есть аккаунт?{' '}
           <Link
             to="/login"
-            className="font-bold text-aura-graphite-light dark:text-aura-ivory hover:opacity-60 transition-opacity underline underline-offset-8 decoration-aura-graphite-light/10"
+            className="font-bold text-vault-pine hover:opacity-60 transition-opacity underline underline-offset-8 decoration-vault-pine/10"
           >
             Войти
           </Link>

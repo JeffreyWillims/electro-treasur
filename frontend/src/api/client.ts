@@ -1,5 +1,5 @@
 /**
- * API Client — typed fetch wrappers for the Aura Wealth backend.
+ * API Client — typed fetch wrappers for the Citrine Vault backend.
  * All responses validated against contract types. Zero `any` types in public API.
  *
  * Authorization: JWT Bearer tokens from localStorage('aura_token').

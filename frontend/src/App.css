@@ -1,4 +1,4 @@
-/* ── Aura Wealth — App-Level Utilities ─────────────────────────────── */
+/* ── Citrine Vault — App-Level Utilities ─────────────────────────────── */
 
 /* Base layout container */
 .app-container {
@@ -18,19 +18,19 @@
 /* ── Decorative Dividers ─────────────────────────────────────────────── */
 .divider-gold {
   height: 1px;
-  background: linear-gradient(to right, transparent, var(--aura-gold), transparent);
+  background: linear-gradient(to right, transparent, var(--citrine-orange), transparent);
   opacity: 0.15;
 }
 
 .divider-fade {
   height: 1px;
-  background: linear-gradient(to right, var(--aura-gold), transparent);
+  background: linear-gradient(to right, var(--citrine-orange), transparent);
   opacity: 0.1;
 }
 
 /* ── Number Formatting ───────────────────────────────────────────────── */
 .mono-amount {
-  font-family: 'Space Mono', monospace;
+  font-family: 'SF Mono', 'Space Mono', monospace;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }
@@ -45,9 +45,9 @@
 }
 
 .ambient-orb.gold {
-  background: var(--aura-gold);
+  background: var(--citrine-orange);
 }
 
 .ambient-orb.emerald {
-  background: var(--aura-emerald);
+  background: var(--vault-pine);
 }

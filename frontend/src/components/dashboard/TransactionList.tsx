@@ -4,9 +4,9 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import { fetchTransactions, fetchCategories } from '@/api/client';
-import type { CategoryRead } from '@/types';
+import type { CategoryRead, TransactionResponse } from '@/types';
 import { cn } from '@/lib/utils';
-import { ArrowUpRight, ArrowDownLeft, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 
@@ -40,11 +40,10 @@ export function TransactionList() {
     queryFn: fetchCategories,
   });
 
-  const filteredTransactions = transactions.filter(tx => {
-    const rtx = tx as any;
-    const matchesSearch = rtx.category_name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          rtx.comment?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory ? String(rtx.category_id) === selectedCategory : true;
+  const filteredTransactions = transactions.filter((tx: TransactionResponse) => {
+    const matchesSearch = tx.category_name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          tx.comment?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory ? String(tx.category_id) === selectedCategory : true;
     return matchesSearch && matchesCategory;
   });
 
@@ -65,7 +64,7 @@ export function TransactionList() {
             <div>
               <h1 className="text-5xl md:text-6xl font-bold text-premium tracking-tighter leading-none mb-3">История</h1>
               <p className="text-[10px] font-mono text-aura-gold uppercase tracking-[0.4em] font-bold opacity-60">
-                Финансовый хронограф Aura Wealth
+                Финансовый хронограф Citrine Vault
               </p>
             </div>
             <div className="flex gap-6 text-[10px] font-mono font-bold uppercase tracking-widest text-aura-gold/40">

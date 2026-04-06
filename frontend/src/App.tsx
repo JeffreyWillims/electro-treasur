@@ -1,6 +1,6 @@
 /**
- * App.tsx — Root application layout.
- * CSS Grid for responsive dashboard (sidebar + main content area).
+ * App.tsx — Root application layout for Citrine Vault.
+ * CSS Grid for responsive dashboard (floating sidebar + main content area).
  * TanStack QueryClientProvider wraps the entire tree.
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -10,11 +10,12 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { BalanceCards } from '@/components/dashboard/BalanceCards';
 import { QuickEntry } from '@/components/dashboard/QuickEntry';
 import { TransactionList } from '@/components/dashboard/TransactionList';
-import { Sparkles, Wallet } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { FeedbackWidget } from '@/components/layout/FeedbackWidget';
 import { InsightModal } from '@/components/insights/InsightModal';
 import { useState } from 'react';
-import { ThemeProvider, useTheme } from '@/context/ThemeContext';
+import { ThemeProvider } from '@/context/ThemeContext';
+import { motion } from 'framer-motion';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,10 +29,11 @@ const queryClient = new QueryClient({
 
 function DashboardLayout() {
   return (
-    <div className="flex min-h-screen bg-white dark:bg-[#0A0A0A] transition-colors duration-500">
+    <div className="flex min-h-screen bg-[#FDFBF7] dark:bg-[#050505] transition-colors duration-500 relative overflow-hidden">
+      <div className="fixed -top-40 -left-40 w-96 h-96 bg-emerald-300/30 dark:bg-emerald-900/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob pointer-events-none z-0"></div>
       <Sidebar />
 
-      {/* Main Content Area */}
+      {/* Main Content Area — accounts for floating sidebar margins */}
       <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
         <Outlet />
       </main>
@@ -40,7 +42,6 @@ function DashboardLayout() {
 }
 
 function Overview() {
-  const { isDarkMode } = useTheme();
   const [startDate, setStartDate] = useState<string>(() => {
     const d = new Date();
     d.setDate(1);
@@ -59,31 +60,69 @@ function Overview() {
   return (
     <div className="max-w-7xl mx-auto pt-12 pb-24">
       <div className="flex flex-col gap-16">
-        {/* Hero Header Section */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
-          <div>
-            <div className="flex items-center gap-4 mb-4">
-              <Wallet className="w-10 h-10 text-emerald-600 drop-shadow-sm" strokeWidth={2} />
-              <h1 
-                className="text-[2.5rem] font-extrabold text-slate-800 dark:text-slate-100 tracking-tight transition-colors duration-500" 
-                style={{ 
-                  textShadow: isDarkMode 
-                    ? "1px 1px 0px rgba(0,0,0,0.8), -1px -1px 0px rgba(255,255,255,0.1), 0px 4px 10px rgba(0,0,0,0.5)" 
-                    : "1px 1px 0px rgba(255,255,255,1), 0px 4px 12px rgba(0,0,0,0.06)" 
-                }}
-              >
-                Electro Treasur
+        {/* V.I.A. Command Center */}
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-2">
+          <div className="flex items-center gap-5">
+            {/* Strict Geometric Logo */}
+            <div className="relative w-14 h-14 flex items-center justify-center rounded-2xl bg-gradient-to-br from-[#1C3F35] to-[#0A1A12] dark:from-[#050505] dark:to-[#111111] shadow-[0_0_20px_rgba(197,160,89,0.15)] overflow-hidden border border-white/10">
+              <svg viewBox="0 0 100 100" className="w-14 h-14 drop-shadow-[0_0_8px_rgba(197,160,89,0.8)] z-10" fill="none" strokeWidth="2.5">
+                <circle cx="50" cy="50" r="30" stroke="#C5A059" strokeOpacity="0.3" />
+                <path d="M 50 10 L 50 90 M 10 50 L 90 50" stroke="#C5A059" strokeOpacity="0.3" />
+                <path d="M 28 28 L 72 72 M 28 72 L 72 28" stroke="#C5A059" strokeOpacity="0.15" />
+                <motion.circle
+                  cx="50"
+                  cy="50"
+                  r="30"
+                  stroke="#C5A059"
+                  strokeDasharray="15 173"
+                  strokeLinecap="round"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                  style={{ transformOrigin: "50px 50px" }}
+                />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-[2.5rem] font-extrabold tracking-tight text-[#1C3F35] dark:text-white leading-none">
+                V.I.A.
               </h1>
+              <p className="text-[#1C3F35]/50 dark:text-white/40 text-[11px] font-mono tracking-widest uppercase mt-1">Value Insight Aggregator</p>
             </div>
           </div>
           
-          <button 
-            className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2.5 px-6 rounded-full shadow-lg dark:shadow-emerald-500/20 transition-all active:scale-[0.98]"
-            onClick={() => setIsInsightOpen(true)}
-          >
-            <Sparkles className="animate-pulse w-5 h-5" />
-            AI Анализ потоков
-          </button>
+          {/* Glass Control Panel */}
+          <div className="flex flex-wrap items-center gap-3 bg-white/60 dark:bg-[#111111]/80 backdrop-blur-xl border border-vault-pine/10 dark:border-white/5 rounded-full p-1.5 shadow-sm">
+            <div className="flex items-center gap-2 px-3">
+              <input 
+                type="date" 
+                value={startDate} 
+                onChange={e => setStartDate(e.target.value)}
+                className="appearance-none bg-transparent text-vault-pine dark:text-white/80 text-sm font-semibold outline-none cursor-pointer"
+                style={{ colorScheme: 'light dark' }}
+              />
+              <span className="text-vault-pine/20 dark:text-white/20 font-medium text-sm">—</span>
+               <input 
+                type="date" 
+                value={endDate} 
+                onChange={e => setEndDate(e.target.value)}
+                className="appearance-none bg-transparent text-vault-pine dark:text-white/80 text-sm font-semibold outline-none cursor-pointer"
+                style={{ colorScheme: 'light dark' }}
+              />
+            </div>
+            
+            <button 
+              className="flex items-center gap-2 bg-[#1C3F35] dark:bg-[#FF7A00] hover:bg-[#1C3F35]/90 dark:hover:bg-[#FF7A00]/90 text-white font-semibold py-2 px-5 rounded-full shadow-lg transition-transform duration-300 active:scale-[0.98]"
+              onClick={() => setIsInsightOpen(true)}
+            >
+              <motion.div
+                animate={{ rotate: [0, 180, 360], opacity: [0.7, 1, 0.7] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+              >
+                <Sparkles className="w-4 h-4" />
+              </motion.div>
+              <span className="text-sm">Анализ потоков</span>
+            </button>
+          </div>
         </div>
 
         <InsightModal 
@@ -93,7 +132,7 @@ function Overview() {
           endDate={endDate} 
         />
 
-        <BalanceCards startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} />
+        <BalanceCards startDate={startDate} endDate={endDate} />
         <QuickEntry />
       </div>
     </div>
@@ -111,14 +150,14 @@ import { Navigate } from 'react-router-dom';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { token, isLoading } = useAuth();
-  if (isLoading) return <div className="flex items-center justify-center min-h-screen font-serif font-bold text-aura-emerald animate-pulse text-xl">Инициализация Aura Wealth...</div>;
+  if (isLoading) return <div className="flex items-center justify-center min-h-screen font-sans font-bold text-[#FF7A00] animate-pulse text-xl">Инициализация Citrine Vault...</div>;
   if (!token) return <Navigate to="/login" />;
   return <>{children}</>;
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { token, isLoading } = useAuth();
-  if (isLoading) return <div className="flex items-center justify-center min-h-screen font-serif font-bold text-aura-emerald animate-pulse text-xl">Инициализация Aura Wealth...</div>;
+  if (isLoading) return <div className="flex items-center justify-center min-h-screen font-sans font-bold text-[#FF7A00] animate-pulse text-xl">Инициализация Citrine Vault...</div>;
   if (token) return <Navigate to="/" />;
   return <>{children}</>;
 }

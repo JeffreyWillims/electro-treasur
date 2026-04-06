@@ -41,6 +41,7 @@ export interface TransactionResponse {
   entry_type: string;
   executed_at: string;
   idempotency_key: string | null;
+  comment?: string;
 }
 
 // ── Dashboard Matrix ───────────────────────────────────────────────────

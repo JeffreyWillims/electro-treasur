@@ -404,8 +404,8 @@ export function SavingsNavigator() {
                       strokeDasharray="10 10" 
                       label={{ value: 'ЦЕЛЬ', position: 'right', fill: '#fbbf24', fontSize: 10, fontWeight: 'bold' }} 
                     />
-                    <Area type="monotone" dataKey="base_savings" name="Текущий путь" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorBase)" isAnimationActive={false} activeDot={{ r: 6, strokeWidth: 0, fill: "#1e293b" }} />
-                    <Area type="monotone" dataKey="optimized_savings" name="Оптимизировано" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorOpt)" isAnimationActive={false} activeDot={{ r: 6, strokeWidth: 0, fill: "#1e293b" }} />
+                    <Area type="monotone" dataKey="base_savings" name="Текущий путь" stroke="#cbd5e1" strokeDasharray="5 5" strokeWidth={3} fillOpacity={1} fill="url(#colorBase)" isAnimationActive={false} activeDot={{ r: 6, strokeWidth: 0, fill: "#1e293b" }} />
+                    <Area type="monotone" dataKey="optimized_savings" name="Оптимизировано" stroke="#10b981" strokeWidth={4} fillOpacity={1} fill="url(#colorOpt)" style={{ filter: 'drop-shadow(0 0 12px rgba(16,185,129,0.5))' }} isAnimationActive={false} activeDot={{ r: 6, strokeWidth: 0, fill: "#1e293b" }} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -435,11 +435,12 @@ export function SavingsNavigator() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {TOP_BANKS.map(bank => (
               <motion.div 
-                whileHover={{ y: -2 }}
+                whileHover={{ y: -16 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                 key={bank.id} 
                 className={cn(
-                  "p-5 rounded-2xl border relative overflow-hidden transition-all shadow-sm",
-                  bank.rate === bankRate ? 'border-emerald-500 bg-emerald-50/50' : 'border-slate-100 bg-white hover:border-slate-200'
+                  "p-5 rounded-2xl border relative overflow-hidden transition-all shadow-sm cursor-pointer",
+                  bank.rate === bankRate ? 'border-emerald-500 bg-emerald-50/50' : 'border-slate-100 bg-white dark:bg-[#1A1A1A]/80 hover:border-[#FF7A00]/40 hover:shadow-[0_0_20px_rgba(255,122,0,0.3)]'
                 )}
               >
                 {bank.rate === bankRate && (
@@ -482,11 +483,20 @@ export function SavingsNavigator() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-lg bg-white dark:bg-[#121212]/90 backdrop-blur-3xl rounded-[2rem] shadow-2xl p-8 overflow-hidden border dark:border-white/5" 
+              className="relative w-full max-w-lg bg-white/30 dark:bg-black/40 backdrop-blur-3xl backdrop-saturate-200 border border-white/20 rounded-[2rem] shadow-[0_20px_60px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.5)] p-12 overflow-hidden" 
               onClick={e => e.stopPropagation()}
             >
-              <button onClick={handleCloseAdvisor} className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-100 transition-colors">
-                <X className="w-5 h-5 text-slate-400" />
+              {isLlmLoading && (
+                <div className="absolute top-0 left-0 w-full h-[2px] overflow-hidden">
+                  <motion.div 
+                     className="absolute top-0 left-0 h-full w-1/3 bg-[#FF7A00] shadow-[0_0_15px_#FF7A00]"
+                     animate={{ left: ["-100%", "100%"] }}
+                     transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                  />
+                </div>
+              )}
+              <button onClick={handleCloseAdvisor} className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-100/50 dark:hover:bg-white/10 transition-colors">
+                <X className="w-5 h-5 text-slate-400 dark:text-slate-300" />
               </button>
 
               <div className="flex items-center gap-4 mb-8">

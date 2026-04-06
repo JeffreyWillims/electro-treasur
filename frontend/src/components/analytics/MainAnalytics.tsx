@@ -4,11 +4,8 @@ import { SpendingChart } from '@/components/dashboard/SpendingChart';
 import { CategoryPieChart } from '@/components/dashboard/CategoryPieChart';
 import { Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-const MOCK_DATA = Array.from({ length: 30 }).map((_, i) => ({
-  date: new Date(Date.now() - (29 - i) * 86400000).toISOString().split('T')[0],
-  amount: Math.floor(Math.random() * 5000) + 500,
-}));
+import { useQuery } from '@tanstack/react-query';
+import { fetchDashboard } from '@/api/client';
 
 export function MainAnalytics() {
   const [startDate, setStartDate] = useState<string>(() => {
@@ -26,20 +23,44 @@ export function MainAnalytics() {
   const [timeframe, setTimeframe] = useState<'День' | 'Месяц' | 'Год'>('Месяц');
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
-  const filteredData = useMemo(() => {
-    // Mock filtering logic for the UI demonstration
-    if (timeframe === 'День') return MOCK_DATA.slice(-7);
-    if (timeframe === 'Год') {
-      return Array.from({ length: 12 }).map((_, i) => ({
-        date: `2026-${String(i + 1).padStart(2, '0')}`,
-        amount: Math.floor(Math.random() * 50000) + 10000,
-      }));
-    }
-    return MOCK_DATA;
-  }, [timeframe]);
+  const { data: dashboard } = useQuery({
+    queryKey: ['dashboard', startDate, endDate],
+    queryFn: () => fetchDashboard(startDate, endDate),
+  });
+
+  const chartData = useMemo(() => {
+    if (!dashboard || !dashboard.rows) return [];
+    
+    const agg: Record<string, number> = {};
+    dashboard.rows.forEach(row => {
+      row.days.forEach(day => {
+        // Here we track total flow (income + expense) to show general liquidity movement,
+        // or just expense. Let's do expense as it's typically 'spending'
+        // DayCellSchema: { day: number; amount: string; }
+        const val = parseFloat(day.amount?.toString() || '0');
+        const dStr = day.day.toString().padStart(2, '0');
+        agg[dStr] = (agg[dStr] || 0) + val;
+      });
+    });
+    
+    let entries = Object.entries(agg)
+      .map(([date, amount]) => ({ date, amount }))
+      .sort((a,b) => a.date.localeCompare(b.date));
+
+    // Simple mock filter for date representation if timeframe changes (Day/Month/Year logic)
+    if (timeframe === 'День') return entries.slice(-7);
+    if (timeframe === 'Год') return entries; // We'd ideally group by month
+    return entries; 
+  }, [dashboard, timeframe]);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-16 py-8">
+    <motion.div 
+      key={timeframe}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: "easeOut" }}
+      className="max-w-7xl mx-auto space-y-16 py-8"
+    >
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-premium text-4xl mb-2 tracking-tighter font-serif font-bold">Аналитика</h1>
@@ -104,28 +125,36 @@ export function MainAnalytics() {
         </div>
         <div className="bg-white/60 dark:bg-[#121212]/80 backdrop-blur-3xl border border-slate-100 dark:border-white/5 rounded-[2.5rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.8)] h-80 w-full hover:shadow-[0_12px_40px_rgba(0,0,0,0.08)] transition-all duration-700">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={filteredData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
-                <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0} />
+                <linearGradient id="colorAmountAnalytics" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#1C3F35" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="#1C3F35" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dy={10} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} tickFormatter={(value) => `${value} ₽`} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(28,63,53,0.05)" />
+              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#1C3F35', opacity: 0.5, fontFamily: 'monospace' }} dy={10} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#1C3F35', opacity: 0.5, fontFamily: 'monospace' }} tickFormatter={(value) => `${value} ₽`} />
               <Tooltip
-                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
-                itemStyle={{ color: '#0f172a', fontWeight: 'bold' }}
+                contentStyle={{ 
+                  borderRadius: '16px', 
+                  border: '1px solid rgba(255,255,255,0.2)', 
+                  boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
+                  background: 'rgba(255, 255, 255, 0.4)',
+                  backdropFilter: 'blur(24px) saturate(150%)',
+                  padding: '12px 16px'
+                }}
+                itemStyle={{ color: '#1C3F35', fontWeight: 'bold' }}
               />
               <Area
                 type="monotone"
                 dataKey="amount"
-                stroke="#8B5CF6"
+                stroke="#1C3F35"
                 strokeWidth={3}
                 fillOpacity={1}
-                fill="url(#colorAmount)"
-                animationDuration={1000}
+                fill="url(#colorAmountAnalytics)"
+                animationDuration={1500}
+                animationEasing="ease-in-out"
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -165,6 +194,6 @@ export function MainAnalytics() {
         <CategoryPieChart startDate={startDate} endDate={endDate} />
       </div>
 
-    </div>
+    </motion.div>
   );
 }

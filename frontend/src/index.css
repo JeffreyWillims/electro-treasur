@@ -1,5 +1,5 @@
-/* ── Google Fonts: Playfair Display, Plus Jakarta Sans, Cormorant Garamond, Space Mono ── */
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+/* ── Google Fonts: Inter for UI, Playfair Display for editorial accents ── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -14,35 +14,35 @@
   box-sizing: border-box;
 }
 
-/* ── CSS Custom Properties (Light Theme) ──────────────────────────────── */
+/* ── CSS Custom Properties (Citrine Vault — Light / California Organic) ── */
 :root {
-  --aura-ivory: #F9F9F6;
-  --aura-graphite: #121212;
-  --aura-graphite-light: #1A1A1A;
-  --aura-emerald: #2A6041;
-  --aura-gold: #C5A059;
-  --aura-ash: #F0F0F0;
-  --bg-primary: #FFFFFF; /* Pure white for Swiss Editorial background */
-  --text-primary: var(--aura-graphite-light);
-  --border-subtle: rgba(26, 26, 26, 0.06);
-  --card-bg: #FFFFFF;
-  --card-border: rgba(26, 26, 26, 0.08);
+  --vault-cream: #FDFBF7;
+  --vault-pine: #1C3F35;
+  --vault-pine-light: #2A5A47;
+  --citrine-orange: #FF7A00;
+  --citrine-glow: #FFA011;
+  --bg-primary: #FDFBF7;
+  --text-primary: #1C3F35;
+  --border-subtle: rgba(28, 63, 53, 0.06);
+  --card-bg: rgba(255, 255, 255, 0.85);
+  --card-border: rgba(28, 63, 53, 0.06);
 }
 
 .dark {
-  --aura-ivory: #0A0A0A;
-  --bg-primary: #0A0A0A;
-  --text-primary: #ECECEC;
+  --vault-cream: #050505;
+  --bg-primary: #050505;
+  --text-primary: #F0EDE8;
   --border-subtle: rgba(255, 255, 255, 0.05);
-  --card-bg: rgba(18, 18, 18, 0.8);
+  --card-bg: rgba(17, 17, 17, 0.8);
   --card-border: rgba(255, 255, 255, 0.05);
 }
 
 html {
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
 body {
@@ -53,13 +53,17 @@ body {
   transition: background-color 0.6s cubic-bezier(0.4, 0, 0.2, 1), color 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* ── Apple-style Tabular Numerals ─────────────────────────────────────── */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── Typography ───────────────────────────────────────────────────────── */
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif;
   @apply font-bold;
   letter-spacing: -0.02em;
 }
-
 
 .text-engraved {
   text-shadow: 2px 2px 0px rgba(255,255,255,0.6), 
@@ -67,19 +71,31 @@ h1, h2, h3, h4, h5, h6 {
                0px 8px 12px rgba(0,0,0,0.08);
 }
 
+.dark .text-engraved {
+  text-shadow: none;
+}
+
 .font-mono,
 [class*="font-mono"] {
-  font-family: 'Space Mono', monospace !important;
+  font-family: 'SF Mono', 'Space Mono', monospace !important;
+}
+
+/* ── Citrine Brand Gradient ───────────────────────────────────────────── */
+.text-citrine-brand {
+  background: linear-gradient(135deg, #FF7A00, #FFA011);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 /* ── Selection ───────────────────────────────────────────────────────── */
 ::selection {
-  background-color: rgba(197, 160, 89, 0.2);
+  background-color: rgba(255, 122, 0, 0.15);
   color: inherit;
 }
 
 .dark ::selection {
-  background-color: rgba(197, 160, 89, 0.3);
+  background-color: rgba(255, 122, 0, 0.25);
   color: #FFFFFF;
 }
 
@@ -90,12 +106,20 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(26, 26, 26, 0.1);
+  background: rgba(28, 63, 53, 0.1);
   border-radius: 100px;
 }
 
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 122, 0, 0.15);
+}
+
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(26, 26, 26, 0.2);
+  background: rgba(28, 63, 53, 0.2);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 122, 0, 0.3);
 }
 
 ::-webkit-scrollbar-track {
@@ -104,7 +128,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ── Focus Ring (Accessibility) ───────────────────────────────────────── */
 *:focus-visible {
-  outline: 2px solid var(--aura-graphite-light);
+  outline: 2px solid var(--citrine-orange);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -124,11 +148,17 @@ h1, h2, h3, h4, h5, h6 {
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     border: 1px solid var(--card-border);
-    @apply shadow-card transition-all duration-700 rounded-[2.5rem] overflow-hidden;
+    @apply shadow-card rounded-[2.5rem] overflow-hidden;
+    transition: all 0.3s ease-out;
   }
 
   .premium-card:hover {
-    @apply shadow-[0_20px_50px_rgba(0,0,0,0.05)];
+    @apply shadow-soft-lift;
+    transform: translateY(-2px) scale(1.005);
+  }
+
+  .dark .premium-card:hover {
+    box-shadow: 0 10px 30px rgba(255, 122, 0, 0.08);
   }
 
   .text-premium {
@@ -137,58 +167,43 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .text-gold {
-    @apply text-aura-gold font-bold tracking-[0.05em];
+    @apply text-citrine-500 font-bold tracking-[0.05em];
   }
-
 
   .hover-lift {
-    @apply transition-transform duration-300 hover:-translate-y-0.5;
+    @apply transition-all duration-300 ease-out;
   }
 
-  .aura-glow {
-    @apply shadow-glow;
+  .hover-lift:hover {
+    transform: translateY(-4px) scale(1.015);
+    @apply shadow-soft-lift;
   }
+
+  .dark .hover-lift:hover {
+    box-shadow: 0 10px 30px rgba(255, 122, 0, 0.15);
+  }
+
 
   /* ── Buttons ─────────────────────────────────────── */
   .btn-primary {
-    @apply bg-aura-graphite-light text-white px-10 py-5 rounded-2xl font-bold
-           hover:bg-aura-graphite transition-all duration-500
+    @apply bg-[#FF7A00] text-white px-10 py-5 rounded-2xl font-bold
+           hover:bg-[#EA6A00] transition-all duration-300 ease-out
            shadow-xl active:scale-[0.98];
   }
 
+  .btn-primary:hover {
+    transform: translateY(-2px) scale(1.015);
+    box-shadow: 0 20px 40px rgba(255, 122, 0, 0.2);
+  }
+
   .btn-outline {
-    @apply border border-aura-graphite-light/10 text-aura-graphite-light px-10 py-5 rounded-2xl font-bold
-           hover:bg-aura-graphite-light/5 transition-all duration-300 active:scale-[0.98];
+    @apply border border-vault-pine/10 text-vault-pine px-10 py-5 rounded-2xl font-bold
+           hover:bg-vault-pine/5 transition-all duration-300 active:scale-[0.98];
   }
 
   .btn-ghost {
-    @apply text-aura-graphite-light/60 hover:text-aura-graphite-light hover:bg-aura-graphite-light/5
+    @apply text-vault-pine/60 hover:text-vault-pine hover:bg-vault-pine/5
            px-4 py-2 rounded-xl transition-all duration-300;
-  }
-
-  /* ── Input Fields ────────────────────────────────── */
-  .input-aura {
-    @apply w-full rounded-2xl px-5 outline-none transition-all duration-300
-           text-base font-medium border border-aura-gold/10;
-    background: rgba(255, 255, 255, 0.02);
-    color: var(--text-primary);
-    height: 3.5rem;
-  }
-
-  .input-aura:focus {
-    @apply border-aura-gold/40 bg-white/5 shadow-glow;
-  }
-
-
-  .input-aura::placeholder {
-    @apply text-aura-graphite-light/20;
-  }
-
-  /* ── Label ───────────────────────────────────────── */
-  .label-aura {
-    @apply text-[10px] font-bold uppercase tracking-[0.15em] mb-2.5 block;
-    color: var(--aura-gold);
-    opacity: 0.6;
   }
 
 }
@@ -197,13 +212,11 @@ h1, h2, h3, h4, h5, h6 {
 @import 'react-phone-number-input/style.css';
 
 .PhoneInput { display: flex; gap: 12px; width: 100%; align-items: center; }
-/* Левый блок (Страна) */
-.PhoneInputCountry { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 0.75rem; padding: 0 16px; height: 3.5rem; display: flex; align-items: center; justify-content: center; min-width: 80px; transition: all 0.2s; }
-.PhoneInputCountry:focus-within { border-color: #10b981; box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2); }
+.PhoneInputCountry { background: #FAF8F3; border: 1px solid #D4CFC5; border-radius: 0.75rem; padding: 0 16px; height: 3.5rem; display: flex; align-items: center; justify-content: center; min-width: 80px; transition: all 0.3s; }
+.PhoneInputCountry:focus-within { border-color: #1C3F35; box-shadow: 0 0 0 3px rgba(28, 63, 53, 0.08); }
 .PhoneInputCountryIcon { width: 28px; height: 20px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-/* Правый блок (Номер) */
-.PhoneInputInput { flex: 1; height: 3.5rem; border: 1px solid #cbd5e1; border-radius: 0.75rem; padding: 0 16px; font-size: 1.125rem; color: #0f172a; outline: none; background: #ffffff; transition: all 0.2s; }
-.PhoneInputInput:focus { border-color: #10b981; box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2); }
+.PhoneInputInput { flex: 1; height: 3.5rem; border: 1px solid #D4CFC5; border-radius: 0.75rem; padding: 0 16px; font-size: 1.125rem; color: #1C3F35; outline: none; background: #FDFBF7; transition: all 0.3s; }
+.PhoneInputInput:focus { border-color: #1C3F35; box-shadow: 0 0 0 3px rgba(28, 63, 53, 0.08); }
 
 
 *,
