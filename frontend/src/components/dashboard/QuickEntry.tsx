@@ -1,4 +1,4 @@
-/* eslint-disable */
+ 
 /**
  * QuickEntry — Premium transaction entry form with subcategory/details support.
  * Citrine Vault California Organic Luxury aesthetic.

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { LogIn, Loader2, Wallet } from 'lucide-react';
 
 export function LoginForm() {
@@ -28,131 +28,117 @@ export function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] relative overflow-hidden flex items-center justify-center">
-      {/* California Sunset Mesh Gradient */}
-      <div className="absolute top-0 -left-4 w-[400px] h-[400px] bg-orange-400 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
-      <div className="absolute top-0 -right-4 w-[400px] h-[400px] bg-amber-300 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
-      <div className="absolute -bottom-8 left-20 w-[400px] h-[400px] bg-emerald-300 rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-blob animation-delay-4000"></div>
+    <div className="min-h-screen flex items-center justify-center bg-[#FDFBF7] dark:bg-[#050505] relative overflow-hidden px-4">
+      {/* Background atmosphere */}
+      <div className="absolute left-0 -top-[10%] h-[120%] w-48 bg-[#3A8248]/50 filter blur-[80px] animate-liquid-pillar pointer-events-none z-0" />
+      <div className="absolute -top-10 -right-20 w-[420px] h-[420px] bg-[#FF7A00]/40 rounded-full mix-blend-multiply filter blur-[100px] animate-blob z-0 pointer-events-none" />
 
+      {/* THE GLASS MONOLITH */}
       <motion.div
-        variants={{
-          hidden: { opacity: 0 },
-          visible: {
-            opacity: 1,
-            transition: {
-              staggerChildren: 0.15,
-              delayChildren: 0.2,
-            },
-          },
-        }}
-        initial="hidden"
-        animate="visible"
-        className="w-full max-w-[460px] z-10"
-
+        initial={{ opacity: 0, y: 32 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+        className="relative w-full max-w-[440px] z-10 rounded-[2.8rem] transition-all duration-700 group
+          bg-gradient-to-br from-white/30 via-white/10 to-[#FF7A00]/5
+          backdrop-blur-3xl backdrop-saturate-[180%] border border-white/40
+          shadow-[inset_0_-20px_40px_-20px_rgba(255,122,0,0.15),inset_0_20px_40px_-20px_rgba(15,23,42,0.08),0_20px_60px_-12px_rgba(0,0,0,0.12)]
+          hover:shadow-[inset_0_-30px_60px_-15px_rgba(255,180,100,0.22),inset_0_20px_40px_-20px_rgba(15,23,42,0.08),0_30px_70px_-10px_rgba(0,0,0,0.16)]
+          dark:bg-gradient-to-br dark:from-[#1a1a1a]/60 dark:via-[#111]/30 dark:to-[#FF7A00]/5
+          dark:border-white/10 dark:shadow-[inset_0_-20px_40px_-20px_rgba(255,122,0,0.12),inset_0_20px_40px_-20px_rgba(15,23,42,0.2),0_20px_60px_-12px_rgba(0,0,0,0.5)]"
       >
-        <motion.div 
-          variants={{
-            hidden: { opacity: 0, y: 40 },
-            visible: { opacity: 1, y: 0, transition: { duration: 1, ease: [0.22, 1, 0.36, 1] } }
-          }}
-          className="w-full flex flex-col items-center justify-center text-center mb-10"
-        >
-          <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#FF7A00] to-[#FFA011] rounded-full mb-6 shadow-lg shadow-[#FF7A00]/20">
-            <Wallet className="text-white w-6 h-6" />
-            <span className="text-white font-extrabold text-xl tracking-wider">Citrine Vault</span>
+        {/* ── Brand Badge ── */}
+        <div className="flex justify-center pt-10 pb-0">
+          <div className="inline-flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-[#FF7A00] to-[#FFA011] rounded-full shadow-lg shadow-[#FF7A00]/25">
+            <Wallet className="text-white w-4 h-4" />
+            <span className="text-white font-extrabold text-base tracking-widest">CITRINE VAULT</span>
           </div>
-          <h1 className="text-3xl font-semibold text-[#1C3F35] tracking-tight">
-            Вход в систему
-          </h1>
-        </motion.div>
+        </div>
 
-        {/* Form Card */}
-        <motion.div 
-          variants={{
-            hidden: { opacity: 0, y: 40 },
-            visible: { opacity: 1, y: 0, transition: { duration: 1, ease: [0.22, 1, 0.36, 1] } }
-          }}
-          className="relative w-full max-w-[460px] bg-white/60 backdrop-blur-2xl border border-white/50 shadow-[0_8px_32px_rgba(28,63,53,0.05)] rounded-3xl p-12 z-10"
-        >
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-5">
+        {/* ── Shared Tab Navigation ── */}
+        <div className="px-8 pt-6 pb-0">
+          <div className="relative flex items-center bg-black/5 dark:bg-white/5 rounded-2xl p-1">
+            {/* Active tab indicator */}
+            <motion.div
+              layoutId="auth-tab-indicator"
+              className="absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-xl bg-white dark:bg-white/10 shadow-sm"
+              transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+            />
+            {/* Login tab — active */}
+            <span className="relative flex-1 py-2.5 text-center text-sm font-bold tracking-wide text-slate-900 dark:text-white z-10 cursor-default select-none">
+              Вход
+            </span>
+            {/* Register tab */}
+            <Link
+              to="/register"
+              className="relative flex-1 py-2.5 text-center text-sm font-semibold tracking-wide text-slate-500 dark:text-white/40 z-10 hover:text-slate-700 dark:hover:text-white/70 transition-colors"
+            >
+              Регистрация
+            </Link>
+          </div>
+        </div>
 
-              <motion.div 
-                variants={{
-                  hidden: { opacity: 0, x: -20 },
-                  visible: { opacity: 1, x: 0, transition: { duration: 0.8 } }
-                }}
-                className="group relative"
+        {/* ── Form Fields ── */}
+        <div className="px-8 pt-6 pb-10">
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key="login-fields"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.4 }}
+                className="space-y-3"
               >
-                <label className="block mb-2 text-lg font-medium text-[#1C3F35] transition-transform duration-500 group-focus-within:-translate-y-1">Email</label>
                 <input
                   type="email"
                   required
-                  className="input-aura"
-                  placeholder="name@example.com"
+                  autoComplete="email"
+                  className="w-full h-13 px-5 py-3.5 text-base rounded-2xl outline-none transition-all duration-400
+                    shadow-inner bg-white/40 dark:bg-white/5
+                    border border-white/50 dark:border-white/10
+                    text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500
+                    focus:bg-white/70 dark:focus:bg-white/10 focus:border-white/80 focus:shadow-[0_0_20px_rgba(255,255,255,0.25)]"
+                  placeholder="Email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
-              </motion.div>
-              <motion.div 
-                variants={{
-                  hidden: { opacity: 0, x: -20 },
-                  visible: { opacity: 1, x: 0, transition: { duration: 0.8 } }
-                }}
-                className="group relative"
-              >
-                <label className="block mb-2 text-lg font-medium text-[#1C3F35] transition-transform duration-500 group-focus-within:-translate-y-1">Пароль</label>
                 <input
                   type="password"
                   required
-                  className="input-aura"
-                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  className="w-full h-13 px-5 py-3.5 text-base rounded-2xl outline-none transition-all duration-400
+                    shadow-inner bg-white/40 dark:bg-white/5
+                    border border-white/50 dark:border-white/10
+                    text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500
+                    focus:bg-white/70 dark:focus:bg-white/10 focus:border-white/80 focus:shadow-[0_0_20px_rgba(255,255,255,0.25)]"
+                  placeholder="Пароль"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </motion.div>
-            </div>
+            </AnimatePresence>
 
-            <motion.div
-              variants={{
-                hidden: { opacity: 0, scale: 0.95 },
-                visible: { opacity: 1, scale: 1, transition: { duration: 0.8 } }
-              }}
-            >
+            {/* ── CTA Button ── */}
+            <div className="pt-2">
               <motion.button
-                whileHover={{ scale: 1.02, y: -2 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={{ scale: 1.015, y: -1 }}
+                whileTap={{ scale: 0.985 }}
                 type="submit"
                 disabled={isSubmitting}
-                className="btn-primary w-full flex items-center justify-center gap-3"
+                className="btn-primary w-full flex items-center justify-center gap-2.5 h-13 py-3.5"
               >
                 {isSubmitting ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
-                  <LogIn className="w-5 h-5" />
+                  <LogIn className="w-4 h-4" />
                 )}
-                <span className="text-base font-bold">{isSubmitting ? 'Аутентификация...' : 'Войти в аккаунт'}</span>
-
+                <span className="text-sm font-bold tracking-wide">
+                  {isSubmitting ? 'Аутентификация...' : 'Войти в аккаунт'}
+                </span>
               </motion.button>
-            </motion.div>
+            </div>
           </form>
-        </motion.div>
-
-        <motion.p 
-          variants={{
-            hidden: { opacity: 0 },
-            visible: { opacity: 1, transition: { delay: 1, duration: 1 } }
-          }}
-          className="text-center mt-12 text-sm text-vault-pine/30"
-        >
-          Нет аккаунта?{' '}
-          <Link
-            to="/register"
-            className="font-bold text-vault-pine hover:opacity-60 transition-opacity underline underline-offset-8 decoration-vault-pine/10"
-          >
-            Создать аккаунт
-          </Link>
-        </motion.p>
+        </div>
       </motion.div>
     </div>
   );

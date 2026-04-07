@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Feather, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
 export function FeedbackWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -11,7 +11,12 @@ export function FeedbackWidget() {
         onClick={() => setIsOpen(!isOpen)}
         className="fixed bottom-8 right-8 z-50 bg-[#FF7A00] text-white w-14 h-14 rounded-full shadow-2xl shadow-[#FF7A00]/20 flex items-center justify-center hover:scale-110 hover:bg-[#EA6A00] transition-all duration-300"
       >
-        {isOpen ? <X className="w-6 h-6" /> : <Feather className="w-6 h-6" />}
+        {isOpen ? <X className="w-6 h-6" /> : (
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-white animate-[spin_6s_linear_infinite]">
+            <path d="M12 2L2 12L12 22L22 12L12 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+            <path d="M12 6L6 12L12 18L18 12L12 6Z" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" opacity="0.6"/>
+          </svg>
+        )}
       </button>
 
       <AnimatePresence>

@@ -126,12 +126,7 @@ h1, h2, h3, h4, h5, h6 {
   background: transparent;
 }
 
-/* ── Focus Ring (Accessibility) ───────────────────────────────────────── */
-*:focus-visible {
-  outline: 2px solid var(--citrine-orange);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
+/* ── Focus Ring (Accessibility) — Handled by Tailwind inline classes ── */
 
 /* ── Custom UI Components ─────────────────────────────────────────────── */
 @layer components {
@@ -211,21 +206,10 @@ h1, h2, h3, h4, h5, h6 {
 /* ── International Phone Input Styling ── */
 @import 'react-phone-number-input/style.css';
 
-.PhoneInput { display: flex; gap: 12px; width: 100%; align-items: center; }
-.PhoneInputCountry { background: #FAF8F3; border: 1px solid #D4CFC5; border-radius: 0.75rem; padding: 0 16px; height: 3.5rem; display: flex; align-items: center; justify-content: center; min-width: 80px; transition: all 0.3s; }
-.PhoneInputCountry:focus-within { border-color: #1C3F35; box-shadow: 0 0 0 3px rgba(28, 63, 53, 0.08); }
-.PhoneInputCountryIcon { width: 28px; height: 20px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-.PhoneInputInput { flex: 1; height: 3.5rem; border: 1px solid #D4CFC5; border-radius: 0.75rem; padding: 0 16px; font-size: 1.125rem; color: #1C3F35; outline: none; background: #FDFBF7; transition: all 0.3s; }
-.PhoneInputInput:focus { border-color: #1C3F35; box-shadow: 0 0 0 3px rgba(28, 63, 53, 0.08); }
+/* ── Phone Input — Styled inline via Tailwind Glassmorphism ── */
 
 
-*,
-*::before,
-*::after {
-  transition-property: background-color, border-color, color, fill, stroke, box-shadow;
-  transition-duration: 0ms;
-}
-
+/* ── Theme Transition — Clean passthrough for Tailwind durations ── */
 html.transitioning *,
 html.transitioning *::before,
 html.transitioning *::after {
@@ -242,3 +226,14 @@ html.transitioning *::after {
 .animate-blob { animation: blob 8s infinite alternate; }
 .animation-delay-2000 { animation-delay: 2s; }
 .animation-delay-4000 { animation-delay: 4s; }
+
+/* ── Citrine Vault Ambient Dynamics ── */
+@keyframes liquid-pillar {
+  0% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; transform: translateY(-2%); }
+  50% { border-radius: 60% 40% 30% 70% / 50% 60% 40% 60%; transform: translateY(2%); }
+  100% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; transform: translateY(-2%); }
+}
+.animate-liquid-pillar {
+  animation: liquid-pillar 12s ease-in-out infinite;
+  transform-origin: left center;
+}

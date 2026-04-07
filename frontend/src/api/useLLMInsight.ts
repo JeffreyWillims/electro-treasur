@@ -65,7 +65,7 @@ export function useLLMInsight(startDate: string, endDate: string, userId: number
     setEnqueueError(null);
     setIsEnqueuing(true);
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       const response = await enqueueInsight({ start_date: startDate, end_date: endDate } as any);
       setTaskId(response.task_id);
     } catch (err) {
