@@ -30,7 +30,8 @@ const queryClient = new QueryClient({
 function DashboardLayout() {
   return (
     <div className="flex min-h-screen bg-[#FDFBF7] dark:bg-[#050505] transition-colors duration-500 relative overflow-hidden">
-      <div className="fixed -top-40 -left-40 w-96 h-96 bg-emerald-300/30 dark:bg-emerald-900/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob pointer-events-none z-0"></div>
+      <div className="absolute left-[-2%] -top-[5%] h-[110%] w-32 bg-[#1C3F35]/30 filter blur-[80px] animate-liquid-interference pointer-events-none z-0" />
+      <div className="absolute left-0 -top-[10%] h-[120%] w-48 bg-[#3A8248]/50 filter blur-[80px] animate-liquid-pillar pointer-events-none z-0" />
       <Sidebar />
 
       {/* Main Content Area — accounts for floating sidebar margins */}
@@ -64,21 +65,21 @@ function Overview() {
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-2">
           <div className="flex items-center gap-5">
             {/* Strict Geometric Logo */}
-            <div className="relative w-14 h-14 flex items-center justify-center rounded-2xl bg-gradient-to-br from-[#1C3F35] to-[#0A1A12] dark:from-[#050505] dark:to-[#111111] shadow-[0_0_20px_rgba(197,160,89,0.15)] overflow-hidden border border-white/10">
-              <svg viewBox="0 0 100 100" className="w-14 h-14 drop-shadow-[0_0_8px_rgba(197,160,89,0.8)] z-10" fill="none" strokeWidth="2.5">
-                <circle cx="50" cy="50" r="30" stroke="#C5A059" strokeOpacity="0.3" />
-                <path d="M 50 10 L 50 90 M 10 50 L 90 50" stroke="#C5A059" strokeOpacity="0.3" />
-                <path d="M 28 28 L 72 72 M 28 72 L 72 28" stroke="#C5A059" strokeOpacity="0.15" />
+            <div className="relative w-14 h-14 flex items-center justify-center rounded-2xl bg-gradient-to-br from-[#1C3F35] to-[#0A1A12] dark:from-[#050505] dark:to-[#111111] shadow-lg shadow-emerald-900/10 overflow-hidden border border-white/10">
+              <svg viewBox="0 0 100 100" className="w-14 h-14 drop-shadow-[0_0_8px_rgba(255,122,0,0.8)] z-10" fill="none" strokeWidth="3.5">
+                <circle cx="50" cy="50" r="30" stroke="#FF7A00" strokeOpacity="0.3" />
+                <path d="M 50 10 L 50 90 M 10 50 L 90 50" stroke="#FF7A00" strokeOpacity="0.3" />
+                <path d="M 28 28 L 72 72 M 28 72 L 72 28" stroke="#FF7A00" strokeOpacity="0.15" />
                 <motion.circle
                   cx="50"
                   cy="50"
-                  r="30"
-                  stroke="#C5A059"
+                  r="32"
+                  stroke="#FF7A00"
                   strokeDasharray="15 173"
                   strokeLinecap="round"
                   animate={{ rotate: 360 }}
                   transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                  style={{ transformOrigin: "50px 50px" }}
+                  style={{ transformOrigin: "50px 50px", filter: "drop-shadow(0 0 8px #FF7A00)" }}
                 />
               </svg>
             </div>
@@ -86,7 +87,7 @@ function Overview() {
               <h1 className="text-[2.5rem] font-extrabold tracking-tight text-[#1C3F35] dark:text-white leading-none">
                 V.I.A.
               </h1>
-              <p className="text-[#1C3F35]/50 dark:text-white/40 text-[11px] font-mono tracking-widest uppercase mt-1">Value Insight Aggregator</p>
+              <p className="text-[#1C3F35]/70 dark:text-white/60 text-[11px] font-bold font-mono tracking-widest uppercase mt-1">Value Insight Aggregator</p>
             </div>
           </div>
           

@@ -28,8 +28,9 @@ export function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#FDFBF7] dark:bg-[#050505] relative overflow-hidden px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#FDFBF7] dark:bg-[#050505] relative overflow-hidden px-4">
       {/* Background atmosphere */}
+      <div className="absolute left-[-2%] -top-[5%] h-[110%] w-32 bg-[#1C3F35]/30 filter blur-[80px] animate-liquid-interference pointer-events-none z-0" />
       <div className="absolute left-0 -top-[10%] h-[120%] w-48 bg-[#3A8248]/50 filter blur-[80px] animate-liquid-pillar pointer-events-none z-0" />
       <div className="absolute -top-10 -right-20 w-[420px] h-[420px] bg-[#FF7A00]/40 rounded-full mix-blend-multiply filter blur-[100px] animate-blob z-0 pointer-events-none" />
 
@@ -46,39 +47,51 @@ export function LoginForm() {
           dark:bg-gradient-to-br dark:from-[#1a1a1a]/60 dark:via-[#111]/30 dark:to-[#FF7A00]/5
           dark:border-white/10 dark:shadow-[inset_0_-20px_40px_-20px_rgba(255,122,0,0.12),inset_0_20px_40px_-20px_rgba(15,23,42,0.2),0_20px_60px_-12px_rgba(0,0,0,0.5)]"
       >
-        {/* ── Brand Badge ── */}
-        <div className="flex justify-center pt-10 pb-0">
-          <div className="inline-flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-[#FF7A00] to-[#FFA011] rounded-full shadow-lg shadow-[#FF7A00]/25">
-            <Wallet className="text-white w-4 h-4" />
-            <span className="text-white font-extrabold text-base tracking-widest">CITRINE VAULT</span>
+        {/* ── Brand Badge (Inlaid Citrine) ── */}
+        <div className="flex justify-center pt-10 pb-6 z-20 relative">
+          <div className="inline-flex items-center gap-4 px-10 py-5 rounded-full transition-all duration-500
+            bg-gradient-to-r from-[#FF7A00] to-[#FFA011]
+            border border-white/20
+            shadow-[0_15px_35px_-5px_rgba(255,122,0,0.5)]"
+          >
+            <Wallet className="text-white w-7 h-7" strokeWidth={2.5} />
+            <span className="text-white font-black text-xl tracking-tight">Citrine Vault</span>
           </div>
         </div>
 
-        {/* ── Shared Tab Navigation ── */}
-        <div className="px-8 pt-6 pb-0">
-          <div className="relative flex items-center bg-black/5 dark:bg-white/5 rounded-2xl p-1">
-            {/* Active tab indicator */}
-            <motion.div
-              layoutId="auth-tab-indicator"
-              className="absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-xl bg-white dark:bg-white/10 shadow-sm"
-              transition={{ type: 'spring', stiffness: 400, damping: 35 }}
-            />
-            {/* Login tab — active */}
-            <span className="relative flex-1 py-2.5 text-center text-sm font-bold tracking-wide text-slate-900 dark:text-white z-10 cursor-default select-none">
-              Вход
-            </span>
-            {/* Register tab */}
-            <Link
-              to="/register"
-              className="relative flex-1 py-2.5 text-center text-sm font-semibold tracking-wide text-slate-500 dark:text-white/40 z-10 hover:text-slate-700 dark:hover:text-white/70 transition-colors"
-            >
-              Регистрация
-            </Link>
+        {/* ── Shared Tab Navigation (Quantum Toggle) ── */}
+        <div className="px-8 pb-0 z-20 relative">
+          <div className="relative flex items-center bg-slate-900/10 dark:bg-black/20 shadow-inner rounded-2xl p-1 mb-8">
+              {/* Active tab indicator */}
+              <motion.div
+                layoutId="auth-tab-indicator"
+                className="absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-xl bg-white/80 dark:bg-white/10 backdrop-blur-md shadow-sm"
+                transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+              />
+              {/* Login tab — active */}
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key="login-active"
+                  initial={{ opacity: 0.8 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0.8 }}
+                  className="relative flex-1 py-2.5 text-center text-sm font-bold tracking-wide text-slate-900 dark:text-white z-10 cursor-default select-none"
+                >
+                  Вход
+                </motion.span>
+              </AnimatePresence>
+              {/* Register tab */}
+              <Link
+                to="/register"
+                className="relative flex-1 py-2.5 text-center text-sm font-semibold tracking-wide text-slate-500 dark:text-white/40 z-10 hover:text-slate-700 dark:hover:text-white/70 transition-colors"
+              >
+                Регистрация
+              </Link>
+            </div>
           </div>
-        </div>
 
-        {/* ── Form Fields ── */}
-        <div className="px-8 pt-6 pb-10">
+          {/* ── Form Fields ── */}
+          <div className="px-8 pb-10">
           <form onSubmit={handleSubmit} className="space-y-3">
             <AnimatePresence mode="wait">
               <motion.div

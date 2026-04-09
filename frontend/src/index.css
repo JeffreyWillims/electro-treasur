@@ -237,3 +237,13 @@ html.transitioning *::after {
   animation: liquid-pillar 12s ease-in-out infinite;
   transform-origin: left center;
 }
+
+@keyframes liquid-interference {
+  0% { border-radius: 60% 40% 30% 70% / 50% 60% 40% 60%; transform: translateY(1%); }
+  50% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; transform: translateY(-1%); }
+  100% { border-radius: 60% 40% 30% 70% / 50% 60% 40% 60%; transform: translateY(1%); }
+}
+.animate-liquid-interference {
+  animation: liquid-interference 18s ease-in-out infinite reverse;
+  transform-origin: center right;
+}

@@ -27,52 +27,47 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 
 const NAV_ITEMS = [
-  { name: 'Обзор', path: '/', icon: LayoutDashboard },
-  { name: 'Операции', path: '/transactions', icon: List },
-  { name: 'Бюджеты', path: '/budgets', icon: Target },
-  { name: 'Аналитика', path: '/analytics', icon: PieChart },
-  { name: 'Финплан', path: '/savings-navigator', icon: PiggyBank },
-  { name: 'Настройки', path: '/settings/profile', icon: Settings },
+  { name: 'Обзор', path: '/', icon: LayoutDashboard, color: 'text-blue-500', hex: 'rgba(59,130,246,0.2)' },
+  { name: 'Операции', path: '/transactions', icon: List, color: 'text-indigo-500', hex: 'rgba(99,102,241,0.2)' },
+  { name: 'Бюджеты', path: '/budgets', icon: Target, color: 'text-amber-500', hex: 'rgba(245,158,11,0.2)' },
+  { name: 'Аналитика', path: '/analytics', icon: PieChart, color: 'text-emerald-500', hex: 'rgba(16,185,129,0.2)' },
+  { name: 'Финплан', path: '/savings-navigator', icon: PiggyBank, color: 'text-pink-500', hex: 'rgba(236,72,153,0.2)' },
+  { name: 'Настройки', path: '/settings/profile', icon: Settings, color: 'text-slate-500', hex: 'rgba(100,116,139,0.2)' },
 ];
 
 function ThemeToggle() {
   const { isDarkMode, toggleTheme } = useTheme();
 
   return (
-    <div className="flex items-center justify-between px-3">
-      <span className="text-[10.5px] font-mono uppercase tracking-[0.2em] text-[#1C3F35] dark:text-white/50 font-bold">
-        Тема
-      </span>
-      <div 
-        className={`flex w-14 h-8 bg-slate-200 dark:bg-slate-800 rounded-full p-1 cursor-pointer transition-colors duration-500 ${isDarkMode ? 'justify-end' : 'justify-start'}`} 
-        onClick={toggleTheme}
-      >
-        <motion.div layout className="w-6 h-6 bg-white dark:bg-slate-950 rounded-full shadow-md flex items-center justify-center">
-          <AnimatePresence mode="wait">
-            {isDarkMode ? (
-              <motion.div
-                key="moon"
-                initial={{ rotate: -180, opacity: 0 }}
-                animate={{ rotate: 0, opacity: 1 }}
-                exit={{ rotate: 180, opacity: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Moon size={12} className="text-[#FF7A00]" />
-              </motion.div>
-            ) : (
-              <motion.div
-                key="sun"
-                initial={{ rotate: 180, opacity: 0 }}
-                animate={{ rotate: 0, opacity: 1 }}
-                exit={{ rotate: -180, opacity: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Sun size={12} className="text-[#FF7A00]" />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-      </div>
+    <div 
+      className={cn("w-14 h-8 rounded-full flex items-center p-1 cursor-pointer transition-all duration-500 bg-black/10 dark:bg-black/40 shadow-[inset_0_2px_4px_rgba(0,0,0,0.15)] dark:shadow-[inset_0_2px_6px_rgba(0,0,0,0.6)] border border-black/5 dark:border-white/5", isDarkMode ? 'justify-end' : 'justify-start')} 
+      onClick={toggleTheme}
+    >
+      <motion.div layout transition={{ type: "spring", stiffness: 700, damping: 30 }} className="w-6 h-6 bg-white dark:bg-[#121212] rounded-full shadow-md flex items-center justify-center">
+        <AnimatePresence mode="wait">
+          {isDarkMode ? (
+            <motion.div
+              key="moon"
+              initial={{ rotate: -180, opacity: 0 }}
+              animate={{ rotate: 0, opacity: 1 }}
+              exit={{ rotate: 180, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Moon size={12} className="text-[#FF7A00]" />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="sun"
+              initial={{ rotate: 180, opacity: 0 }}
+              animate={{ rotate: 0, opacity: 1 }}
+              exit={{ rotate: -180, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Sun size={12} className="text-[#FF7A00]" />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
     </div>
   );
 }
@@ -94,8 +89,8 @@ function UserProfileWidget() {
   }, []);
 
   const initials = user?.full_name
-    ? user.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-    : user?.email?.charAt(0).toUpperCase() || 'C';
+    ? user.full_name.charAt(0).toUpperCase()
+    : 'Q';
 
   const displayName = user?.full_name || user?.email?.split('@')[0] || 'Пользователь';
 
@@ -103,64 +98,47 @@ function UserProfileWidget() {
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          "w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 text-left group",
-          "bg-[#FF7A00]/[0.03] border border-[#FF7A00]/[0.06]",
-          "hover:bg-[#FF7A00]/[0.06] hover:border-[#FF7A00]/10",
-          isOpen && "bg-[#FF7A00]/[0.08] border-[#FF7A00]/15"
-        )}
+        className="w-10 h-10 rounded-full flex items-center justify-center cursor-pointer transition-transform hover:scale-105 bg-black/5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.1),0_1px_0_rgba(255,255,255,0.8)] border border-black/5 dark:bg-black/40 dark:shadow-[inset_0_2px_6px_rgba(0,0,0,0.5),0_1px_0_rgba(255,255,255,0.05)] dark:border-white/5"
       >
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF7A00] to-[#FFA011] flex items-center justify-center text-white font-bold text-sm shadow-sm">
+        <div className="w-8 h-8 bg-gradient-to-br from-[#FF7A00] to-[#FFA011] rounded-full flex items-center justify-center text-white font-bold shadow-sm text-sm">
           {initials}
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-vault-pine dark:text-white leading-tight truncate">
-            {displayName}
-          </p>
-          <p className="text-[10px] font-mono text-[#FF7A00]/50 truncate mt-0.5">
-            {user?.email}
-          </p>
-        </div>
-        <motion.div
-          animate={{ rotate: isOpen ? 180 : 0 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-        >
-          <ChevronUp size={14} className="text-[#FF7A00]/40" />
-        </motion.div>
       </button>
 
-      {/* Dropdown Menu */}
+      {/* Glass Popover */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 8, scale: 0.96 }}
+            initial={{ opacity: 0, y: 10, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.96 }}
+            exit={{ opacity: 0, y: 10, scale: 0.96 }}
             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-            className="absolute bottom-full left-0 right-0 mb-2 rounded-2xl overflow-hidden border border-[#FF7A00]/10 bg-white/90 dark:bg-vault-black/90 backdrop-blur-xl shadow-premium z-50"
+            className="absolute bottom-14 right-0 min-w-48 bg-white/80 dark:bg-[#121212]/80 backdrop-blur-3xl border border-white/40 dark:border-white/10 rounded-2xl shadow-2xl p-4 z-50 origin-bottom-right"
           >
-            <div className="p-2 space-y-0.5">
-              <button
-                onClick={() => { navigate('/settings/profile'); setIsOpen(false); }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-vault-pine dark:text-white hover:bg-[#FF7A00]/5 transition-colors"
-              >
-                <User size={16} className="text-[#FF7A00]/60" />
-                <span>Профиль</span>
-              </button>
-              <button
-                onClick={() => { navigate('/settings/profile'); setIsOpen(false); }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-vault-pine dark:text-white hover:bg-[#FF7A00]/5 transition-colors"
-              >
-                <Sliders size={16} className="text-[#FF7A00]/60" />
-                <span>Предпочтения</span>
-              </button>
+            <div className="mb-3 px-1">
+              <p className="text-base font-bold text-vault-pine dark:text-white leading-tight truncate">
+                {displayName}
+              </p>
+              <p className="text-[11px] font-mono text-vault-pine/50 dark:text-white/40 truncate mt-0.5">
+                {user?.email}
+              </p>
+            </div>
+            
+            <div className="h-px bg-black/5 dark:bg-white/5 mb-2 mx-1" />
 
-              <div className="h-px bg-[#FF7A00]/10 mx-2 my-1" />
+            <div className="space-y-0.5">
+              <button
+                onClick={() => { navigate('/settings/profile'); setIsOpen(false); }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-vault-pine dark:text-white hover:bg-[#FF7A00]/10 hover:text-[#FF7A00] transition-colors group"
+              >
+                <Sliders size={16} className="text-vault-pine/50 dark:text-white/40 group-hover:text-[#FF7A00]" />
+                <span>Настройки</span>
+              </button>
 
               <button
                 onClick={() => { logout(); setIsOpen(false); }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-rose-500 hover:bg-rose-500/5 transition-colors"
-              >
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-rose-500 hover:bg-rose-500/10 transition-colors"
+               >
                 <LogOut size={16} />
                 <span>Выйти</span>
               </button>
@@ -236,7 +214,7 @@ export function Sidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 space-y-1">
+        <nav className="flex-1 space-y-2 mt-4">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             return (
@@ -247,31 +225,33 @@ export function Sidebar() {
                 onClick={() => setMobileOpen(false)}
                 className={({ isActive }) =>
                   cn(
-                    'group w-full flex items-center gap-4 px-4 py-3 rounded-xl text-[13px] font-medium transition-all duration-300 relative overflow-hidden',
-                    isActive
-                      ? 'text-[#1C3F35] dark:text-white'
-                      : 'text-[#1C3F35]/70 dark:text-white/30 hover:text-[#1C3F35] dark:hover:text-white/60'
+                    'group w-full flex items-center gap-4 p-2 rounded-2xl relative transition-all duration-300',
+                    isActive 
+                      ? 'bg-white/40 dark:bg-white/10 backdrop-blur-md shadow-sm' 
+                      : 'hover:bg-black/[0.02] dark:hover:bg-white/[0.02]'
                   )
                 }
               >
                 {({ isActive }) => (
                   <>
-                    {isActive && (
-                      <motion.div
-                        layoutId="sidebar-active"
-                        className="absolute inset-0 bg-[#FDFBF7] dark:bg-[#1A1A1A] border border-orange-200 dark:border-[#FF7A00]/20 rounded-xl -z-10 shadow-sm"
-                        transition={{ type: 'spring', bounce: 0.15, duration: 0.5 }}
+                    <div className="relative w-10 h-10 rounded-xl shrink-0">
+                      {/* The concave base */}
+                      <div className={cn(
+                        "absolute inset-0 rounded-xl transition-all duration-300",
+                        "bg-black/5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.1),0_1px_0_rgba(255,255,255,0.8)] border border-black/5",
+                        "dark:bg-black/40 dark:shadow-[inset_0_2px_6px_rgba(0,0,0,0.5),0_1px_0_rgba(255,255,255,0.05)] dark:border-white/5"
+                      )} />
+                      {/* The glow layer (visible on active or hover) */}
+                      <div 
+                        className={cn("absolute inset-0 rounded-xl transition-opacity duration-300", isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100")} 
+                        style={{ boxShadow: `inset 0 0 12px ${item.hex}` }} 
                       />
-                    )}
-                    <Icon
-                      className={cn(
-                        "w-[18.5px] h-[18.5px] transition-all duration-300",
-                        isActive
-                          ? "text-[#1C3F35] dark:text-white"
-                          : "group-hover:scale-105"
-                      )}
-                    />
-                    <span className={cn(isActive ? "font-semibold" : "")}>
+                      {/* The icon */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Icon className={cn("w-5 h-5", item.color)} />
+                      </div>
+                    </div>
+                    <span className="font-extrabold text-[#1C3F35] dark:text-white tracking-tight text-base">
                       {item.name}
                     </span>
                   </>
@@ -281,8 +261,8 @@ export function Sidebar() {
           })}
         </nav>
 
-        {/* Bottom Section */}
-        <div className="mt-auto space-y-6 pt-6 border-t border-[#FF7A00]/[0.06]">
+        {/* Compact Dock Bottom Section */}
+        <div className="flex justify-between items-center w-full px-2 mt-auto pt-6 border-t border-[#FF7A00]/[0.06]">
           <ThemeToggle />
           <UserProfileWidget />
         </div>
