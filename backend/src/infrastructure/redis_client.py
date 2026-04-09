@@ -7,6 +7,7 @@ Used for:
   • LLM insight result storage
   • arq task result polling
 """
+
 from __future__ import annotations
 
 from redis.asyncio import ConnectionPool, Redis

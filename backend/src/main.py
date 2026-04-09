@@ -9,6 +9,7 @@ Startup/shutdown lifecycle hooks manage:
 OpenAPI schema is auto-generated — frontend can derive TypeScript types
 via `openapi-typescript` CLI for Single Source of Truth DTO alignment.
 """
+
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
@@ -20,7 +21,6 @@ import time
 import json
 from datetime import datetime
 from fastapi import Request, Depends, HTTPException
-from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from redis.asyncio import Redis
@@ -57,6 +57,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.middleware("http")
 async def json_log_middleware(request: Request, call_next):
     start_time = time.perf_counter()
@@ -79,6 +80,7 @@ async def json_log_middleware(request: Request, call_next):
         print(json.dumps(log_data), flush=True)
     return response
 
+
 setup_exception_handlers(app)
 
 # ── Routers ─────────────────────────────────────────────────────────────
@@ -88,13 +90,12 @@ app.include_router(analytics_router, prefix="/api")
 
 @app.get("/health", tags=["System"])
 async def health_check(
-    db: AsyncSession = Depends(get_session),
-    redis_client: Redis = Depends(get_redis)
+    db: AsyncSession = Depends(get_session), redis_client: Redis = Depends(get_redis)
 ) -> dict[str, str]:
     """Liveness probe resolving actual persistence layers."""
     try:
         await db.execute(text("SELECT 1"))
         await redis_client.ping()
         return {"status": "ok", "service": "electro-treasur"}
-    except Exception as e:
-        raise HTTPException(status_code=503, detail=f"Service Unavailable: Node Offline")
+    except Exception:
+        raise HTTPException(status_code=503, detail="Service Unavailable: Node Offline")

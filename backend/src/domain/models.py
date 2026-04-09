@@ -11,14 +11,14 @@ Complexity:
   • INSERT  O(1) per transaction (B-Tree on idempotency_key).
   • SELECT  O(N) scan with index on (user_id, executed_at) for monthly aggregation.
 """
+
 from __future__ import annotations
 
 import enum
-from datetime import date, datetime
+from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import (
-    Date,
     DateTime,
     Enum,
     ForeignKey,
@@ -54,15 +54,21 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
-    monthly_income: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, server_default=text("0"), default=Decimal("0"))
+    monthly_income: Mapped[Decimal] = mapped_column(
+        Numeric(12, 2), nullable=False, server_default=text("0"), default=Decimal("0")
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
 
     # ── Relationships ───────────────────────────────────────────────────
-    categories: Mapped[list[Category]] = relationship(back_populates="user", lazy="selectin")
+    categories: Mapped[list[Category]] = relationship(
+        back_populates="user", lazy="selectin"
+    )
     budgets: Mapped[list[Budget]] = relationship(back_populates="user", lazy="selectin")
-    transactions: Mapped[list[Transaction]] = relationship(back_populates="user", lazy="selectin")
+    transactions: Mapped[list[Transaction]] = relationship(
+        back_populates="user", lazy="selectin"
+    )
 
 
 class Category(Base):
@@ -71,8 +77,12 @@ class Category(Base):
     __tablename__ = "categories"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    parent_id: Mapped[int | None] = mapped_column(ForeignKey("categories.id", ondelete="CASCADE"), nullable=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    parent_id: Mapped[int | None] = mapped_column(
+        ForeignKey("categories.id", ondelete="CASCADE"), nullable=True
+    )
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     icon: Mapped[str | None] = mapped_column(String(64), nullable=True)
     type: Mapped[CategoryType] = mapped_column(
@@ -81,7 +91,9 @@ class Category(Base):
 
     # ── Relationships ───────────────────────────────────────────────────
     user: Mapped[User] = relationship(back_populates="categories")
-    parent: Mapped["Category"] = relationship(back_populates="subcategories", remote_side=[id])
+    parent: Mapped["Category"] = relationship(
+        back_populates="subcategories", remote_side=[id]
+    )
     subcategories: Mapped[list["Category"]] = relationship(back_populates="parent")
     budgets: Mapped[list["Budget"]] = relationship(back_populates="category")
     transactions: Mapped[list["Transaction"]] = relationship(back_populates="category")
@@ -94,11 +106,19 @@ class Budget(Base):
 
     __tablename__ = "budgets"
     __table_args__ = (
-        UniqueConstraint("user_id", "category_id", "month", "year", name="uq_budget_user_cat_month_year"),
+        UniqueConstraint(
+            "user_id",
+            "category_id",
+            "month",
+            "year",
+            name="uq_budget_user_cat_month_year",
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
     category_id: Mapped[int] = mapped_column(
         ForeignKey("categories.id", ondelete="CASCADE"), index=True
     )
@@ -129,16 +149,24 @@ class Transaction(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
     category_id: Mapped[int] = mapped_column(
         ForeignKey("categories.id", ondelete="CASCADE"), index=True
     )
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
-    currency: Mapped[str] = mapped_column(String(3), nullable=False, server_default="RUB")
-    is_recurring: Mapped[bool] = mapped_column(nullable=False, server_default=text("false"))
-    entry_type: Mapped[str] = mapped_column(String(32), nullable=False, server_default="manual")
+    currency: Mapped[str] = mapped_column(
+        String(3), nullable=False, server_default="RUB"
+    )
+    is_recurring: Mapped[bool] = mapped_column(
+        nullable=False, server_default=text("false")
+    )
+    entry_type: Mapped[str] = mapped_column(
+        String(32), nullable=False, server_default="manual"
+    )
     comment: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    
+
     executed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.dependencies import get_current_user, get_db
-from src.domain.models import User, Category
+from src.domain.models import User
 from src.schemas.user import UserRead, UserUpdate, CategoryRead
 from src.services.user_service import update_user_profile
 
@@ -30,7 +30,9 @@ async def update_user_me(
     """
     Update current user profile (contact information, budget settings).
     """
-    return await update_user_profile(db, db_user=current_user, update_data=user_in.model_dump(exclude_unset=True))
+    return await update_user_profile(
+        db, db_user=current_user, update_data=user_in.model_dump(exclude_unset=True)
+    )
 
 
 @router.get("/categories", response_model=list[CategoryRead])

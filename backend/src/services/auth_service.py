@@ -8,9 +8,9 @@ from argon2.exceptions import VerifyMismatchError
 from pydantic import BaseModel
 
 # ── Security Configuration ───────────────────────────────────────────
-SECRET_KEY = "SUPER_SECRET_ORBITAL_KEY_CHANGE_ME" 
+SECRET_KEY = "SUPER_SECRET_ORBITAL_KEY_CHANGE_ME"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # 24 hours for MVP stability
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours for MVP stability
 
 ph = PasswordHasher()
 
@@ -19,7 +19,9 @@ class TokenData(BaseModel):
     email: str | None = None
 
 
-def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = None) -> str:
+def create_access_token(
+    data: dict[str, Any], expires_delta: timedelta | None = None
+) -> str:
     """
     Encodes data into a JWT access token.
     """
@@ -28,7 +30,7 @@ def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = 
         expire = datetime.now(timezone.utc) + expires_delta
     else:
         expire = datetime.now(timezone.utc) + timedelta(minutes=15)
-    
+
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -38,12 +40,13 @@ async def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     Verifies a plain password against its hashed version using Argon2 inside a thread pool.
     """
+
     def _verify():
         try:
             return ph.verify(hashed_password, plain_password)
         except VerifyMismatchError:
             return False
-            
+
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(None, _verify)
 

@@ -4,6 +4,7 @@ Transactions Router — POST /api/v1/transactions/
 JWT-authenticated. User identity extracted from Bearer token via get_current_user.
 Idempotency-Key header protection against race conditions / double-spend.
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Header, status

@@ -9,6 +9,7 @@ PgBouncer in transaction-mode (pool_mode=transaction):
 
 Complexity: O(1) per session acquisition.
 """
+
 from collections.abc import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import (

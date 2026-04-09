@@ -4,7 +4,9 @@ Dashboard Router — GET /api/v1/dashboard/
 JWT-authenticated. Returns the monthly budget matrix:
   Category → Plan → Fact → Delta → 31 day cells.
 """
+
 from __future__ import annotations
+from datetime import date
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,7 +18,6 @@ from src.services.dashboard_service import get_monthly_dashboard
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
-from datetime import date
 
 @router.get(
     "/",

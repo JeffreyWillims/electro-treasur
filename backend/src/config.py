@@ -4,6 +4,7 @@ Electro-Treasur Configuration.
 Centralized settings via pydantic-settings.
 Environment variables override defaults → 12-Factor compliant.
 """
+
 from pydantic_settings import BaseSettings
 
 

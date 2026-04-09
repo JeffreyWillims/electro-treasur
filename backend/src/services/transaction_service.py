@@ -11,10 +11,9 @@ Race-condition defence (double-spend prevention):
 Time:  O(1) amortized per request.
 Space: O(1) Redis memory per unique key (auto-evicted by TTL).
 """
+
 from __future__ import annotations
 
-import json
-from decimal import Decimal
 
 from redis.asyncio import Redis
 from sqlalchemy import select
@@ -22,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from src.config import settings
-from src.domain.models import Transaction, Category
+from src.domain.models import Transaction
 from src.schemas.transaction import TransactionCreate, TransactionResponse
 
 
@@ -105,11 +104,11 @@ async def list_transactions(
     )
     result = await session.execute(stmt)
     transactions = result.scalars().all()
-    
+
     responses = []
     for tx in transactions:
         resp = TransactionResponse.model_validate(tx)
         resp.category_name = tx.category.name if tx.category else "Unknown"
         responses.append(resp)
-        
+
     return responses

@@ -1,6 +1,7 @@
 """
 API v1 Root Router — aggregates all v1 sub-routers.
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter

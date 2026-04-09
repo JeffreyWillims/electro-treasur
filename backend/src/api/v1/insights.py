@@ -4,16 +4,16 @@ Insights Router — arq-based LLM insight generation + polling.
 POST /api/v1/insights/  → enqueue arq task, return HTTP 202 + task_id.
 GET  /api/v1/insights/{task_id} → poll Redis for result.
 """
+
 from __future__ import annotations
 
 import uuid
 
 from arq.connections import ArqRedis, create_pool
 from arq.connections import RedisSettings
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, status, Depends
 
 from src.config import settings
-from src.infrastructure.redis_client import get_redis
 from src.dependencies import get_current_user
 from src.domain.models import User
 from src.schemas.insight import (
@@ -81,12 +81,15 @@ async def poll_insight(task_id: str) -> InsightResultResponse:
     """
     pool = await _get_arq_pool()
     from arq.jobs import Job
+
     try:
         job = Job(task_id, pool)
         info = await job.info()
         if info and info.success and info.result is not None:
-            return InsightResultResponse(task_id=task_id, status="complete", result=info.result)
-    except Exception as e:
+            return InsightResultResponse(
+                task_id=task_id, status="complete", result=info.result
+            )
+    except Exception:
         # log if needed
         pass
 

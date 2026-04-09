@@ -6,6 +6,7 @@ Each day cell holds the actual spend for that day-of-month (0-indexed → day 1 
 
 Time Complexity of building the response: O(N) where N = number of transactions in the month.
 """
+
 from __future__ import annotations
 
 from datetime import date
@@ -52,9 +53,15 @@ class DashboardResponse(BaseModel):
     year: int | None = Field(default=None)
     start_date: date | None = None
     end_date: date | None = None
-    total_balance_all_time: Decimal = Field(default=Decimal("0.00"), max_digits=12, decimal_places=2)
-    period_income: Decimal = Field(default=Decimal("0.00"), max_digits=12, decimal_places=2)
-    period_expense: Decimal = Field(default=Decimal("0.00"), max_digits=12, decimal_places=2)
+    total_balance_all_time: Decimal = Field(
+        default=Decimal("0.00"), max_digits=12, decimal_places=2
+    )
+    period_income: Decimal = Field(
+        default=Decimal("0.00"), max_digits=12, decimal_places=2
+    )
+    period_expense: Decimal = Field(
+        default=Decimal("0.00"), max_digits=12, decimal_places=2
+    )
     rows: list[CategoryRowSchema]
 
     model_config = ConfigDict(from_attributes=True)

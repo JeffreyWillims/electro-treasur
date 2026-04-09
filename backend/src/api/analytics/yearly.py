@@ -7,6 +7,7 @@ GET  /api/analytics/tasks/{task_id} → poll for result.
 Uses the same arq infrastructure as insights, but targets
 the yearly analytics flow with ProcessPoolExecutor offloading.
 """
+
 from __future__ import annotations
 
 import json
@@ -99,7 +100,9 @@ async def poll_yearly_task(task_id: str) -> YearlyTaskStatusResponse:
                 return YearlyTaskStatusResponse(
                     task_id=task_id, status="complete", result=result["result"]
                 )
-            return YearlyTaskStatusResponse(task_id=task_id, status="complete", result=result)
+            return YearlyTaskStatusResponse(
+                task_id=task_id, status="complete", result=result
+            )
         except (json.JSONDecodeError, TypeError):
             pass
 

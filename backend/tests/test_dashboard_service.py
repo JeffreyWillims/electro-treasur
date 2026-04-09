@@ -4,6 +4,7 @@ Unit tests for the dashboard aggregation logic.
 Tests the O(N) single-pass algorithm WITHOUT a real database —
 we directly test the data-structure transformation.
 """
+
 from __future__ import annotations
 
 from decimal import Decimal
@@ -74,7 +75,7 @@ class TestDashboardAggregation:
         assert cat1.fact == Decimal("2450.50")
         assert cat1.delta == Decimal("2549.50")  # 5000 - 2450.50
         assert cat1.days[0].amount == Decimal("1500.00")  # day 1
-        assert cat1.days[2].amount == Decimal("750.50")   # day 3
+        assert cat1.days[2].amount == Decimal("750.50")  # day 3
 
         # Category 2 (Ипотека): fact = 24897.54
         cat2 = rows[1]

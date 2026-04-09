@@ -9,12 +9,13 @@ Algorithm:
   4. Merge with plans, compute delta, emit 31-day vectors             → O(K).
   Total: O(N + K) ≈ O(N) for large transaction sets.
 """
+
 from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import extract, func, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.models import Budget, Category, Transaction
@@ -52,7 +53,9 @@ async def get_monthly_dashboard(
     )
     all_res = await session.execute(stmt_all)
     all_totals = {r[0]: (r[1] or Decimal("0.00")) for r in all_res.all()}
-    total_balance_all_time = all_totals.get("income", Decimal("0.00")) - all_totals.get("expense", Decimal("0.00"))
+    total_balance_all_time = all_totals.get("income", Decimal("0.00")) - all_totals.get(
+        "expense", Decimal("0.00")
+    )
 
     # ── Step 1: Fetch aggregated transactions grouped by date ─────────
     stmt_tx = (
@@ -68,7 +71,9 @@ async def get_monthly_dashboard(
             func.date(Transaction.executed_at) >= start_date,
             func.date(Transaction.executed_at) <= end_date,
         )
-        .group_by(Transaction.category_id, Category.type, func.date(Transaction.executed_at))
+        .group_by(
+            Transaction.category_id, Category.type, func.date(Transaction.executed_at)
+        )
     )
     tx_result = await session.execute(stmt_tx)
     tx_rows = tx_result.all()  # list[(category_id, type, exec_date, total)]
@@ -76,17 +81,24 @@ async def get_monthly_dashboard(
     # ── Step 2: Fetch budgets ─────────────────────────
     # For budgets, we'll try to match the month of the start_date as a proxy or just aggregate any budget that touches the range.
     # To keep it simple, we filter by start_date's month/year
-    stmt_bp = (
-        select(Budget.category_id, Budget.amount_limit)
-        .where(Budget.user_id == user_id, Budget.month == start_date.month, Budget.year == start_date.year)
+    stmt_bp = select(Budget.category_id, Budget.amount_limit).where(
+        Budget.user_id == user_id,
+        Budget.month == start_date.month,
+        Budget.year == start_date.year,
     )
     bp_result = await session.execute(stmt_bp)
-    plans: dict[int, Decimal] = {row.category_id: row.amount_limit for row in bp_result.all()}
+    plans: dict[int, Decimal] = {
+        row.category_id: row.amount_limit for row in bp_result.all()
+    }
 
     # ── Step 3: Fetch category names ─────────────────────────────────────
-    stmt_cat = select(Category.id, Category.name, Category.type).where(Category.user_id == user_id)
+    stmt_cat = select(Category.id, Category.name, Category.type).where(
+        Category.user_id == user_id
+    )
     cat_result = await session.execute(stmt_cat)
-    cat_info: dict[int, dict] = {row.id: {"name": row.name, "type": row.type} for row in cat_result.all()}
+    cat_info: dict[int, dict] = {
+        row.id: {"name": row.name, "type": row.type} for row in cat_result.all()
+    }
 
     # ── Step 4: O(N) single-pass aggregation into day matrix ─────────────
     #   matrix[category_id][day_index] = Decimal
@@ -97,7 +109,7 @@ async def get_monthly_dashboard(
 
     for cat_id, cat_type, exec_date, total in tx_rows:
         cat_id = int(cat_id)
-        
+
         # Calculate day index based on start_date
         delta_days = (exec_date - start_date).days
         day_index = max(0, min(delta_days, day_count - 1))
@@ -105,10 +117,10 @@ async def get_monthly_dashboard(
         if cat_id not in matrix:
             matrix[cat_id] = [Decimal("0.00")] * day_count
             fact_totals[cat_id] = Decimal("0.00")
-        
+
         matrix[cat_id][day_index] += total
         fact_totals[cat_id] += total
-        
+
         if cat_type == "income":
             period_income += total
         elif cat_type == "expense":
@@ -132,7 +144,10 @@ async def get_monthly_dashboard(
                 planned=planned,
                 fact=fact,
                 delta=planned - fact if info["type"] == "expense" else fact - planned,
-                days=[DayCellSchema(day=i + 1, amount=days_data[i]) for i in range(day_count)],
+                days=[
+                    DayCellSchema(day=i + 1, amount=days_data[i])
+                    for i in range(day_count)
+                ],
             )
         )
 
@@ -142,5 +157,5 @@ async def get_monthly_dashboard(
         total_balance_all_time=total_balance_all_time,
         period_income=period_income,
         period_expense=period_expense,
-        rows=rows
+        rows=rows,
     )

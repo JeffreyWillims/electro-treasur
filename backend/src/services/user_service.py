@@ -30,7 +30,7 @@ async def create_user(db: AsyncSession, user_in: dict[str, Any]) -> User:
     )
     db.add(db_user)
     await db.flush()  # Get db_user.id
-    
+
     # Seed Elite Categories
     default_categories = [
         ("Propulsion (Income)", CategoryType.income, "rocket"),
@@ -40,10 +40,10 @@ async def create_user(db: AsyncSession, user_in: dict[str, Any]) -> User:
         ("Logistics (Transport)", CategoryType.expense, "car"),
         ("Wellness (Health)", CategoryType.expense, "heart"),
     ]
-    
+
     for name, ctype, icon in default_categories:
         db.add(Category(user_id=db_user.id, name=name, type=ctype, icon=icon))
-        
+
     await db.commit()
     await db.refresh(db_user)
     return db_user
@@ -61,7 +61,7 @@ async def update_user_profile(
         db_user.phone = update_data["phone"]
     if "monthly_income" in update_data:
         db_user.monthly_income = update_data["monthly_income"]
-    
+
     await db.commit()
     await db.refresh(db_user)
     return db_user

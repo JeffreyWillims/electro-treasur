@@ -1,9 +1,10 @@
 """
 Pydantic V2 schemas for LLM Insight endpoints.
 """
+
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class InsightRequest(BaseModel):

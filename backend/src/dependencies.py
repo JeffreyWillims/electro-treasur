@@ -4,6 +4,7 @@ FastAPI Dependencies — Dependency Injection layer.
 Provides async DB sessions and Redis clients to route handlers
 via FastAPI's Depends() mechanism.
 """
+
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
@@ -19,7 +20,6 @@ from src.domain.models import User
 from src.infrastructure.redis_client import get_redis
 from src.services.auth_service import decode_access_token
 from src.services.user_service import get_user_by_email
-
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login")
 
@@ -53,7 +53,7 @@ async def get_current_user(
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    
+
     user = await get_user_by_email(db, email=token_data.email)
     if user is None:
         raise credentials_exception
