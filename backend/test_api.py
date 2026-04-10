@@ -1,9 +1,11 @@
 import asyncio
 from decimal import Decimal
-from src.schemas.analytics import SimulateRequest, Adjustment
-from src.services.analytics_service import get_analytics_profile, simulate_savings
-from src.database import async_session_factory
+
 from pydantic import ValidationError
+from src.database import async_session_factory
+from src.schemas.analytics import Adjustment, SimulateRequest
+from src.services.analytics_service import (get_analytics_profile,
+                                            simulate_savings)
 
 
 async def run_tests():

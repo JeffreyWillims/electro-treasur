@@ -2,17 +2,13 @@
 
 from datetime import date, timedelta
 from decimal import Decimal
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
 
-from src.domain.models import Category, Transaction, Budget, CategoryType
-from src.schemas.analytics import (
-    AnalyticsProfileResponse,
-    CategoryAvg,
-    SimulateRequest,
-    SimulateResponse,
-    SimulationDataPoint,
-)
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from src.domain.models import Budget, Category, CategoryType, Transaction
+from src.schemas.analytics import (AnalyticsProfileResponse, CategoryAvg,
+                                   SimulateRequest, SimulateResponse,
+                                   SimulationDataPoint)
 
 
 async def get_analytics_profile(

@@ -1,34 +1,125 @@
- 
 /**
- * QuickEntry — Premium transaction entry form with subcategory/details support.
- * Citrine Vault California Organic Luxury aesthetic.
+ * QuickEntry — Premium transaction entry with Magic Combobox.
+ *
+ * Features:
+ *   • Zero-Latency Emoji via getCategoryIcon() — instant visual feedback.
+ *   • Smart Combobox with fuzzy filter + "Create on the fly" option.
+ *   • useOnClickOutside hook for closing the dropdown.
+ *   • POST /categories integration for dynamic category creation.
+ *   • Citrine Vault California Organic Luxury aesthetic.
  */
-import { useState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { PlusCircle, Calendar as CalendarIcon, ChevronDown, Tag } from 'lucide-react';
-import { createTransaction, fetchCategories } from '@/api/client';
+import { PlusCircle, Calendar as CalendarIcon, Tag, Search, Plus, Check } from 'lucide-react';
+import { createTransaction, fetchCategories, createCategory } from '@/api/client';
+import type { CategoryRead } from '@/types';
 
 const CURRENCIES = ['RUB', 'USD', 'EUR'];
 
+// ── Zero-Latency Emoji Dictionary ──────────────────────────────────────
+function getCategoryIcon(name: string): string {
+  const n = name.toLowerCase();
+  if (/корм|животн|пит(ом|ец)/.test(n)) return '🐾';
+  if (/кофе|кафе/.test(n)) return '☕';
+  if (/продукт|еда|grocery|food/.test(n)) return '🛒';
+  if (/такси|бензин|транспорт|transport|logistics/.test(n)) return '🚗';
+  if (/подписк|интернет|связь/.test(n)) return '🌐';
+  if (/сигарет|вейп|табак/.test(n)) return '💨';
+  if (/зарплат|доход|income|propulsion/.test(n)) return '💰';
+  if (/аренд|жильё|жилье|housing|rent|operation/.test(n)) return '🏠';
+  if (/здоров|врач|аптек|health|wellness/.test(n)) return '💊';
+  if (/отдых|развлеч|leisure/.test(n)) return '🎭';
+  if (/инвест|рост|growth/.test(n)) return '📈';
+  if (/покупк|shopping/.test(n)) return '🛍️';
+  if (/образован|учёб|education/.test(n)) return '📚';
+  return '✨';
+}
+
+// ── useOnClickOutside Hook ─────────────────────────────────────────────
+function useOnClickOutside(
+  ref: React.RefObject<HTMLElement | null>,
+  handler: () => void,
+) {
+  useEffect(() => {
+    const listener = (event: MouseEvent) => {
+      if (!ref.current || ref.current.contains(event.target as Node)) return;
+      handler();
+    };
+    document.addEventListener('mousedown', listener);
+    return () => document.removeEventListener('mousedown', listener);
+  }, [ref, handler]);
+}
 
 export function QuickEntry() {
   const queryClient = useQueryClient();
   const [type, setType] = useState<'expense' | 'income'>('expense');
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState('RUB');
-  const [category, setCategory] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [subcategory, setSubcategory] = useState('');
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [isSuccessAnim, setIsSuccessAnim] = useState(false);
 
-  // ── Queries ─────────────────────────────────────────────────────────
+  // ── Combobox State ────────────────────────────────────────────────────
+  const [comboOpen, setComboOpen] = useState(false);
+  const [comboInput, setComboInput] = useState('');
+  const comboRef = useRef<HTMLDivElement>(null);
+
+  useOnClickOutside(comboRef, useCallback(() => setComboOpen(false), []));
+
+  // ── Queries ───────────────────────────────────────────────────────────
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
     queryFn: fetchCategories,
   });
 
+  const filteredCategories = categories
+    .filter((c) => c.type === type)
+    .filter((c) =>
+      comboInput
+        ? c.name.toLowerCase().includes(comboInput.toLowerCase())
+        : true,
+    );
+
+  const exactMatch = filteredCategories.some(
+    (c) => c.name.toLowerCase() === comboInput.toLowerCase(),
+  );
+
+  // ── Create Category Mutation ──────────────────────────────────────────
+  const createCategoryMutation = useMutation({
+    mutationFn: createCategory,
+    onSuccess: (newCat: CategoryRead) => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      setSelectedCategoryId(newCat.id);
+      setComboInput(newCat.name);
+      setComboOpen(false);
+      toast.success(`Категория «${newCat.name}» создана`, {
+        description: `${getCategoryIcon(newCat.name)} ${newCat.type === 'income' ? 'Доход' : 'Расход'}`,
+      });
+    },
+    onError: (error: Error) => {
+      toast.error(`Ошибка создания: ${error.message}`);
+    },
+  });
+
+  const handleCreateCategory = () => {
+    if (!comboInput.trim()) return;
+    createCategoryMutation.mutate({
+      name: comboInput.trim(),
+      type,
+      icon: getCategoryIcon(comboInput.trim()),
+    });
+  };
+
+  const handleSelectCategory = (cat: CategoryRead) => {
+    setSelectedCategoryId(cat.id);
+    setComboInput(cat.name);
+    setComboOpen(false);
+  };
+
+  // ── Transaction Mutation ──────────────────────────────────────────────
   const mutation = useMutation({
     mutationFn: (payload: Parameters<typeof createTransaction>[0]) => createTransaction(payload),
     onSuccess: () => {
@@ -38,7 +129,8 @@ export function QuickEntry() {
         setAmount('');
         setSubcategory('');
         setType('expense');
-        setCategory('');
+        setSelectedCategoryId(null);
+        setComboInput('');
       }, 1500);
 
       toast.success('Транзакция сохранена', {
@@ -69,7 +161,7 @@ export function QuickEntry() {
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!amount || !category) {
+    if (!amount || !selectedCategoryId) {
       toast.error('Заполните сумму и категорию');
       return;
     }
@@ -77,28 +169,14 @@ export function QuickEntry() {
     mutation.mutate({
       amount: parseFloat(amount.replace(/\s/g, '')),
       currency,
-      category_id: parseInt(category),
+      category_id: selectedCategoryId,
       executed_at: new Date(date || new Date().toISOString()).toISOString(),
       entry_type: 'manual',
       comment: subcategory || undefined,
     });
   };
 
-  const filteredCategories = categories.filter(c => c.type === type);
-
-  const getRussianCategoryName = (rawName: string) => {
-    const name = rawName.toLowerCase();
-    if (name.includes('leisure')) return 'Отдых и развлечения';
-    if (name.includes('housing')) return 'Жилье';
-    if (name.includes('transport')) return 'Транспорт';
-    if (name.includes('food')) return 'Еда и продукты';
-    if (name.includes('health')) return 'Здоровье';
-    if (name.includes('income')) return 'Доход';
-    if (name.includes('shopping')) return 'Покупки';
-    if (name.includes('growth') || name.includes('invest')) return 'Инвестиции и Рост';
-    if (name.includes('utilit') || name.includes('operation')) return 'ЖКХ и Операции';
-    return rawName;
-  };
+  const selectedCat = categories.find((c) => c.id === selectedCategoryId);
 
   return (
     <div className="w-full bg-white/70 dark:bg-[#111111]/80 backdrop-blur-3xl border border-vault-pine/[0.04] dark:border-white/5 shadow-[0_8px_30px_rgba(28,63,53,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.8)] rounded-3xl p-8 transition-all duration-300 ease-out hover:-translate-y-1 hover:scale-[1.005] hover:shadow-[0_20px_40px_rgba(28,63,53,0.08)] dark:hover:shadow-[0_10px_30px_rgba(255,122,0,0.15)]">
@@ -121,9 +199,9 @@ export function QuickEntry() {
           <div className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white dark:bg-[#FF7A00] border border-vault-pine/10 dark:border-[#FF7A00]/50 rounded-lg transition-transform duration-300 ease-out shadow-sm ${type === 'income' ? 'translate-x-full left-0' : 'translate-x-0 left-1'}`} />
           
           {/* Buttons */}
-          <button type="button" onClick={() => { setType('expense'); setCategory(''); }} className={`relative z-10 flex-1 py-3 text-lg font-bold transition-colors duration-300 ${type === 'expense' ? 'text-[#1C3F35] dark:text-[#050505]' : 'text-vault-pine/30 hover:text-vault-pine/50 dark:text-white/30 dark:hover:text-white/50'}`}>Расход</button>
+          <button type="button" onClick={() => { setType('expense'); setSelectedCategoryId(null); setComboInput(''); }} className={`relative z-10 flex-1 py-3 text-lg font-bold transition-colors duration-300 ${type === 'expense' ? 'text-[#1C3F35] dark:text-[#050505]' : 'text-vault-pine/30 hover:text-vault-pine/50 dark:text-white/30 dark:hover:text-white/50'}`}>Расход</button>
           
-          <button type="button" onClick={() => { setType('income'); setCategory(''); }} className={`relative z-10 flex-1 py-3 text-lg font-bold transition-colors duration-300 ${type === 'income' ? 'text-[#1C3F35] dark:text-[#050505]' : 'text-vault-pine/30 hover:text-vault-pine/50 dark:text-white/30 dark:hover:text-white/50'}`}>Доход</button>
+          <button type="button" onClick={() => { setType('income'); setSelectedCategoryId(null); setComboInput(''); }} className={`relative z-10 flex-1 py-3 text-lg font-bold transition-colors duration-300 ${type === 'income' ? 'text-[#1C3F35] dark:text-[#050505]' : 'text-vault-pine/30 hover:text-vault-pine/50 dark:text-white/30 dark:hover:text-white/50'}`}>Доход</button>
         </div>
 
         {/* Amount + Currency */}
@@ -148,25 +226,90 @@ export function QuickEntry() {
           </div>
         </div>
 
-        {/* Category + Subcategory side by side */}
+        {/* Category Combobox + Subcategory side by side */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
+          {/* ── Magic Combobox ─────────────────────────────────────────── */}
+          <div ref={comboRef} className="relative">
             <label className="block mb-2 text-lg font-semibold text-[#1C3F35] dark:text-white/90">Категория</label>
-            <div className="relative">
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="input-aura appearance-none pr-10 text-base font-semibold text-[#1C3F35] dark:text-white cursor-pointer bg-white/50 dark:bg-white/3 border-vault-pine/10 dark:border-white/5 transition-all outline-none"
-              >
-                <option value="" disabled>Выберите</option>
-                {filteredCategories.map(cat => (
-                  <option key={cat.id} value={cat.id.toString()} className="bg-white dark:bg-[#111111]">
-                    {getRussianCategoryName(cat.name)}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#FF7A00]/40 pointer-events-none" />
+            <div
+              className="relative flex items-center rounded-2xl border border-vault-pine/[0.06] dark:border-white/5 focus-within:border-[#1C3F35] focus-within:ring-2 focus-within:ring-[#1C3F35]/10 dark:focus-within:border-[#FF7A00] dark:focus-within:ring-[#FF7A00]/10 transition-all duration-300 bg-white/50 dark:bg-white/[0.03] overflow-hidden"
+            >
+              {/* Emoji prefix */}
+              <span className="pl-4 text-lg pointer-events-none select-none">
+                {selectedCat ? getCategoryIcon(selectedCat.name) : '🔍'}
+              </span>
+              <input
+                type="text"
+                value={comboInput}
+                onChange={(e) => {
+                  setComboInput(e.target.value);
+                  setSelectedCategoryId(null);
+                  if (!comboOpen) setComboOpen(true);
+                }}
+                onFocus={() => setComboOpen(true)}
+                placeholder="Поиск или создание..."
+                className="flex-1 px-3 py-3 outline-none text-base font-semibold bg-transparent text-[#1C3F35] dark:text-white placeholder:text-vault-pine/20 dark:placeholder:text-white/15"
+              />
+              <Search className="mr-4 w-4 h-4 text-[#FF7A00]/40 pointer-events-none" />
             </div>
+
+            {/* Dropdown */}
+            <AnimatePresence>
+              {comboOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute z-50 w-full mt-2 py-2 rounded-2xl bg-white/95 dark:bg-[#1a1a1a]/95 backdrop-blur-2xl border border-vault-pine/[0.08] dark:border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.6)] max-h-[240px] overflow-y-auto"
+                >
+                  {/* Create option — shown as first item when no exact match */}
+                  {comboInput.trim() && !exactMatch && (
+                    <button
+                      type="button"
+                      onClick={handleCreateCategory}
+                      disabled={createCategoryMutation.isPending}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-[#FF7A00]/[0.06] dark:hover:bg-[#FF7A00]/10 transition-colors duration-150 group"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-[#FF7A00]/10 flex items-center justify-center group-hover:bg-[#FF7A00]/20 transition-colors">
+                        <Plus className="w-4 h-4 text-[#FF7A00]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-[#FF7A00] truncate">
+                          Создать «{comboInput.trim()}»
+                        </p>
+                        <p className="text-[10px] font-mono text-vault-pine/30 dark:text-white/20 uppercase tracking-wider">
+                          {getCategoryIcon(comboInput.trim())} · {type === 'income' ? 'доход' : 'расход'}
+                        </p>
+                      </div>
+                    </button>
+                  )}
+
+                  {/* Filtered categories */}
+                  {filteredCategories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => handleSelectCategory(cat)}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-vault-pine/[0.03] dark:hover:bg-white/[0.04] transition-colors duration-150"
+                    >
+                      <span className="text-lg w-9 text-center">{getCategoryIcon(cat.name)}</span>
+                      <span className="flex-1 text-sm font-semibold text-[#1C3F35] dark:text-white/90 truncate">{cat.name}</span>
+                      {selectedCategoryId === cat.id && (
+                        <Check className="w-4 h-4 text-[#FF7A00]" />
+                      )}
+                    </button>
+                  ))}
+
+                  {/* Empty state */}
+                  {filteredCategories.length === 0 && (!comboInput.trim() || exactMatch) && (
+                    <p className="px-4 py-6 text-center text-sm text-vault-pine/30 dark:text-white/20 italic">
+                      Нет категорий
+                    </p>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           <div>

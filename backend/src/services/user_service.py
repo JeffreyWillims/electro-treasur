@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from typing import Any
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from src.domain.models import User, Category, CategoryType
+from src.domain.models import Category, CategoryType, User
+from src.schemas.user import CategoryCreate
 from src.services.auth_service import get_password_hash
 
 
@@ -65,3 +66,22 @@ async def update_user_profile(
     await db.commit()
     await db.refresh(db_user)
     return db_user
+
+
+async def create_user_category(
+    db: AsyncSession, user_id: int, category_in: CategoryCreate
+) -> Category:
+    """
+    Creates a new custom category for the user.
+    """
+    db_category = Category(
+        user_id=user_id,
+        name=category_in.name,
+        type=category_in.type,
+        icon=category_in.icon,
+        parent_id=category_in.parent_id,
+    )
+    db.add(db_category)
+    await db.commit()
+    await db.refresh(db_category)
+    return db_category

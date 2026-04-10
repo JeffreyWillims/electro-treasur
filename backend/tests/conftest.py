@@ -1,6 +1,7 @@
 import asyncio
-import pytest
 from unittest.mock import AsyncMock
+
+import pytest
 
 
 @pytest.fixture(scope="session")

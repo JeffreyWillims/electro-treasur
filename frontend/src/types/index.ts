@@ -44,6 +44,16 @@ export interface TransactionResponse {
   comment?: string;
 }
 
+export interface TransactionUpdate {
+  category_id?: number;
+  amount?: number | string;
+  currency?: string;
+  is_recurring?: boolean;
+  entry_type?: string;
+  executed_at?: string;
+  comment?: string;
+}
+
 // ── Dashboard Matrix ───────────────────────────────────────────────────
 export interface DayCellSchema {
   day: number; // 1–31
@@ -164,6 +174,13 @@ export interface SimulateResponse {
 // ── Category ──────────────────────────────────────────────────────────
 export interface CategoryRead {
   id: number;
+  name: string;
+  type: string;
+  icon?: string;
+  parent_id?: number;
+}
+
+export interface CategoryCreate {
   name: string;
   type: string;
   icon?: string;

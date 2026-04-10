@@ -1,10 +1,11 @@
 import asyncio
+import uuid
 from datetime import datetime, timedelta
 from decimal import Decimal
-import uuid
+
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from src.domain.models import Base, User, Category, CategoryType, Transaction
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from src.domain.models import Base, Category, CategoryType, Transaction, User
 
 DATABASE_URL = (
     "postgresql+asyncpg://electro:electro_secret@localhost:5432/electro_treasur"

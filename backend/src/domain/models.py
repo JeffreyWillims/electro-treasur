@@ -18,17 +18,8 @@ import enum
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import (
-    DateTime,
-    Enum,
-    ForeignKey,
-    Index,
-    Numeric,
-    String,
-    UniqueConstraint,
-    func,
-    text,
-)
+from sqlalchemy import (DateTime, Enum, ForeignKey, Index, Numeric, String,
+                        UniqueConstraint, func, text)
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 

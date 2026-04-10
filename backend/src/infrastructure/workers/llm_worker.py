@@ -20,8 +20,7 @@ import logging
 from datetime import datetime
 
 from arq.connections import RedisSettings
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from src.config import settings
 
 logger = logging.getLogger(__name__)

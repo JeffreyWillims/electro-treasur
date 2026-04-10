@@ -12,10 +12,12 @@ import type {
   DashboardResponse,
   TransactionCreate,
   TransactionResponse,
+  TransactionUpdate,
   AnalyticsProfileResponse,
   SimulateRequest,
   SimulateResponse,
   CategoryRead,
+  CategoryCreate,
   UserRead,
   UserUpdate,
 } from '@/types';
@@ -83,6 +85,36 @@ export function createTransaction(
 
 export function fetchTransactions(limit = 10, offset = 0): Promise<TransactionResponse[]> {
   return request<TransactionResponse[]>(`/v1/transactions/?limit=${limit}&offset=${offset}`);
+}
+
+export function updateTransaction(
+  id: number,
+  payload: TransactionUpdate,
+): Promise<TransactionResponse> {
+  return request<TransactionResponse>(`/v1/transactions/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      ...payload,
+      amount: payload.amount !== undefined ? payload.amount.toString() : undefined,
+    }),
+  });
+}
+
+export async function deleteTransaction(id: number): Promise<void> {
+  const token = localStorage.getItem('aura_token');
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const response = await fetch(`${API_BASE}/v1/transactions/${id}`, {
+    method: 'DELETE',
+    headers,
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new ApiError(response.status, errorBody.detail || `API error: ${response.status}`);
+  }
+  // 204 No Content — no body to parse
 }
 
 // ── Dashboard ──────────────────────────────────────────────────────────
@@ -155,4 +187,11 @@ export function updateMe(payload: UserUpdate): Promise<UserRead> {
 // ── Categories ────────────────────────────────────────────────────────
 export function fetchCategories(): Promise<CategoryRead[]> {
   return request<CategoryRead[]>('/v1/users/categories');
+}
+
+export function createCategory(payload: CategoryCreate): Promise<CategoryRead> {
+  return request<CategoryRead>('/v1/users/categories', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }

@@ -30,6 +30,22 @@ class TransactionCreate(BaseModel):
     model_config = ConfigDict(strict=False)
 
 
+class TransactionUpdate(BaseModel):
+    """Payload accepted by PATCH /api/v1/transactions/{id}."""
+
+    category_id: int | None = None
+    amount: Decimal | None = Field(
+        None, max_digits=12, decimal_places=2, description="Monetary amount"
+    )
+    currency: str | None = None
+    is_recurring: bool | None = None
+    entry_type: str | None = None
+    executed_at: datetime | None = None
+    comment: str | None = None
+
+    model_config = ConfigDict(strict=False)
+
+
 class TransactionResponse(BaseModel):
     """Single transaction returned to the client."""
 
@@ -42,6 +58,7 @@ class TransactionResponse(BaseModel):
     is_recurring: bool
     entry_type: str
     executed_at: datetime
+    comment: str | None = None
     idempotency_key: str | None = None
 
     model_config = ConfigDict(from_attributes=True)

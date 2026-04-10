@@ -14,15 +14,14 @@ Space: O(1) Redis memory per unique key (auto-evicted by TTL).
 
 from __future__ import annotations
 
-
 from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
-
 from src.config import settings
 from src.domain.models import Transaction
-from src.schemas.transaction import TransactionCreate, TransactionResponse
+from src.schemas.transaction import (TransactionCreate, TransactionResponse,
+                                     TransactionUpdate)
 
 
 async def create_transaction(
@@ -112,3 +111,70 @@ async def list_transactions(
         responses.append(resp)
 
     return responses
+
+
+async def get_transaction_by_id_and_user(
+    session: AsyncSession, transaction_id: int, user_id: int
+) -> Transaction | None:
+    """
+    Fetch a transaction by ID, ensuring it belongs to the specified user.
+    """
+    stmt = (
+        select(Transaction)
+        .options(joinedload(Transaction.category))
+        .where(Transaction.id == transaction_id, Transaction.user_id == user_id)
+    )
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+async def update_transaction(
+    session: AsyncSession,
+    transaction_id: int,
+    user_id: int,
+    payload: TransactionUpdate,
+) -> TransactionResponse | None:
+    """
+    Partially update a transaction. Returns None if not found or not owned by user.
+    """
+    tx = await get_transaction_by_id_and_user(session, transaction_id, user_id)
+    if not tx:
+        return None
+
+    update_data = payload.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(tx, key, value)
+
+    await session.commit()
+    await session.refresh(tx)
+
+    # Re-fetch if category was changed to eagerly load the new Category relationship
+    if "category_id" in update_data:
+        stmt = (
+            select(Transaction)
+            .options(joinedload(Transaction.category))
+            .where(Transaction.id == transaction_id)
+        )
+        result = await session.execute(stmt)
+        tx = result.scalar_one()
+
+    resp = TransactionResponse.model_validate(tx)
+    resp.category_name = tx.category.name if tx.category else "Unknown"
+    return resp
+
+
+async def delete_transaction(
+    session: AsyncSession,
+    transaction_id: int,
+    user_id: int,
+) -> bool:
+    """
+    Deletes a transaction. Returns False if not found or not owned by user.
+    """
+    tx = await get_transaction_by_id_and_user(session, transaction_id, user_id)
+    if not tx:
+        return False
+
+    await session.delete(tx)
+    await session.commit()
+    return True

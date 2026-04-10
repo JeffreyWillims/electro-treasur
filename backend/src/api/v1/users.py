@@ -2,11 +2,10 @@ from typing import Any
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from src.dependencies import get_current_user, get_db
 from src.domain.models import User
-from src.schemas.user import UserRead, UserUpdate, CategoryRead
-from src.services.user_service import update_user_profile
+from src.schemas.user import CategoryCreate, CategoryRead, UserRead, UserUpdate
+from src.services.user_service import create_user_category, update_user_profile
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -43,3 +42,17 @@ async def get_user_categories(
     Get all categories for the current user.
     """
     return current_user.categories
+
+
+@router.post(
+    "/categories", response_model=CategoryRead, status_code=201
+)
+async def post_user_category(
+    category_in: CategoryCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """
+    Create a new custom category for the current user.
+    """
+    return await create_user_category(db, user_id=current_user.id, category_in=category_in)

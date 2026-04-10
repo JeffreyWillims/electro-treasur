@@ -1,5 +1,6 @@
 import asyncio
 import json
+
 from arq import create_pool
 from arq.connections import RedisSettings
 from redis.asyncio import Redis

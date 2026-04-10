@@ -12,24 +12,22 @@ via `openapi-typescript` CLI for Single Source of Truth DTO alignment.
 
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
-from collections.abc import AsyncIterator
-
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-import time
 import json
+import time
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import datetime
-from fastapi import Request, Depends, HTTPException
+
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from redis.asyncio import Redis
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
-from redis.asyncio import Redis
-
-from src.api.v1.router import router as v1_router
 from src.api.analytics.yearly import router as analytics_router
-from src.infrastructure.redis_client import close_redis, get_redis
-from src.database import get_session
+from src.api.v1.router import router as v1_router
 from src.core.exceptions import setup_exception_handlers
+from src.database import get_session
+from src.infrastructure.redis_client import close_redis, get_redis
 
 
 @asynccontextmanager

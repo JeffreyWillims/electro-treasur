@@ -1,4 +1,5 @@
 from decimal import Decimal
+
 from pydantic import BaseModel, EmailStr, Field
 
 
@@ -24,6 +25,13 @@ class UserRead(UserBase):
 
     class Config:
         from_attributes = True
+
+
+class CategoryCreate(BaseModel):
+    name: str
+    type: str
+    icon: str | None = None
+    parent_id: int | None = None
 
 
 class CategoryRead(BaseModel):

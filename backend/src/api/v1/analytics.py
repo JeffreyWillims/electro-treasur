@@ -6,15 +6,12 @@ JWT-authenticated. User identity from Bearer token.
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from src.dependencies import get_db, get_current_user
+from src.dependencies import get_current_user, get_db
 from src.domain.models import User
-from src.schemas.analytics import (
-    AnalyticsProfileResponse,
-    SimulateRequest,
-    SimulateResponse,
-)
-from src.services.analytics_service import get_analytics_profile, simulate_savings
+from src.schemas.analytics import (AnalyticsProfileResponse, SimulateRequest,
+                                   SimulateResponse)
+from src.services.analytics_service import (get_analytics_profile,
+                                            simulate_savings)
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
