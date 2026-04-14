@@ -44,9 +44,7 @@ async def get_user_categories(
     return current_user.categories
 
 
-@router.post(
-    "/categories", response_model=CategoryRead, status_code=201
-)
+@router.post("/categories", response_model=CategoryRead, status_code=201)
 async def post_user_category(
     category_in: CategoryCreate,
     current_user: User = Depends(get_current_user),
@@ -55,4 +53,6 @@ async def post_user_category(
     """
     Create a new custom category for the current user.
     """
-    return await create_user_category(db, user_id=current_user.id, category_in=category_in)
+    return await create_user_category(
+        db, user_id=current_user.id, category_in=category_in
+    )

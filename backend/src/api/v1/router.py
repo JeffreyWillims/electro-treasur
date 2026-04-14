@@ -11,6 +11,7 @@ from src.api.v1.dashboard import router as dashboard_router
 from src.api.v1.insights import router as insights_router
 from src.api.v1.transactions import router as transactions_router
 from src.api.v1.users import router as users_router
+from src.api.v1.budgets import router as budgets_router
 
 router = APIRouter(prefix="/api/v1")
 
@@ -20,3 +21,4 @@ router.include_router(transactions_router)
 router.include_router(dashboard_router)
 router.include_router(insights_router)
 router.include_router(analytics_router)
+router.include_router(budgets_router)

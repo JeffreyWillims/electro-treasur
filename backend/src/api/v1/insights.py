@@ -14,8 +14,11 @@ from fastapi import APIRouter, Depends, status
 from src.config import settings
 from src.dependencies import get_current_user
 from src.domain.models import User
-from src.schemas.insight import (InsightEnqueueResponse, InsightRequest,
-                                 InsightResultResponse)
+from src.schemas.insight import (
+    InsightEnqueueResponse,
+    InsightRequest,
+    InsightResultResponse,
+)
 
 router = APIRouter(prefix="/insights", tags=["LLM Insights"])
 
