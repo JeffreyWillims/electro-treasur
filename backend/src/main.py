@@ -23,6 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from redis.asyncio import Redis
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.api.analytics.yearly import router as analytics_router
 from src.api.v1.router import router as v1_router
 from src.core.exceptions import setup_exception_handlers

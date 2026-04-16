@@ -198,3 +198,11 @@ export interface RecurringReminder {
   dueDate: string; // ISO date
   isActive: boolean;
 }
+
+// ── Budget ────────────────────────────────────────────────────────────
+export interface BudgetUpsert {
+  category_id: number;
+  amount_limit: string | number;
+  month: number;
+  year: number;
+}

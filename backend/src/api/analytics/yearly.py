@@ -16,6 +16,7 @@ import uuid
 from arq.connections import ArqRedis, RedisSettings, create_pool
 from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, Field
+
 from src.config import settings
 from src.dependencies import get_current_user
 from src.domain.models import User

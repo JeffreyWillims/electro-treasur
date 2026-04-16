@@ -2,16 +2,20 @@
  * BudgetEnvelopes — Premium "envelope" budget visualization cards.
  * Each category is a visual "envelope" showing fill level with animated progress.
  */
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { fetchDashboard } from '@/api/client';
 import { cn } from '@/lib/utils';
 import { Banknote, TrendingDown, AlertCircle } from 'lucide-react';
 import type { CategoryRowSchema } from '@/types';
+import { BudgetConfigModal } from './BudgetConfigModal';
 
 const ENVELOPE_ICONS = ['🏠', '🛒', '🚗', '📱', '🎭', '💊', '🎓', '✈️'];
 
 export function BudgetEnvelopes() {
+  const [selectedRow, setSelectedRow] = useState<CategoryRowSchema | null>(null);
+
   const { data: dashboard, isLoading } = useQuery({
     queryKey: ['dashboard'],
     queryFn: () => {
@@ -75,10 +79,11 @@ export function BudgetEnvelopes() {
             transition={{ delay: index * 0.08, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             className={cn(
               "premium-card p-8 min-h-[240px] backdrop-blur-3xl backdrop-saturate-150 bg-white/40 dark:bg-[#111111]/40 border border-white/20",
-              "shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(255,255,255,0.02)] transition-all cursor-default",
+              "shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(255,255,255,0.02)] transition-all cursor-pointer",
               "hover:shadow-[0_0_30px_rgba(255,122,0,0.25)] hover:border-[#FF7A00]/40 z-10",
               isOver && "border-rose-500/30"
             )}
+            onClick={() => setSelectedRow(row)}
           >
             {/* Header */}
             <div className="flex justify-between items-start mb-5">
@@ -161,6 +166,12 @@ export function BudgetEnvelopes() {
           </motion.div>
         );
       })}
+      
+      <BudgetConfigModal 
+        isOpen={!!selectedRow} 
+        onClose={() => setSelectedRow(null)} 
+        row={selectedRow} 
+      />
     </div>
   );
 }

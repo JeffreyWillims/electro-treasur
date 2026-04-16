@@ -2,6 +2,7 @@ import asyncio
 from datetime import date
 
 from sqlalchemy import select
+
 from src.database import async_session_factory
 from src.domain.models import Budget, Category, User
 

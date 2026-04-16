@@ -20,6 +20,7 @@ import type {
   CategoryCreate,
   UserRead,
   UserUpdate,
+  BudgetUpsert,
 } from '@/types';
 
 const API_BASE = '/api';
@@ -193,5 +194,19 @@ export function createCategory(payload: CategoryCreate): Promise<CategoryRead> {
   return request<CategoryRead>('/v1/users/categories', {
     method: 'POST',
     body: JSON.stringify(payload),
+  });
+}
+
+// ── Budgets ───────────────────────────────────────────────────────────
+export function upsertBudget(payload: BudgetUpsert): Promise<{ status: string; amount_limit: string }> {
+  // Pydantic strictly checks amount format
+  const safePayload = {
+    ...payload,
+    amount_limit: payload.amount_limit.toString(),
+  };
+
+  return request<{ status: string; amount_limit: string }>('/v1/budgets/', {
+    method: 'PUT',
+    body: JSON.stringify(safePayload),
   });
 }

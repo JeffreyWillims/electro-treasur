@@ -6,6 +6,7 @@ JWT-authenticated. User identity from Bearer token.
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.dependencies import get_current_user, get_db
 from src.domain.models import User
 from src.schemas.analytics import (

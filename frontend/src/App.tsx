@@ -29,7 +29,7 @@ const queryClient = new QueryClient({
 
 function DashboardLayout() {
   return (
-    <div className="flex min-h-screen bg-[#FDFBF7] dark:bg-[#050505] transition-colors duration-500 relative overflow-hidden">
+    <div className="flex min-h-screen bg-[#FDFBF7] dark:bg-[#050505] relative overflow-hidden">
       <div className="absolute left-[-2%] -top-[5%] h-[110%] w-32 bg-[#1C3F35]/30 filter blur-[80px] animate-liquid-interference pointer-events-none z-0" />
       <div className="absolute left-0 -top-[10%] h-[120%] w-48 bg-[#3A8248]/50 filter blur-[80px] animate-liquid-pillar pointer-events-none z-0" />
       <Sidebar />
@@ -133,8 +133,10 @@ function Overview() {
           endDate={endDate} 
         />
 
-        <BalanceCards startDate={startDate} endDate={endDate} />
-        <QuickEntry />
+        <div className="flex flex-col items-stretch w-full max-w-[1400px] mx-auto gap-8 px-4 lg:px-8">
+          <BalanceCards startDate={startDate} endDate={endDate} />
+          <QuickEntry />
+        </div>
       </div>
     </div>
   );

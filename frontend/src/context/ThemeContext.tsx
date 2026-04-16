@@ -35,8 +35,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     const root = window.document.documentElement;
-    root.classList.add('transitioning');
-    
     if (isDarkMode) {
       root.classList.add('dark');
       root.classList.remove('light');
@@ -45,13 +43,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       root.classList.add('light');
     }
     
-    localStorage.setItem('theme', theme);
-    
-    const timeout = setTimeout(() => {
-      root.classList.remove('transitioning');
-    }, 600);
-    
-    return () => clearTimeout(timeout);
+    // Non-blocking I/O write
+    setTimeout(() => {
+      localStorage.setItem('theme', theme);
+    }, 0);
   }, [theme, isDarkMode]);
 
   const toggleTheme = () => {

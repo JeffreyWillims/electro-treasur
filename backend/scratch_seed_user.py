@@ -1,5 +1,7 @@
 import asyncio
+
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
 from src.services.user_service import create_user
 
 DATABASE_URL = (

@@ -4,6 +4,7 @@ from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.domain.models import Category, CategoryType, User
 from src.schemas.user import CategoryCreate
 from src.services.auth_service import get_password_hash

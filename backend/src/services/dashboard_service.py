@@ -17,6 +17,7 @@ from decimal import Decimal
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.domain.models import Budget, Category, Transaction
 from src.schemas.dashboard import CategoryRowSchema, DashboardResponse, DayCellSchema
 

@@ -11,6 +11,7 @@ Used for:
 from __future__ import annotations
 
 from redis.asyncio import ConnectionPool, Redis
+
 from src.config import settings
 
 _pool: ConnectionPool | None = None

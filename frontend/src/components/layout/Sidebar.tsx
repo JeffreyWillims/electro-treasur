@@ -183,7 +183,6 @@ export function Sidebar() {
           "flex flex-col w-72 h-[calc(100vh-32px)] m-4 p-7 rounded-3xl z-10",
           "bg-white/40 dark:bg-[#111111]/40",
           "backdrop-blur-3xl backdrop-saturate-150",
-          "border border-white/40 dark:border-white/10",
           "shadow-2xl",
           "transition-all duration-500",
           // Mobile
@@ -191,6 +190,16 @@ export function Sidebar() {
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >
+        {/* ── Glowing Edges (Vision OS Style) ── */}
+        <div className="absolute inset-0 rounded-3xl pointer-events-none p-[2px] z-50"
+             style={{
+               background: "linear-gradient(160deg, rgba(28,63,53,0.8) 0%, rgba(255,255,255,0.05) 50%, rgba(255,122,0,0.8) 100%)",
+               WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+               WebkitMaskComposite: "xor",
+               maskComposite: "exclude",
+             }}>
+        </div>
+
         {/* Mobile Close */}
         <button
           onClick={() => setMobileOpen(false)}
@@ -248,10 +257,10 @@ export function Sidebar() {
                       />
                       {/* The icon */}
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <Icon className={cn("w-5 h-5", item.color)} />
+                        <Icon className={cn("w-5 h-5", item.color)} strokeWidth={1.5} />
                       </div>
                     </div>
-                    <span className="font-extrabold text-[#1C3F35] dark:text-white tracking-tight text-base">
+                    <span className="font-semibold text-[#1C3F35] dark:text-white tracking-tight text-base">
                       {item.name}
                     </span>
                   </>

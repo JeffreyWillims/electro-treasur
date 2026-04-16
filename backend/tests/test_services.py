@@ -5,6 +5,7 @@ from decimal import Decimal
 from unittest.mock import MagicMock
 
 import pytest
+
 from src.domain.models import BudgetPlan, Category, Transaction
 from src.schemas.transaction import TransactionCreate
 from src.services.dashboard_service import DashboardService

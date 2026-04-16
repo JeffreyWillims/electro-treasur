@@ -18,6 +18,20 @@ import type { CategoryRead } from '@/types';
 
 const CURRENCIES = ['RUB', 'USD', 'EUR'];
 
+const getRussianCategoryName = (rawName: string) => {
+  const name = rawName.toLowerCase();
+  if (name.includes('leisure') || name.includes('lifestyle')) return 'Отдых и развлечения';
+  if (name.includes('housing')) return 'Жилье';
+  if (name.includes('transport')) return 'Транспорт';
+  if (name.includes('food')) return 'Еда и продукты';
+  if (name.includes('health')) return 'Здоровье';
+  if (name.includes('income')) return 'Доход';
+  if (name.includes('shopping')) return 'Покупки';
+  if (name.includes('utilit') || name.includes('operation')) return 'ЖКХ и Операции';
+  if (name.includes('growth') || name.includes('invest')) return 'Инвестиции';
+  return rawName; // Fallback
+};
+
 // ── Zero-Latency Emoji Dictionary ──────────────────────────────────────
 function getCategoryIcon(name: string): string {
   const n = name.toLowerCase();
@@ -77,14 +91,21 @@ export function QuickEntry() {
 
   const filteredCategories = categories
     .filter((c) => c.type === type)
-    .filter((c) =>
-      comboInput
-        ? c.name.toLowerCase().includes(comboInput.toLowerCase())
-        : true,
-    );
+    .filter((c) => {
+      if (!comboInput) return true;
+      const term = comboInput.toLowerCase();
+      const catName = c.name.toLowerCase();
+      const translated = getRussianCategoryName(c.name).toLowerCase();
+      return catName.includes(term) || translated.includes(term);
+    });
 
   const exactMatch = filteredCategories.some(
-    (c) => c.name.toLowerCase() === comboInput.toLowerCase(),
+    (c) => {
+      const catName = c.name.toLowerCase();
+      const translated = getRussianCategoryName(c.name).toLowerCase();
+      const term = comboInput.toLowerCase();
+      return catName === term || translated === term;
+    }
   );
 
   // ── Create Category Mutation ──────────────────────────────────────────
@@ -115,7 +136,7 @@ export function QuickEntry() {
 
   const handleSelectCategory = (cat: CategoryRead) => {
     setSelectedCategoryId(cat.id);
-    setComboInput(cat.name);
+    setComboInput(getRussianCategoryName(cat.name));
     setComboOpen(false);
   };
 
@@ -204,141 +225,138 @@ export function QuickEntry() {
           <button type="button" onClick={() => { setType('income'); setSelectedCategoryId(null); setComboInput(''); }} className={`relative z-10 flex-1 py-3 text-lg font-bold transition-colors duration-300 ${type === 'income' ? 'text-[#1C3F35] dark:text-[#050505]' : 'text-vault-pine/30 hover:text-vault-pine/50 dark:text-white/30 dark:hover:text-white/50'}`}>Доход</button>
         </div>
 
-        {/* Amount + Currency */}
-        <div>
-          <label className="block mb-2 text-lg font-semibold text-[#1C3F35] dark:text-white/90">Сумма</label>
-          <div className="flex rounded-2xl overflow-hidden border border-vault-pine/[0.06] dark:border-white/5 focus-within:border-[#1C3F35] focus-within:ring-2 focus-within:ring-[#1C3F35]/10 dark:focus-within:border-[#FF7A00] dark:focus-within:ring-[#FF7A00]/10 transition-all duration-300">
-            <input
-              type="text"
-              inputMode="decimal"
-              value={amount}
-              onChange={handleAmountChange}
-              placeholder="0.00"
-              className="flex-1 px-5 py-3 outline-none font-mono text-base font-medium tabular-nums bg-transparent text-[#1C3F35] dark:text-white placeholder:text-vault-pine/15 dark:placeholder:text-white/10"
-            />
-            <select
-              value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
-              className="bg-[#FF7A00]/[0.06] border-l border-vault-pine/5 dark:border-white/5 px-3 py-3 text-[10px] font-mono font-bold text-[#FF7A00] outline-none cursor-pointer"
-            >
-              {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-        </div>
-
-        {/* Category Combobox + Subcategory side by side */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* ── Magic Combobox ─────────────────────────────────────────── */}
-          <div ref={comboRef} className="relative">
-            <label className="block mb-2 text-lg font-semibold text-[#1C3F35] dark:text-white/90">Категория</label>
-            <div
-              className="relative flex items-center rounded-2xl border border-vault-pine/[0.06] dark:border-white/5 focus-within:border-[#1C3F35] focus-within:ring-2 focus-within:ring-[#1C3F35]/10 dark:focus-within:border-[#FF7A00] dark:focus-within:ring-[#FF7A00]/10 transition-all duration-300 bg-white/50 dark:bg-white/[0.03] overflow-hidden"
-            >
-              {/* Emoji prefix */}
-              <span className="pl-4 text-lg pointer-events-none select-none">
-                {selectedCat ? getCategoryIcon(selectedCat.name) : '🔍'}
-              </span>
+        {/* Row 2: Amount (70%) + Date (30%) */}
+        <div className="flex gap-4 items-end">
+          <div className="w-[70%]">
+            <label className="block mb-2 text-sm font-semibold text-[#1C3F35]/70 dark:text-white/60">Сумма</label>
+            <div className="flex bg-white/40 dark:bg-black/20 rounded-2xl p-4 items-center h-16 focus-within:ring-2 focus-within:ring-[#1C3F35]/10 dark:focus-within:ring-[#FF7A00]/20 transition-all duration-300">
               <input
                 type="text"
-                value={comboInput}
-                onChange={(e) => {
-                  setComboInput(e.target.value);
-                  setSelectedCategoryId(null);
-                  if (!comboOpen) setComboOpen(true);
-                }}
-                onFocus={() => setComboOpen(true)}
-                placeholder="Поиск или создание..."
-                className="flex-1 px-3 py-3 outline-none text-base font-semibold bg-transparent text-[#1C3F35] dark:text-white placeholder:text-vault-pine/20 dark:placeholder:text-white/15"
+                inputMode="decimal"
+                value={amount}
+                onChange={handleAmountChange}
+                placeholder="0.00"
+                className="flex-1 w-full outline-none bg-transparent text-[#1C3F35] dark:text-white text-3xl font-black tabular-nums placeholder:text-vault-pine/15 dark:placeholder:text-white/10"
               />
-              <Search className="mr-4 w-4 h-4 text-[#FF7A00]/40 pointer-events-none" />
+              <select
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                className="ml-3 bg-transparent text-sm font-bold text-slate-400 outline-none cursor-pointer"
+              >
+                {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
-
-            {/* Dropdown */}
-            <AnimatePresence>
-              {comboOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: -4, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -4, scale: 0.98 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute z-50 w-full mt-2 py-2 rounded-2xl bg-white/95 dark:bg-[#1a1a1a]/95 backdrop-blur-2xl border border-vault-pine/[0.08] dark:border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.6)] max-h-[240px] overflow-y-auto"
-                >
-                  {/* Create option — shown as first item when no exact match */}
-                  {comboInput.trim() && !exactMatch && (
-                    <button
-                      type="button"
-                      onClick={handleCreateCategory}
-                      disabled={createCategoryMutation.isPending}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-[#FF7A00]/[0.06] dark:hover:bg-[#FF7A00]/10 transition-colors duration-150 group"
-                    >
-                      <div className="w-9 h-9 rounded-xl bg-[#FF7A00]/10 flex items-center justify-center group-hover:bg-[#FF7A00]/20 transition-colors">
-                        <Plus className="w-4 h-4 text-[#FF7A00]" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-[#FF7A00] truncate">
-                          Создать «{comboInput.trim()}»
-                        </p>
-                        <p className="text-[10px] font-mono text-vault-pine/30 dark:text-white/20 uppercase tracking-wider">
-                          {getCategoryIcon(comboInput.trim())} · {type === 'income' ? 'доход' : 'расход'}
-                        </p>
-                      </div>
-                    </button>
-                  )}
-
-                  {/* Filtered categories */}
-                  {filteredCategories.map((cat) => (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => handleSelectCategory(cat)}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-vault-pine/[0.03] dark:hover:bg-white/[0.04] transition-colors duration-150"
-                    >
-                      <span className="text-lg w-9 text-center">{getCategoryIcon(cat.name)}</span>
-                      <span className="flex-1 text-sm font-semibold text-[#1C3F35] dark:text-white/90 truncate">{cat.name}</span>
-                      {selectedCategoryId === cat.id && (
-                        <Check className="w-4 h-4 text-[#FF7A00]" />
-                      )}
-                    </button>
-                  ))}
-
-                  {/* Empty state */}
-                  {filteredCategories.length === 0 && (!comboInput.trim() || exactMatch) && (
-                    <p className="px-4 py-6 text-center text-sm text-vault-pine/30 dark:text-white/20 italic">
-                      Нет категорий
-                    </p>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
-
-          <div>
-            <label className="block mb-2 text-lg font-semibold text-[#1C3F35] dark:text-white/90 flex items-center gap-1.5">
-              <Tag size={16} />
-              Детали
-            </label>
-            <input
-              type="text"
-              value={subcategory}
-              onChange={(e) => setSubcategory(e.target.value)}
-              placeholder="Напр.: Netflix, Пятёрочка"
-              className="input-aura text-base font-medium"
-            />
+          <div className="w-[30%]">
+            <label className="block mb-2 text-sm font-semibold text-[#1C3F35]/70 dark:text-white/60">Дата</label>
+            <div className="bg-white/40 dark:bg-black/20 border border-white/20 rounded-2xl h-16 flex items-center justify-center focus-within:ring-2 focus-within:ring-[#1C3F35]/10 dark:focus-within:ring-[#FF7A00]/20 transition-all duration-300">
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full bg-transparent outline-none text-center text-lg font-semibold text-slate-800 dark:text-white cursor-pointer px-2"
+                style={{ colorScheme: 'light dark' }}
+              />
+            </div>
           </div>
         </div>
 
-        {/* Date */}
-        <div>
-          <label className="block mb-2 text-lg font-semibold text-[#1C3F35] dark:text-white/90">Дата</label>
-          <div className="relative">
-            <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#FF7A00]/40 pointer-events-none" />
+        {/* Row 3: Magic Combobox */}
+        <div ref={comboRef} className="relative">
+          <label className="block mb-2 text-sm font-semibold text-[#1C3F35]/70 dark:text-white/60">Категория</label>
+          <div
+            className="relative flex items-center bg-white/40 dark:bg-black/20 border border-white/40 dark:border-white/10 rounded-2xl focus-within:border-[#1C3F35]/30 focus-within:ring-2 focus-within:ring-[#1C3F35]/10 dark:focus-within:border-[#FF7A00]/30 dark:focus-within:ring-[#FF7A00]/20 transition-all duration-300 overflow-hidden"
+          >
+            {/* Emoji prefix */}
+            <span className="pl-4 text-lg pointer-events-none select-none">
+              {selectedCat ? getCategoryIcon(selectedCat.name) : '🔍'}
+            </span>
             <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="input-aura pl-11 text-base font-medium"
+              type="text"
+              value={comboInput}
+              onChange={(e) => {
+                setComboInput(e.target.value);
+                setSelectedCategoryId(null);
+                if (!comboOpen) setComboOpen(true);
+              }}
+              onFocus={() => setComboOpen(true)}
+              placeholder="Поиск или создание..."
+              className="flex-1 px-3 py-4 outline-none text-base font-semibold bg-transparent text-[#1C3F35] dark:text-white placeholder:text-vault-pine/20 dark:placeholder:text-white/15"
             />
+            <Search className="mr-4 w-4 h-4 text-[#FF7A00]/40 pointer-events-none" />
           </div>
+
+          {/* Dropdown */}
+          <AnimatePresence>
+            {comboOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -4, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                transition={{ duration: 0.15 }}
+                className="absolute z-50 w-full mt-2 py-2 rounded-2xl bg-white/95 dark:bg-[#1a1a1a]/95 backdrop-blur-2xl border border-vault-pine/[0.08] dark:border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.6)] max-h-[240px] overflow-y-auto"
+              >
+                {/* Create option — shown as first item when no exact match */}
+                {comboInput.trim() && !exactMatch && (
+                  <button
+                    type="button"
+                    onClick={handleCreateCategory}
+                    disabled={createCategoryMutation.isPending}
+                    className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-[#FF7A00]/[0.06] dark:hover:bg-[#FF7A00]/10 transition-colors duration-150 group"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-[#FF7A00]/10 flex items-center justify-center group-hover:bg-[#FF7A00]/20 transition-colors">
+                      <Plus className="w-4 h-4 text-[#FF7A00]" />
+                    </div>
+                    <div className="flex-1 min-w-0 ml-1">
+                      <p className="text-sm font-bold text-[#FF7A00] truncate">
+                        Создать «{comboInput.trim()}»
+                      </p>
+                      <p className="text-[10px] font-mono text-vault-pine/30 dark:text-white/20 uppercase tracking-wider">
+                        {getCategoryIcon(comboInput.trim())} · {type === 'income' ? 'доход' : 'расход'}
+                      </p>
+                    </div>
+                  </button>
+                )}
+
+                {/* Filtered categories */}
+                {filteredCategories.map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => handleSelectCategory(cat)}
+                    className="w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-vault-pine/[0.03] dark:hover:bg-white/[0.04] transition-colors duration-150"
+                  >
+                    <span className="text-lg w-9 text-center">{getCategoryIcon(cat.name)}</span>
+                    <span className="flex-1 ml-1 text-sm font-semibold text-[#1C3F35] dark:text-white/90 truncate">{getRussianCategoryName(cat.name)}</span>
+                    {selectedCategoryId === cat.id && (
+                      <Check className="w-4 h-4 text-[#FF7A00]" />
+                    )}
+                  </button>
+                ))}
+
+                {/* Empty state */}
+                {filteredCategories.length === 0 && (!comboInput.trim() || exactMatch) && (
+                  <p className="px-4 py-6 text-center text-sm text-vault-pine/30 dark:text-white/20 italic">
+                    Нет категорий
+                  </p>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>        </div>
+
+        {/* Row 4: Details */}
+        <div>
+          <label className="block mb-2 text-sm font-semibold text-[#1C3F35]/70 dark:text-white/60 flex items-center gap-1.5">
+            <Tag size={14} />
+            Детали
+          </label>
+          <input
+            type="text"
+            value={subcategory}
+            onChange={(e) => setSubcategory(e.target.value)}
+            placeholder="Напр.: Пятёрочка, Яндекс.Такси"
+            className="w-full bg-white/40 dark:bg-black/20 border border-white/40 dark:border-white/10 rounded-2xl px-4 py-4 outline-none text-base font-medium text-[#1C3F35] dark:text-white placeholder:text-vault-pine/20 dark:placeholder:text-white/20 focus-within:ring-2 focus-within:ring-[#1C3F35]/10 dark:focus-within:ring-[#FF7A00]/20 transition-all duration-300"
+          />
         </div>
 
         {/* Submit — Citrine Orange / Kinetic Abacus */}

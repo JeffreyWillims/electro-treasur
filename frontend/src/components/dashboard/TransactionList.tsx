@@ -19,20 +19,18 @@ import { toast } from 'sonner';
 
 const PAGE_SIZE = 30;
 
-const CATEGORY_TRANSLATIONS: Record<string, string> = {
-  'Housing': 'Жилье',
-  'Food': 'Еда',
-  'Transport': 'Транспорт',
-  'Utilities': 'Коммунальные',
-  'Leisure': 'Отдых',
-  'Salary': 'Зарплата',
-  'Investment': 'Инвестиции',
-  'Healthcare': 'Здоровье',
-  'Health': 'Здоровье',
-  'Education': 'Образование',
-  'Shopping': 'Покупки',
-  'Personal Care': 'Уход',
-  'Other': 'Другое'
+const getRussianCategoryName = (rawName: string) => {
+  const name = rawName.toLowerCase();
+  if (name.includes('leisure') || name.includes('lifestyle')) return 'Отдых и развлечения';
+  if (name.includes('housing')) return 'Жилье';
+  if (name.includes('transport')) return 'Транспорт';
+  if (name.includes('food')) return 'Еда и продукты';
+  if (name.includes('health')) return 'Здоровье';
+  if (name.includes('income')) return 'Доход';
+  if (name.includes('shopping')) return 'Покупки';
+  if (name.includes('utilit') || name.includes('operation')) return 'ЖКХ и Операции';
+  if (name.includes('growth') || name.includes('invest')) return 'Инвестиции';
+  return rawName; // Fallback
 };
 
 function getCategoryIcon(name: string): string {
@@ -53,9 +51,6 @@ function getCategoryIcon(name: string): string {
   return '✨';
 }
 
-function translateCategory(name: string): string {
-  return CATEGORY_TRANSLATIONS[name] || name;
-}
 
 export function TransactionList() {
   const queryClient = useQueryClient();
@@ -250,7 +245,7 @@ export function TransactionList() {
             {/* Top Header: Title & Legend */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
               <div>
-                <h1 className="text-5xl md:text-6xl font-bold text-premium tracking-tighter leading-none mb-3">История</h1>
+                <h1 className="text-4xl md:text-5xl font-extrabold text-[#1C3F35] dark:text-emerald-50 tracking-tight mb-8" style={{ textShadow: "1px 1px 0px rgba(255,255,255,0.8), -1px -1px 0px rgba(0,0,0,0.05)" }}>История</h1>
                 <p className="text-[10px] font-mono text-aura-gold uppercase tracking-[0.4em] font-bold opacity-60">
                   Финансовый хронограф Citrine Vault
                 </p>
@@ -268,32 +263,32 @@ export function TransactionList() {
             </div>
             
             {/* Toolbar */}
-            <div className="flex flex-col sm:flex-row gap-4 w-full">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-aura-gold/30" />
+            <div className="flex flex-col md:flex-row gap-4 w-full p-2 bg-white/40 dark:bg-black/20 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-2xl shadow-sm mb-8">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input 
                   type="text" 
                   placeholder="Поиск по транзакциям..." 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="input-aura pl-11 text-base"
+                  className="w-full flex-1 h-12 bg-white/50 dark:bg-white/5 border border-white/50 dark:border-white/10 rounded-xl px-12 text-slate-900 dark:text-white placeholder-slate-500 focus:ring-2 focus:ring-[#1C3F35]/20 outline-none transition-all"
                 />
               </div>
               <div className="relative">
                 <select 
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="input-aura pr-10 text-base font-medium appearance-none cursor-pointer w-full sm:w-64"
+                  className="h-12 min-w-[200px] w-full bg-white/50 dark:bg-white/5 border border-white/50 dark:border-white/10 rounded-xl px-4 pr-10 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-[#1C3F35]/20 outline-none cursor-pointer appearance-none"
                 >
                   <option value="">Все категории</option>
                   {categories.map(c => (
                     <option key={c.id} value={c.id}>
-                      {translateCategory(c.name)}
+                      {getRussianCategoryName(c.name)}
                     </option>
                   ))}
                 </select>
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <div className="w-2 h-2 border-r-2 border-b-2 border-aura-gold/40 rotate-45 -translate-y-0.5" />
+                  <div className="w-2 h-2 border-r-2 border-b-2 border-slate-400 rotate-45 -translate-y-0.5" />
                 </div>
               </div>
             </div>
@@ -333,7 +328,7 @@ export function TransactionList() {
                       </div>
                       <div>
                         <p className="text-lg font-bold text-aura-graphite dark:text-aura-ivory tracking-tight leading-tight mb-1">
-                          {translateCategory(catName)}
+                          {getRussianCategoryName(catName)}
                         </p>
                         <div className="flex items-center gap-3">
                           <p className="text-[10px] font-mono font-bold text-aura-gold/40 uppercase tracking-widest">
@@ -513,7 +508,7 @@ function DrawerContent({
 
         {/* Details Grid */}
         <div className="space-y-4">
-          <DetailRow icon={<Tag className="w-4 h-4" />} label="Категория" value={`${getCategoryIcon(catName)} ${translateCategory(catName)}`} />
+          <DetailRow icon={<Tag className="w-4 h-4" />} label="Категория" value={`${getCategoryIcon(catName)} ${getRussianCategoryName(catName)}`} />
           <DetailRow 
             icon={<Calendar className="w-4 h-4" />} 
             label="Дата" 

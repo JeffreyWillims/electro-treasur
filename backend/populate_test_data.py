@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
 from src.domain.models import Base, Category, CategoryType, Transaction, User
 
 DATABASE_URL = (

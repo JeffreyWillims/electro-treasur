@@ -7,6 +7,7 @@ sys.path.append(os.path.join(os.getcwd(), "src"))
 sys.path.append(os.getcwd())
 
 from sqlalchemy import inspect, text
+
 from src.database import async_session_factory, engine
 from src.domain.models import User
 

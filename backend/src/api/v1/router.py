@@ -5,13 +5,14 @@ API v1 Root Router — aggregates all v1 sub-routers.
 from __future__ import annotations
 
 from fastapi import APIRouter
+
 from src.api.v1.analytics import router as analytics_router
 from src.api.v1.auth import router as auth_router
+from src.api.v1.budgets import router as budgets_router
 from src.api.v1.dashboard import router as dashboard_router
 from src.api.v1.insights import router as insights_router
 from src.api.v1.transactions import router as transactions_router
 from src.api.v1.users import router as users_router
-from src.api.v1.budgets import router as budgets_router
 
 router = APIRouter(prefix="/api/v1")
 

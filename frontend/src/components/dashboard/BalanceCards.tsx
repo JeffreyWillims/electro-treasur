@@ -46,9 +46,7 @@ export function BalanceCards({
   );
 
   return (
-    <div className="transform scale-[0.97] origin-top-left w-full flex flex-col gap-6">
-
-      <div className="relative bg-white/70 dark:bg-[#111111]/80 backdrop-blur-3xl border border-vault-pine/[0.04] dark:border-white/5 shadow-[0_8px_30px_rgba(28,63,53,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.8)] rounded-3xl p-8 animate-slide-up w-full transition-all duration-300 ease-out hover:-translate-y-1 hover:scale-[1.005] hover:shadow-[0_20px_40px_rgba(28,63,53,0.08)] dark:hover:shadow-[0_10px_30px_rgba(255,122,0,0.15)] overflow-hidden">
+      <div className="relative bg-white/70 dark:bg-[#111111]/80 backdrop-blur-3xl border border-vault-pine/[0.04] dark:border-white/5 shadow-[0_8px_30px_rgba(28,63,53,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.8)] rounded-3xl p-8 w-full transition-all duration-300 ease-out hover:-translate-y-1 hover:scale-[1.005] hover:shadow-[0_20px_40px_rgba(28,63,53,0.08)] dark:hover:shadow-[0_10px_30px_rgba(255,122,0,0.15)] overflow-hidden">
         {/* Breathing Glow */}
         <motion.div 
           className="absolute inset-0 pointer-events-none z-0"
@@ -147,7 +145,6 @@ export function BalanceCards({
             </AnimatePresence>
           </div>
         </div>
-      </div>
       </div>
     </div>
   );

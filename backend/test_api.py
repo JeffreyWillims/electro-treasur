@@ -2,6 +2,7 @@ import asyncio
 from decimal import Decimal
 
 from pydantic import ValidationError
+
 from src.database import async_session_factory
 from src.schemas.analytics import Adjustment, SimulateRequest
 from src.services.analytics_service import get_analytics_profile, simulate_savings

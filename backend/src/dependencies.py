@@ -14,6 +14,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.database import async_session_factory
 from src.domain.models import User
 from src.infrastructure.redis_client import get_redis

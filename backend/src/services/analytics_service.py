@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.domain.models import Budget, Category, CategoryType, Transaction
 from src.schemas.analytics import (
     AnalyticsProfileResponse,
