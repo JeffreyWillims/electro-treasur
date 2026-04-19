@@ -11,11 +11,9 @@ import {
   Target,
   PiggyBank,
   LogOut,
-  User,
   Sliders,
   Sun,
   Moon,
-  ChevronUp,
   Menu,
   X,
 } from 'lucide-react';

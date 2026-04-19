@@ -28,9 +28,12 @@ def setup_exception_handlers(app: FastAPI) -> None:
         error_id = f"aura_err_{int(datetime.now().timestamp())}_{uuid.uuid4().hex[:6]}"
 
         # Log the full traceback with the error_id for observability
-        logging.getLogger("uvicorn.error").error(
-            f"❌ Geodetic Trap [{error_id}]: Unhandled Exception in {request.method} {request.url.path}\n{traceback.format_exc()}"
+        error_msg = (
+            f"❌ Geodetic Trap [{error_id}]: Unhandled Exception in "
+            f"{request.method} {request.url.path}\n"
+            f"{traceback.format_exc()}"
         )
+        logging.getLogger("uvicorn.error").error(error_msg)
 
         # Return sanitized JSON to client
         return JSONResponse(

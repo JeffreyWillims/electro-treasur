@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { fetchAnalyticsProfile, fetchDashboard } from '@/api/client';
 import { TrendingUp, Infinity as InfinityIcon } from 'lucide-react';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length > 0) {
     const value = payload[0].value;

@@ -7,8 +7,8 @@ sys.path.append(os.path.join(os.getcwd(), "src"))
 # Also add current dir to path just in case
 sys.path.append(os.getcwd())
 
-from src.database import async_session_factory
-from src.services.user_service import create_user
+from src.database import async_session_factory  # noqa: E402
+from src.services.user_service import create_user  # noqa: E402
 
 
 async def test_creation():

@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.dependencies import get_current_user, get_db
 from src.domain.models import User
 from src.schemas.budget import BudgetUpsert
-from src.services.budget_service import upsert_budget
+from src.services.budget_service import upsert_budget, delete_budget
 
 router = APIRouter(prefix="/budgets", tags=["Budgets"])
 
@@ -25,5 +25,23 @@ async def set_budget_limit(
             amount_limit=payload.amount_limit,
         )
         return {"status": "success", "amount_limit": str(budget.amount_limit)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_budget(
+    category_id: int,
+    month: int = Query(...),
+    year: int = Query(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        deleted = await delete_budget(db, current_user.id, category_id, month, year)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Budget not found")
+        return None
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

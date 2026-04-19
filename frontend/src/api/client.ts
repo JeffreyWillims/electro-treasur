@@ -210,3 +210,19 @@ export function upsertBudget(payload: BudgetUpsert): Promise<{ status: string; a
     body: JSON.stringify(safePayload),
   });
 }
+
+export function deleteBudget(categoryId: number, month: number, year: number): Promise<void> {
+  const token = localStorage.getItem('aura_token');
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  return fetch(`${API_BASE}/v1/budgets/${categoryId}?month=${month}&year=${year}`, {
+    method: 'DELETE',
+    headers,
+  }).then(async (response) => {
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({ detail: response.statusText }));
+      throw new ApiError(response.status, errorBody.detail || `API error: ${response.status}`);
+    }
+  });
+}

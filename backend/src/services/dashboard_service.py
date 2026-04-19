@@ -15,7 +15,7 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.models import Budget, Category, Transaction
@@ -40,7 +40,7 @@ async def get_monthly_dashboard(
     if day_count <= 0:
         day_count = 1
 
-    # ── Step 0: Total Balance All Time ────────────────────────────────
+    # ── Step 0: Total Balance All Time ───────
     stmt_all = (
         select(Category.type, func.sum(Transaction.amount))
         .join(Category, Transaction.category_id == Category.id)
@@ -75,19 +75,24 @@ async def get_monthly_dashboard(
     tx_rows = tx_result.all()  # list[(category_id, type, exec_date, total)]
 
     # ── Step 2: Fetch budgets ─────────────────────────
-    # For budgets, we'll try to match the month of the start_date as a proxy or just aggregate any budget that touches the range.
-    # To keep it simple, we filter by start_date's month/year
-    stmt_bp = select(Budget.category_id, Budget.amount_limit).where(
-        Budget.user_id == user_id,
-        Budget.month == start_date.month,
-        Budget.year == start_date.year,
+    # Fetch budgets that match EITHER the start_date's month OR the end_date's month.
+    stmt_bp = (
+        select(Budget.category_id, Budget.amount_limit)
+        .where(
+            Budget.user_id == user_id,
+            or_(
+                (Budget.month == start_date.month) & (Budget.year == start_date.year),
+                (Budget.month == end_date.month) & (Budget.year == end_date.year),
+            ),
+        )
+        .order_by(Budget.year, Budget.month)
     )
     bp_result = await session.execute(stmt_bp)
     plans: dict[int, Decimal] = {
         row.category_id: row.amount_limit for row in bp_result.all()
     }
 
-    # ── Step 3: Fetch category names ─────────────────────────────────────
+    # ── Step 3: Fetch category names ─────────
     stmt_cat = select(Category.id, Category.name, Category.type).where(
         Category.user_id == user_id
     )
@@ -122,7 +127,7 @@ async def get_monthly_dashboard(
         elif cat_type == "expense":
             period_expense += total
 
-    # ── Step 5: Build response rows — O(K) ───────────────────────────────
+    # ── Step 5: Build response rows ───────────
     all_cat_ids = set(plans.keys()) | set(matrix.keys())
     rows: list[CategoryRowSchema] = []
 
@@ -139,7 +144,9 @@ async def get_monthly_dashboard(
                 type=info["type"],
                 planned=planned,
                 fact=fact,
-                delta=planned - fact if info["type"] == "expense" else fact - planned,
+                delta=(
+                    planned - fact if info["type"] == "expense" else fact - planned
+                ),
                 days=[
                     DayCellSchema(day=i + 1, amount=days_data[i])
                     for i in range(day_count)

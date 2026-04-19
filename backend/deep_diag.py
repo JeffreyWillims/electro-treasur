@@ -6,10 +6,10 @@ import sys
 sys.path.append(os.path.join(os.getcwd(), "src"))
 sys.path.append(os.getcwd())
 
-from sqlalchemy import inspect, text
+from sqlalchemy import inspect, text  # noqa: E402
 
-from src.database import async_session_factory, engine
-from src.domain.models import User
+from src.database import async_session_factory, engine  # noqa: E402
+from src.domain.models import User  # noqa: E402
 
 
 async def diagnose():

@@ -1,0 +1,63 @@
+
+> frontend@0.0.0 lint
+> eslint .
+
+
+D:\programmer\Anti_project\electro-treasur\frontend\src\components\analytics\SavingsNavigator.tsx
+  8:52  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\programmer\Anti_project\electro-treasur\frontend\src\components\dashboard\BudgetConfigModal.tsx
+  33:58   error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-explicit-any
+  33:101  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-explicit-any
+  40:9    error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\programmer\Anti_project\electro-treasur\frontend\src\components\dashboard\BudgetConfigModal.tsx:40:9
+  38 |       if (row) {
+  39 |         const planned = parseFloat(row.planned);
+> 40 |         setAmountStr(planned > 0 ? planned.toString() : '');
+     |         ^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  41 |         setSelectedCategoryId(row.category_id);
+  42 |       } else {
+  43 |         setAmountStr('');  react-hooks/set-state-in-effect
+
+D:\programmer\Anti_project\electro-treasur\frontend\src\components\dashboard\BudgetEnvelopes.tsx
+  10:10  error  'Banknote' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\programmer\Anti_project\electro-treasur\frontend\src\components\dashboard\QuickEntry.tsx
+  15:34  error  'CalendarIcon' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\programmer\Anti_project\electro-treasur\frontend\src\components\dashboard\SafeToSpend.tsx
+  3:24  error  'ArrowRight' is defined but never used  @typescript-eslint/no-unused-vars
+  6:10  error  'cn' is defined but never used          @typescript-eslint/no-unused-vars
+
+D:\programmer\Anti_project\electro-treasur\frontend\src\components\layout\Sidebar.tsx
+  14:3  error  'User' is defined but never used       @typescript-eslint/no-unused-vars
+  18:3  error  'ChevronUp' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\programmer\Anti_project\electro-treasur\frontend\src\components\profile\ProfileSettings.tsx
+  18:7   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\programmer\Anti_project\electro-treasur\frontend\src\components\profile\ProfileSettings.tsx:18:7
+  16 |   useEffect(() => {
+  17 |     if (user) {
+> 18 |       setFullName(user.full_name || '');
+     |       ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  19 |       setPhone(user.phone || '');
+  20 |       setMonthlyIncome(user.monthly_income?.toString() || '');
+  21 |     }  react-hooks/set-state-in-effect
+  41:19  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+
+✖ 12 problems (12 errors, 0 warnings)
+

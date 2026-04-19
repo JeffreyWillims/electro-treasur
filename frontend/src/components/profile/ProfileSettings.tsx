@@ -15,6 +15,7 @@ export function ProfileSettings() {
 
   useEffect(() => {
     if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFullName(user.full_name || '');
       setPhone(user.phone || '');
       setMonthlyIncome(user.monthly_income?.toString() || '');
@@ -38,6 +39,7 @@ export function ProfileSettings() {
         className: 'font-serif tracking-tight',
         descriptionClassName: 'font-mono text-[10px] uppercase text-[#FF7A00]'
       });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setIsSubmitting(false);
       toast.error(err.message || 'Ошибка синхронизации', {

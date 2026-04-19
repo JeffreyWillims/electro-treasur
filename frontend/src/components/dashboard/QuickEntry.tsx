@@ -12,7 +12,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { PlusCircle, Calendar as CalendarIcon, Tag, Search, Plus, Check } from 'lucide-react';
+import { PlusCircle, Tag, Search, Plus, Check } from 'lucide-react';
 import { createTransaction, fetchCategories, createCategory } from '@/api/client';
 import type { CategoryRead } from '@/types';
 

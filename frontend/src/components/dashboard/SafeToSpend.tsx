@@ -1,19 +1,28 @@
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Wallet, Info, ArrowRight } from 'lucide-react';
+import { Wallet, Info } from 'lucide-react';
 import { fetchDashboard } from '@/api/client';
 import { useAuth } from '@/context/AuthContext';
-import { cn } from '@/lib/utils';
 import type { CategoryRowSchema } from '@/types';
 
 export function SafeToSpend() {
   const { user } = useAuth();
   const { data: dashboard, isLoading } = useQuery({
-    queryKey: ['dashboard'],
+    queryKey: ['dashboard', 'current'],
     queryFn: () => {
       const d = new Date();
       const start = new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0] as string;
       const end = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0] as string;
+      return fetchDashboard(start, end);
+    },
+  });
+
+  const { data: prevDashboard } = useQuery({
+    queryKey: ['dashboard', 'prev'],
+    queryFn: () => {
+      const d = new Date();
+      const start = new Date(d.getFullYear(), d.getMonth() - 1, 1).toISOString().split('T')[0] as string;
+      const end = new Date(d.getFullYear(), d.getMonth(), 0).toISOString().split('T')[0] as string;
       return fetchDashboard(start, end);
     },
   });
@@ -31,91 +40,104 @@ export function SafeToSpend() {
   // ── Calculation Logic (Quantum Liquidity Protocol) ──────────────────
   
   // Total Planned Expenses (Reserved for Envelopes)
-  const expenseRows = dashboard?.rows.filter((r) => parseFloat(r.planned) > 0) || [];
+  const expenseRows = dashboard?.rows.filter((r) => Number(r.planned) > 0) || [];
   
-  const totalPlanned = expenseRows.reduce((acc: number, row: CategoryRowSchema) => acc + parseFloat(row.planned), 0);
-  const totalSpent = expenseRows.reduce((acc: number, row: CategoryRowSchema) => acc + parseFloat(row.fact), 0);
+  const totalPlanned = expenseRows.reduce((acc: number, row: CategoryRowSchema) => acc + Number(row.planned), 0);
+  const totalSpent = expenseRows.reduce((acc: number, row: CategoryRowSchema) => acc + Number(row.fact), 0);
   
-  // Overspent amounts (spending exceeding planned limits across all categories)
-  const overspent = expenseRows.reduce((acc: number, row: CategoryRowSchema) => {
-    const planned = parseFloat(row.planned);
-    const fact = parseFloat(row.fact);
-    return acc + Math.max(0, fact - planned);
-  }, 0);
+  const overspent = expenseRows.reduce((acc: number, row: CategoryRowSchema) => acc + Math.max(0, Number(row.fact) - Number(row.planned)), 0);
 
   const today = new Date();
   const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-  const daysLeft = Math.max(1, daysInMonth - today.getDate() + 1);
+  const daysLeft = Math.max(0, daysInMonth - today.getDate() + 1);
 
-  // Safe-to-Spend formula: (Total Income - Reserved Budgets - Overspent Leakage) / Time Delta
-  const monthlyIncome = parseFloat(user?.monthly_income?.toString() || '0');
+  const monthlyIncome = Number(user?.monthly_income) || Number(dashboard?.period_income) || 0;
   
-  // Available block: from income subtract what we committed to, plus what we already overspent and has to be covered.
-  const availableLiquidity = Math.max(0, monthlyIncome - totalPlanned - overspent);
-  const safeToSpendToday = availableLiquidity / daysLeft;
+  const limit = daysLeft > 0 ? Math.max(0, (monthlyIncome - totalPlanned - overspent) / daysLeft) : 0;
+  console.log("MATH_CHECK:", { monthlyIncome, totalPlanned, overspent, daysLeft, limit });
 
   const percentSpent = totalPlanned > 0 ? (totalSpent / totalPlanned) * 100 : 0;
 
+  // Rollover (⛄) calculation from previous month
+  const prevIncome = parseFloat(prevDashboard?.period_income || '0');
+  const prevExpense = parseFloat(prevDashboard?.period_expense || '0');
+  const rollover = Math.max(0, prevIncome - prevExpense);
+
   return (
-    <div className="w-full premium-card p-12 md:p-16 overflow-hidden relative group backdrop-blur-3xl backdrop-saturate-150 bg-white/40 dark:bg-[#111111]/40 border border-white/20">
-      {/* Decorative background element */}
-      <div className="absolute -right-20 -top-20 w-80 h-80 bg-[#FF7A00]/[0.04] rounded-full blur-3xl group-hover:bg-[#FF7A00]/[0.08] transition-all duration-700" />
-      
-      <div className="flex items-start justify-between mb-16 relative z-10">
-        <div>
-          <h2 className="text-4xl md:text-5xl font-serif font-bold text-[#1C3F35] dark:text-[#FDFBF7] tracking-tighter">Safe-to-Spend</h2>
-          <p className="text-[12px] font-mono text-[#FF7A00] uppercase tracking-[0.2em] mt-3 font-bold flex items-center gap-2 opacity-80">
-            Абсолютный ликвидный лимит
-            <span className="w-2 h-2 rounded-full bg-[#1C3F35] dark:bg-emerald-500 animate-pulse" />
-          </p>
-        </div>
-        <div className="p-4 bg-[#1C3F35]/[0.08] dark:bg-emerald-500/[0.1] rounded-2xl border border-[#1C3F35]/10 dark:border-emerald-500/10 shadow-[0_0_15px_rgba(28,63,53,0.2)]">
-          <Wallet className="w-8 h-8 text-[#1C3F35] dark:text-emerald-500" />
-        </div>
-      </div>
-
-      <div className="mb-16 relative z-10 flex flex-col items-center justify-center py-6">
-        <div className="flex items-baseline gap-4 md:gap-6">
-          <span className="text-7xl md:text-8xl lg:text-[10rem] font-serif font-bold text-[#1C3F35] dark:text-[#FDFBF7] tracking-tighter text-engraved transition-all">
-            {safeToSpendToday.toLocaleString('ru-RU', { maximumFractionDigits: 0 })}
-          </span>
-          <span className="text-[#FF7A00] font-mono text-xl md:text-3xl uppercase font-bold tracking-widest">₽ / ДЕНЬ</span>
-        </div>
-        <p className="text-sm md:text-base text-[#1C3F35]/60 dark:text-[#FDFBF7]/60 mt-8 max-w-lg text-center leading-relaxed font-medium">
-          Пропускная способность с учетом <span className="text-[#FF7A00] font-bold">базовых бюджетов</span> и перерасходов.
-        </p>
-      </div>
-
-      <div className="space-y-4 relative z-10 max-w-4xl mx-auto">
-        {/* Advanced Progress Bar */}
-        <div className="h-2 w-full bg-[#FF7A00]/[0.08] rounded-full overflow-hidden">
-          <motion.div 
-            initial={{ width: 0 }}
-            animate={{ width: `${Math.min(100, percentSpent)}%` }}
-            className={cn(
-              "h-full transition-colors duration-1000",
-              percentSpent > 100 ? "bg-rose-600 shadow-[0_0_15px_rgba(225,29,72,0.5)]" : "bg-[#FF7A00] shadow-[0_0_15px_rgba(255,122,0,0.5)]"
-            )}
-            transition={{ duration: 1.5, ease: "easeOut" }}
+    <div className="w-full premium-card rounded-3xl p-6 md:p-8 relative backdrop-blur-[60px] backdrop-saturate-200 bg-white/60 dark:bg-[#111111]/60 border border-white/30 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] sticky top-4 z-40 transition-all duration-300 group">
+      {/* Кинетическое Ядро (The Citrine Core SVG) */}
+      <div className="absolute left-6 top-6 w-24 h-24 pointer-events-none opacity-20 dark:opacity-40">
+        <svg viewBox="0 0 100 100" className="w-full h-full">
+          {/* Внешнее кольцо (медленное вращение) */}
+          <motion.circle 
+            cx="50" cy="50" r="45" 
+            stroke="currentColor" strokeWidth="0.5" strokeDasharray="4 4"
+            className="text-emerald-600 dark:text-emerald-400"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
           />
-        </div>
-        
-        <div className="flex justify-between text-xs font-mono uppercase font-bold tracking-widest">
-          <span className="text-[#1C3F35]/60 dark:text-[#FDFBF7]/60">
-            Потрачено: {totalSpent.toLocaleString('ru-RU', { maximumFractionDigits: 0 })}
+          {/* Внутренний кристалл (пульсация) */}
+          <motion.path 
+            d="M50 20L80 50L50 80L20 50L50 20Z" 
+            fill="url(#citrineGradient)"
+            animate={{ scale: [0.9, 1.1, 0.9], opacity: [0.5, 0.8, 0.5] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <defs>
+            <linearGradient id="citrineGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#FF7A00" />
+              <stop offset="100%" stopColor="#FFA011" />
+            </linearGradient>
+          </defs>
+          {/* Направляющие линии */}
+          <path d="M50 5V15M50 85V95M5 50H15M85 50H95" stroke="currentColor" strokeWidth="1" className="text-emerald-500" />
+        </svg>
+      </div>
+
+      {/* Decorative background glow */}
+      <div className="absolute -right-20 -top-20 w-80 h-80 bg-[#FF7A00]/[0.04] rounded-3xl blur-3xl transition-all duration-700 pointer-events-none" />
+      
+      <div className="relative z-10 flex flex-col items-center justify-center text-center gap-4 w-full">
+        {/* Centered Header Section */}
+        <h2 className="text-2xl md:text-3xl font-extrabold text-[#1C3F35] dark:text-emerald-50 tracking-tight" style={{ textShadow: "1px 1px 0px rgba(255,255,255,0.8), -1px -1px 0px rgba(0,0,0,0.05)" }}>
+          Безопасный лимит
+        </h2>
+
+        {rollover > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+            className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-mono text-[10px] font-bold uppercase tracking-wider"
+          >
+            <span>⛄ Rollover:</span>
+            <span>+{rollover.toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₽</span>
+          </motion.div>
+        )}
+
+        <div className="flex flex-col items-center justify-center w-full gap-1">
+          <span 
+            className="text-5xl md:text-7xl font-black tracking-tighter tabular-nums text-[#1C3F35] dark:text-white transition-all"
+            style={{ textShadow: "3px 3px 0px rgba(255,255,255,0.6), -1px -1px 1px rgba(0,0,0,0.15), 0px 10px 25px rgba(0,0,0,0.08)" }}
+          >
+            {limit.toLocaleString('ru-RU', { maximumFractionDigits: 0 })}
           </span>
-          <span className={percentSpent > 100 ? "text-rose-600" : "text-[#FF7A00]"}>
-            Буфер: {Math.max(0, totalPlanned - totalSpent).toLocaleString('ru-RU', { maximumFractionDigits: 0 })}
+          <span className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500/60 dark:text-slate-400/40">
+            ₽ / ДЕНЬ
           </span>
         </div>
       </div>
 
-      <div className="mt-12 pt-8 border-t border-[#1C3F35]/10 dark:border-white/10 flex items-center justify-between group/link cursor-pointer relative z-10">
-        <div className="flex items-center gap-2 text-sm font-semibold text-[#1C3F35] dark:text-emerald-500 group-hover/link:text-[#FF7A00] transition-colors">
+      {/* Info Icon Corner Slot */}
+      <div className="absolute bottom-6 right-6 group z-50">
+        <div className="flex items-center justify-center p-2 rounded-full bg-[#1C3F35]/5 dark:bg-white/10 cursor-pointer hover:bg-[#1C3F35]/10 transition-colors text-[#1C3F35]/70 dark:text-white/70">
           <Info size={18} />
-          <span className="tracking-wide">Детализация расчета</span>
         </div>
-        <ArrowRight size={20} className="text-[#1C3F35]/40 dark:text-[#FDFBF7]/40 transform group-hover/link:translate-x-2 group-hover/link:text-[#FF7A00] transition-all" />
+        {/* Tooltip Content - Opening Left (Lateral Shift) */}
+        <div className="absolute right-full bottom-0 mr-4 z-[110] w-72 p-4 bg-white/90 dark:bg-[#1A1A1A]/95 backdrop-blur-2xl border border-white/20 dark:border-white/10 rounded-2xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 pointer-events-none">
+          <p className="text-xs font-medium text-[#1C3F35] dark:text-white leading-relaxed">
+            Это сумма, которую вы можете тратить каждый день до конца месяца, не нарушая свои бюджетные планы. Она учитывает ваши доходы и уже установленные лимиты в конвертах.
+          </p>
+          <div className="absolute left-full top-1/2 -translate-y-1/2 border-8 border-transparent border-l-white/90 dark:border-l-[#1A1A1A]/95" />
+        </div>
       </div>
     </div>
   );
