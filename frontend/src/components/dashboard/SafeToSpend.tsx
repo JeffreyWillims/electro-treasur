@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Wallet, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { fetchDashboard } from '@/api/client';
 import { useAuth } from '@/context/AuthContext';
 import type { CategoryRowSchema } from '@/types';
@@ -43,7 +43,6 @@ export function SafeToSpend() {
   const expenseRows = dashboard?.rows.filter((r) => Number(r.planned) > 0) || [];
   
   const totalPlanned = expenseRows.reduce((acc: number, row: CategoryRowSchema) => acc + Number(row.planned), 0);
-  const totalSpent = expenseRows.reduce((acc: number, row: CategoryRowSchema) => acc + Number(row.fact), 0);
   
   const overspent = expenseRows.reduce((acc: number, row: CategoryRowSchema) => acc + Math.max(0, Number(row.fact) - Number(row.planned)), 0);
 
@@ -56,7 +55,6 @@ export function SafeToSpend() {
   const limit = daysLeft > 0 ? Math.max(0, (monthlyIncome - totalPlanned - overspent) / daysLeft) : 0;
   console.log("MATH_CHECK:", { monthlyIncome, totalPlanned, overspent, daysLeft, limit });
 
-  const percentSpent = totalPlanned > 0 ? (totalSpent / totalPlanned) * 100 : 0;
 
   // Rollover (⛄) calculation from previous month
   const prevIncome = parseFloat(prevDashboard?.period_income || '0');

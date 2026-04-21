@@ -96,7 +96,6 @@ export function BudgetEnvelopes() {
       {expenseRows.map((row: CategoryRowSchema, index: number) => {
         const planned = parseFloat(row.planned);
         const fact = parseFloat(row.fact);
-        const remaining = Math.max(0, planned - fact);
         const percent = planned > 0 ? (fact / planned) * 100 : 0;
         
         // Guilt-Free Logic
@@ -109,22 +108,8 @@ export function BudgetEnvelopes() {
 
         // Predictive Math
         const todayDate = new Date().getDate();
-        const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
-        const daysLeftInMonth = daysInMonth - todayDate;
-        const percentTimeElapsed = (todayDate / daysInMonth) * 100;
+        const percentTimeElapsed = (todayDate / new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()) * 100;
         const isBurnWarning = percent > (percentTimeElapsed + 10) && !isOver;
-        const avgPerDay = todayDate > 0 ? fact / todayDate : 0;
-        const daysUntilDepletion = avgPerDay > 0 ? parseInt((remaining / avgPerDay).toFixed(0)) : 0;
-        
-        let predictionText = null;
-        if (daysUntilDepletion > 0 && daysUntilDepletion < daysLeftInMonth && !isOver) {
-          const depletionDate = new Date();
-          depletionDate.setDate(depletionDate.getDate() + daysUntilDepletion);
-          const weekday = depletionDate.toLocaleDateString('ru-RU', { weekday: 'long' });
-          // capitalizing weekday
-          const weekdayCap = weekday.charAt(0).toUpperCase() + weekday.slice(1);
-          predictionText = `🔮 Закончится: ${weekdayCap}`;
-        }
 
         const fillBgClasses = isGuiltFree
           ? "bg-gradient-to-t from-yellow-400/40 to-amber-300/10"

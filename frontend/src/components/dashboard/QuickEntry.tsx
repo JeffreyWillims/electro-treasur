@@ -200,7 +200,7 @@ export function QuickEntry() {
   const selectedCat = categories.find((c) => c.id === selectedCategoryId);
 
   return (
-    <div className="w-full bg-white/70 dark:bg-[#111111]/80 backdrop-blur-3xl border border-vault-pine/[0.04] dark:border-white/5 shadow-[0_8px_30px_rgba(28,63,53,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.8)] rounded-3xl p-8 transition-all duration-300 ease-out hover:-translate-y-1 hover:scale-[1.005] hover:shadow-[0_20px_40px_rgba(28,63,53,0.08)] dark:hover:shadow-[0_10px_30px_rgba(255,122,0,0.15)]">
+    <div className="w-full bg-white/70 dark:bg-[#111111]/80 backdrop-blur-3xl border border-vault-pine/[0.04] dark:border-white/5 shadow-[0_8px_30px_rgba(28,63,53,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.8)] rounded-3xl p-8 transition-all duration-300 ease-out">
       <div className="flex items-center gap-3 mb-7">
         <div className="p-2.5 bg-[#FF7A00]/[0.08] rounded-xl">
           <PlusCircle className="w-[18px] h-[18px] text-[#FF7A00]" />
@@ -229,14 +229,14 @@ export function QuickEntry() {
         <div className="flex gap-4 items-end">
           <div className="w-[70%]">
             <label className="block mb-2 text-sm font-semibold text-[#1C3F35]/70 dark:text-white/60">Сумма</label>
-            <div className="flex bg-white/40 dark:bg-black/20 rounded-2xl p-4 items-center h-16 focus-within:ring-2 focus-within:ring-[#1C3F35]/10 dark:focus-within:ring-[#FF7A00]/20 transition-all duration-300">
+            <div className="flex bg-white/40 dark:bg-black/20 rounded-2xl px-4 items-center h-16 focus-within:ring-2 focus-within:ring-[#1C3F35]/10 dark:focus-within:ring-[#FF7A00]/20 transition-all duration-300">
               <input
                 type="text"
                 inputMode="decimal"
                 value={amount}
                 onChange={handleAmountChange}
                 placeholder="0.00"
-                className="flex-1 w-full outline-none bg-transparent text-[#1C3F35] dark:text-white text-3xl font-black tabular-nums placeholder:text-vault-pine/15 dark:placeholder:text-white/10"
+                className="flex-1 w-full outline-none bg-transparent text-[#1C3F35] dark:text-white text-2xl font-bold tabular-nums placeholder:text-vault-pine/15 dark:placeholder:text-white/10"
               />
               <select
                 value={currency}
@@ -354,7 +354,7 @@ export function QuickEntry() {
             type="text"
             value={subcategory}
             onChange={(e) => setSubcategory(e.target.value)}
-            placeholder="Напр.: Пятёрочка, Яндекс.Такси"
+            placeholder={type === 'income' ? 'Напр.: Аванс, Возврат долга, Фриланс' : 'Напр.: Пятёрочка, Яндекс.Такси'}
             className="w-full bg-white/40 dark:bg-black/20 border border-white/40 dark:border-white/10 rounded-2xl px-4 py-4 outline-none text-base font-medium text-[#1C3F35] dark:text-white placeholder:text-vault-pine/20 dark:placeholder:text-white/20 focus-within:ring-2 focus-within:ring-[#1C3F35]/10 dark:focus-within:ring-[#FF7A00]/20 transition-all duration-300"
           />
         </div>

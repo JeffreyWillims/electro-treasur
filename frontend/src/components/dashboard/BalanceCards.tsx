@@ -46,7 +46,7 @@ export function BalanceCards({
   );
 
   return (
-      <div className="relative bg-white/70 dark:bg-[#111111]/80 backdrop-blur-3xl border border-vault-pine/[0.04] dark:border-white/5 shadow-[0_8px_30px_rgba(28,63,53,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.8)] rounded-3xl p-8 w-full transition-all duration-300 ease-out hover:-translate-y-1 hover:scale-[1.005] hover:shadow-[0_20px_40px_rgba(28,63,53,0.08)] dark:hover:shadow-[0_10px_30px_rgba(255,122,0,0.15)] overflow-hidden">
+      <div className="relative bg-white/70 dark:bg-[#111111]/80 backdrop-blur-3xl border border-vault-pine/[0.04] dark:border-white/5 shadow-[0_8px_30px_rgba(28,63,53,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.8)] rounded-3xl p-8 w-full transition-all duration-300 ease-out overflow-hidden">
         {/* Breathing Glow */}
         <motion.div 
           className="absolute inset-0 pointer-events-none z-0"
@@ -68,7 +68,7 @@ export function BalanceCards({
         <div className="relative">
           <p className="text-lg font-semibold text-[#1C3F35] dark:text-white/80 mb-3">Общий капитал</p>
           <div className="flex items-baseline gap-2 relative">
-            <motion.h1 className="text-6xl font-extrabold tracking-tight tabular-nums text-[#1C3F35] dark:text-[#FDFBF7]">
+            <motion.h1 className="text-3xl md:text-4xl font-extrabold tracking-tight tabular-nums text-[#1C3F35] dark:text-[#FDFBF7]">
               {displayTotal}
             </motion.h1>
             <span className="text-2xl font-bold text-vault-pine/30 dark:text-white/30">RUB</span>
@@ -78,9 +78,9 @@ export function BalanceCards({
 
         {/* Income Card */}
         <div className="relative">
-          <p className="text-lg font-semibold text-[#1C3F35] dark:text-white/80 mb-3">Поступления (Доход)</p>
+          <p className="text-lg font-semibold text-[#1C3F35] dark:text-white/80 mb-3">Доход</p>
           <div className="flex items-baseline gap-2">
-            <span className="text-5xl font-sans tabular-nums tracking-tight font-semibold text-emerald-600 dark:text-emerald-400">
+            <span className="text-3xl md:text-4xl font-sans tabular-nums tracking-tight font-bold text-emerald-600 dark:text-emerald-400">
               +{Math.round(monthlyIncome).toLocaleString('ru-RU')}
             </span>
             <span className="text-xl font-bold text-emerald-700/60 dark:text-emerald-400/60">RUB</span>
@@ -89,9 +89,9 @@ export function BalanceCards({
 
         {/* Expense Card */}
         <div className="relative">
-          <p className="text-lg font-semibold text-[#1C3F35] dark:text-white/80 mb-3">Списания (Расход)</p>
+          <p className="text-lg font-semibold text-[#1C3F35] dark:text-white/80 mb-3">Расход</p>
           <div className="flex items-baseline gap-2">
-            <span className="text-5xl font-sans tabular-nums tracking-tight font-semibold text-rose-600 dark:text-rose-500">
+            <span className="text-3xl md:text-4xl font-sans tabular-nums tracking-tight font-semibold text-rose-600 dark:text-rose-500">
               -{Math.round(monthlyExpense).toLocaleString('ru-RU')}
             </span>
             <span className="text-xl font-bold text-rose-700/60 dark:text-rose-500/60">RUB</span>

@@ -1,25 +1,53 @@
 /* eslint-disable */
-import { useQuery } from '@tanstack/react-query';
+/**
+ * CategoryPieChart.tsx — "The Money Eater" Data Story
+ *
+ * Architecture: DUMB COMPONENT. Zero internal fetching.
+ * Receives pre-aggregated category totals from parent Data Cortex.
+ *
+ * Visual: Thin ring donut chart with central insight showing
+ * the hungriest budget category and its percentage.
+ * Aesthetic: California Organic Luxury.
+ */
+import { useMemo } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
-import { fetchDashboard } from '@/api/client';
-import type { CategoryRowSchema } from '@/types';
+import { motion } from 'framer-motion';
 
-const COLORS = [
-  '#2A6041', // emerald
-  '#C5A059', // gold
-  '#1A1A1A', // graphite-light
-  '#3A7A57', // emerald-light
-  '#D4B46E', // gold-light
-  '#C0392B', // expense
+// ── Types ──────────────────────────────────────────────────────────────
+interface CategoryTotal {
+  name: string;
+  value: number;
+  categoryId: number;
+  type?: string;
+}
+
+interface CategoryPieChartProps {
+  categoryTotals: CategoryTotal[];
+}
+
+// ── Palette ────────────────────────────────────────────────────────────
+const RING_COLORS = [
+  '#1C3F35',  // pine
+  '#FF7A00',  // citrine
+  '#C5A059',  // gold
+  '#2A6041',  // emerald
+  '#D4B46E',  // gold-light
+  '#8B5E3C',  // warm earth
+  '#3A7A57',  // mint-pine
+  '#A0522D',  // sienna
 ];
 
-const CustomTooltip = ({ active, payload }: any) => {
+// ── Custom Tooltip ─────────────────────────────────────────────────────
+const EaterTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white/95 dark:bg-[#1A1A1A]/90 backdrop-blur-md border border-aura-gold/20 dark:border-white/5 px-5 py-3 rounded-2xl shadow-premium">
-        <p className="text-[10px] font-mono text-aura-gold/80 mb-1 uppercase font-bold tracking-widest">{payload[0].name}</p>
-        <p className="text-xl font-serif tracking-tight font-semibold text-aura-graphite dark:text-aura-ivory">
-          {payload[0].value.toLocaleString('ru-RU')} <span className="text-xs text-aura-gold ml-0.5">₽</span>
+      <div className="bg-white/95 dark:bg-[#1A1A1A]/95 backdrop-blur-2xl border border-[#1C3F35]/10 dark:border-white/10 px-5 py-4 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)]">
+        <p className="text-[10px] font-mono text-[#1C3F35]/50 dark:text-white/40 mb-1.5 uppercase font-bold tracking-widest">
+          {payload[0].name}
+        </p>
+        <p className="text-xl font-serif font-bold tracking-tight text-[#1C3F35] dark:text-white">
+          {payload[0].value.toLocaleString('ru-RU')}
+          <span className="text-xs text-[#C5A059] ml-1">₽</span>
         </p>
       </div>
     );
@@ -27,98 +55,123 @@ const CustomTooltip = ({ active, payload }: any) => {
   return null;
 };
 
-export function CategoryPieChart({ startDate, endDate }: { startDate: string; endDate: string }) {
-  const { data: dashboard, isLoading } = useQuery({
-    queryKey: ['dashboard', startDate, endDate],
-    queryFn: () => fetchDashboard(startDate, endDate),
-  });
+// ── Component ──────────────────────────────────────────────────────────
+export function CategoryPieChart({ categoryTotals }: CategoryPieChartProps) {
+  // ── Central Insight: The Money Eater ─────────────────────────────────
+  const eaterInsight = useMemo(() => {
+    if (!categoryTotals.length) return null;
 
-  if (isLoading) {
-    return (
-      <div className="premium-card p-8 h-[400px] flex items-center justify-center bg-white dark:bg-[#121212]/80 border dark:border-white/5 transition-colors duration-700">
-        <div className="w-8 h-8 border-2 border-aura-gold/20 border-t-aura-gold rounded-full animate-spin" />
-      </div>
-    );
-  }
+    const total = categoryTotals.reduce((s, c) => s + c.value, 0);
+    const top = categoryTotals[0];
+    if (!top) return null;
+    const pct = total > 0 ? Math.round((top.value / total) * 100) : 0;
 
-  // Generate chart data by extracting total facts from ALL rows
-  // To keep it clean, let's filter rows that have a fact > 0 and sort descending
-  const rawData = dashboard?.rows
-    .map((r: CategoryRowSchema) => ({
-      name: r.category_name,
-      value: parseFloat(r.fact)
-    }))
-    .filter(r => r.value > 0)
-    .sort((a, b) => b.value - a.value) || [];
+    return {
+      name: top.name,
+      pct,
+      amount: top.value,
+    };
+  }, [categoryTotals]);
 
   return (
-    <div className="premium-card p-8 relative overflow-hidden group bg-white dark:bg-[#121212]/80 border dark:border-white/5 shadow-premium dark:shadow-[0_8px_30_rgba(0,0,0,0.8)] transition-all duration-700">
-      {/* Decorative gradient */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full opacity-5 bg-[radial-gradient(circle,_var(--aura-gold)_0%,_transparent_70%)] pointer-events-none transition-opacity duration-700 group-hover:opacity-10" />
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, delay: 0.2 }}
+      className="bg-white/60 dark:bg-[#0A0A0A]/80 backdrop-blur-3xl border border-[#1C3F35]/[0.06] dark:border-white/[0.04] rounded-[2rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.6)] hover:shadow-[0_16px_50px_rgba(0,0,0,0.07)] dark:hover:shadow-[0_16px_50px_rgba(0,0,0,0.8)] transition-all duration-700 relative overflow-hidden"
+    >
+      {/* Decorative radial glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] h-[320px] rounded-full opacity-[0.04] bg-[radial-gradient(circle,_#C5A059_0%,_transparent_70%)] pointer-events-none" />
 
-      <div className="flex items-start justify-between mb-8 relative z-10">
-        <div>
-          <h3 className="text-premium text-2xl leading-none">Капитал</h3>
-          <p className="text-[10px] font-mono text-aura-gold/60 uppercase tracking-[0.15em] mt-2">
-            Структура потоков
-          </p>
-        </div>
+      {/* ── Header ────────────────────────────────────────────────────── */}
+      <div className="mb-6 relative z-10">
+        <h3 className="text-2xl font-serif font-bold text-[#1C3F35] dark:text-white tracking-tight leading-none">
+          Главный поглотитель бюджета
+        </h3>
+        <p className="text-[10px] font-mono text-[#C5A059]/70 dark:text-[#C5A059]/50 uppercase tracking-[0.2em] mt-1.5 font-bold">
+          The Money Eater
+        </p>
       </div>
 
-      <div className="h-[280px] w-full relative z-10">
-        {rawData.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-aura-graphite/40 dark:text-aura-ivory/30 font-serif italic text-sm">
+      {/* ── Ring Chart with Central Insight ────────────────────────────── */}
+      <div className="relative h-[320px] w-full z-10">
+        {categoryTotals.length === 0 ? (
+          <div className="h-full flex items-center justify-center text-[#1C3F35]/30 dark:text-white/20 font-serif italic text-sm">
             Нет данных для анализа структуры
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={rawData}
-                cx="50%"
-                cy="50%"
-                innerRadius={70}
-                outerRadius={105}
-                paddingAngle={4}
-                dataKey="value"
-                stroke="transparent"
+          <>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart style={{ outline: 'none' }}>
+                <Pie
+                  data={categoryTotals}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={70}
+                  outerRadius={90}
+                  paddingAngle={3}
+                  dataKey="value"
+                  stroke="transparent"
+                  animationDuration={1200}
+                  animationEasing="ease-in-out"
+                >
+                  {categoryTotals.map((_, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={RING_COLORS[index % RING_COLORS.length]}
+                      className="outline-none"
+                      style={{ transition: 'opacity 0.3s ease' }}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip content={<EaterTooltip />} isAnimationActive={false} wrapperStyle={{ outline: 'none' }} />
+              </PieChart>
+            </ResponsiveContainer>
+
+            {/* ── Absolute Center Insight ──────────────────────────────── */}
+            {eaterInsight && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 0.6 }}
+                className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
               >
-                {rawData.map((_, index) => (
-                  <Cell 
-                    key={'cell-' + index} 
-                    fill={COLORS[index % COLORS.length]} 
-                    className="hover:opacity-80 transition-opacity duration-300 outline-none"
-                  />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
+                <p className="text-3xl font-extrabold text-[#1C3F35] dark:text-white tracking-tight leading-none">
+                  {eaterInsight.pct}%
+                </p>
+                <p className="text-xs font-semibold text-[#1C3F35]/60 dark:text-white/50 mt-1 max-w-[100px] text-center leading-tight truncate">
+                  {eaterInsight.name}
+                </p>
+              </motion.div>
+            )}
+          </>
         )}
       </div>
 
-      {/* Modern Legend */}
-      <div className="mt-4 pt-4 border-t border-aura-gold/[0.08] relative z-10">
+      {/* ── Legend ─────────────────────────────────────────────────────── */}
+      <div className="mt-4 pt-4 border-t border-[#1C3F35]/[0.06] dark:border-white/[0.04] relative z-10">
         <ul className="grid grid-cols-2 lg:grid-cols-3 gap-y-3 gap-x-6">
-          {rawData.slice(0, 6).map((entry, index) => (
+          {categoryTotals.slice(0, 6).map((entry, index) => (
             <li key={`legend-${index}`} className="flex items-center gap-2 group/legend cursor-default">
-              <span 
-                className="w-1.5 h-1.5 rounded-full" 
-                style={{ backgroundColor: COLORS[index % COLORS.length] }} 
+              <span
+                className="w-2 h-2 rounded-full flex-shrink-0"
+                style={{ backgroundColor: RING_COLORS[index % RING_COLORS.length] }}
               />
-              <span className="text-xs font-semibold text-aura-graphite/80 dark:text-aura-ivory/80 truncate group-hover/legend:text-aura-graphite dark:group-hover/legend:text-aura-ivory transition-colors">
+              <span className="text-xs font-semibold text-[#1C3F35]/70 dark:text-white/60 truncate group-hover/legend:text-[#1C3F35] dark:group-hover/legend:text-white transition-colors">
                 {entry.name}
               </span>
             </li>
           ))}
-          {rawData.length > 6 && (
+          {categoryTotals.length > 6 && (
             <li className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-aura-gold/20" />
-              <span className="text-[10px] font-mono uppercase tracking-widest text-aura-gold/50">+{rawData.length - 6} еще</span>
+              <span className="w-2 h-2 rounded-full bg-[#C5A059]/20" />
+              <span className="text-[10px] font-mono uppercase tracking-widest text-[#C5A059]/50">
+                +{categoryTotals.length - 6} ещё
+              </span>
             </li>
           )}
         </ul>
       </div>
-    </div>
+    </motion.div>
   );
 }

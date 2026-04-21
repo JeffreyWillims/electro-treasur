@@ -87,7 +87,7 @@ function Overview() {
               <h1 className="text-[2.5rem] font-extrabold tracking-tight text-[#1C3F35] dark:text-white leading-none">
                 V.I.A.
               </h1>
-              <p className="text-[#1C3F35]/70 dark:text-white/60 text-[11px] font-bold font-mono tracking-widest uppercase mt-1">Value Insight Aggregator</p>
+              <p className="text-[9px] font-mono text-[#1C3F35] dark:text-emerald-400 uppercase tracking-[0.3em] font-bold mt-2">Value Insight Aggregator</p>
             </div>
           </div>
           

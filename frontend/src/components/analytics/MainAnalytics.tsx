@@ -1,13 +1,135 @@
 /* eslint-disable */
+/**
+ * MainAnalytics.tsx — Data Cortex (Single Query Orchestrator)
+ *
+ * Architecture: ONE useQuery fetches dashboard + categories.
+ * All child charts receive pre-calculated data via props.
+ * Zero redundant network calls. Zero local fetch logic in children.
+ *
+ * Aesthetic: "California Organic Luxury" — glass panels, organic typography,
+ * muted pine/gold palette with premium micro-animations.
+ */
 import { useState, useMemo } from 'react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { useQuery } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
+import { fetchDashboard, fetchCategories } from '@/api/client';
 import { SpendingChart } from '@/components/dashboard/SpendingChart';
 import { CategoryPieChart } from '@/components/dashboard/CategoryPieChart';
-import { Info } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useQuery } from '@tanstack/react-query';
-import { fetchDashboard } from '@/api/client';
+import { CapitalGrowthChart } from '@/components/analytics/CapitalGrowthChart';
+import type { DashboardResponse, CategoryRead, CategoryRowSchema } from '@/types';
 
+// ── Russian Category Localization ──────────────────────────────────────
+const getRussianCategoryName = (rawName: string): string => {
+  const name = rawName.toLowerCase();
+  if (name.includes('leisure') || name.includes('lifestyle')) return 'Отдых и развлечения';
+  if (name.includes('housing')) return 'Жилье';
+  if (name.includes('transport')) return 'Транспорт';
+  if (name.includes('food')) return 'Еда и продукты';
+  if (name.includes('health')) return 'Здоровье';
+  if (name.includes('income')) return 'Доход';
+  if (name.includes('shopping')) return 'Покупки';
+  if (name.includes('utilit') || name.includes('operation')) return 'ЖКХ и Операции';
+  if (name.includes('growth') || name.includes('invest')) return 'Инвестиции';
+  return rawName;
+};
+
+// ── Holographic Prism SVG ──────────────────────────────────────────────
+function HolographicPrism() {
+  return (
+    <div className="relative w-12 h-12 flex items-center justify-center">
+      <svg viewBox="0 0 100 100" className="w-12 h-12" fill="none">
+        {/* Orbital Ellipses — Pine Rings */}
+        <ellipse
+          cx="50" cy="50" rx="42" ry="18"
+          stroke="#1C3F35" strokeOpacity="0.25" strokeWidth="1.2"
+        />
+        <ellipse
+          cx="50" cy="50" rx="36" ry="30"
+          stroke="#1C3F35" strokeOpacity="0.18" strokeWidth="1"
+          transform="rotate(55 50 50)"
+        />
+        <ellipse
+          cx="50" cy="50" rx="30" ry="24"
+          stroke="#1C3F35" strokeOpacity="0.12" strokeWidth="0.8"
+          transform="rotate(-35 50 50)"
+        />
+
+        {/* Pulsing Glow Core */}
+        <motion.circle
+          cx="50" cy="50" r="15"
+          fill="#FF7A00" fillOpacity="0.1"
+          filter="blur(6px)"
+          animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0.6, 0.3] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        />
+
+        {/* Citrine Rhombus — Levitating Core */}
+        <motion.g
+          animate={{ rotate: 360 }}
+          transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+          style={{ transformOrigin: "50px 50px" }}
+        >
+          <motion.path
+            d="M 50 38 L 58 50 L 50 62 L 42 50 Z"
+            fill="#FF7A00"
+            fillOpacity="0.9"
+            animate={{
+              fillOpacity: [0.7, 1, 0.7],
+              scale: [0.95, 1.05, 0.95],
+            }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            style={{ transformOrigin: "50px 50px", filter: "drop-shadow(0 0 6px rgba(255, 122, 0, 0.5))" }}
+          />
+        </motion.g>
+      </svg>
+    </div>
+  );
+}
+
+// ── Data Aggregation Utilities ─────────────────────────────────────────
+function aggregateDailyFlows(
+  dashboard: DashboardResponse,
+  categories: CategoryRead[],
+) {
+  const incomeIds = new Set(
+    categories.filter(c => c.type === 'income').map(c => c.id),
+  );
+
+  const dayCount = dashboard.rows[0]?.days.length || 0;
+  const days = Array.from({ length: dayCount }, (_, i) => ({
+    day: i + 1,
+    income: 0,
+    expense: 0,
+  }));
+
+  dashboard.rows.forEach(row => {
+    const isIncome = incomeIds.has(row.category_id);
+    row.days?.forEach(cell => {
+      const idx = cell.day - 1;
+      const amt = parseFloat(cell.amount?.toString() || '0');
+      if (idx >= 0 && idx < dayCount && days[idx]) {
+        if (isIncome) days[idx].income += amt;
+        else days[idx].expense += amt;
+      }
+    });
+  });
+
+  return days;
+}
+
+function aggregateCategoryTotals(rows: CategoryRowSchema[]) {
+  return rows
+    .map(r => ({
+      name: getRussianCategoryName(r.category_name),
+      value: parseFloat(r.fact),
+      categoryId: r.category_id,
+      type: r.type,
+    }))
+    .filter(r => r.value > 0)
+    .sort((a, b) => b.value - a.value);
+}
+
+// ── Main Component ─────────────────────────────────────────────────────
 export function MainAnalytics() {
   const [startDate, setStartDate] = useState<string>(() => {
     const d = new Date();
@@ -20,181 +142,109 @@ export function MainAnalytics() {
     d.setDate(0);
     return d.toISOString().split('T')[0] as string;
   });
-  
-  const [timeframe, setTimeframe] = useState<'День' | 'Месяц' | 'Год'>('Месяц');
-  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
-  const { data: dashboard } = useQuery({
+  // ── DATA CORTEX: Single Orchestrated Query ───────────────────────────
+  const { data: dashboard, isLoading: dashLoading } = useQuery({
     queryKey: ['dashboard', startDate, endDate],
     queryFn: () => fetchDashboard(startDate, endDate),
   });
 
-  const chartData = useMemo(() => {
-    if (!dashboard || !dashboard.rows) return [];
-    
-    const agg: Record<string, number> = {};
-    dashboard.rows.forEach(row => {
-      row.days.forEach(day => {
-        // Here we track total flow (income + expense) to show general liquidity movement,
-        // or just expense. Let's do expense as it's typically 'spending'
-        // DayCellSchema: { day: number; amount: string; }
-        const val = parseFloat(day.amount?.toString() || '0');
-        const dStr = day.day.toString().padStart(2, '0');
-        agg[dStr] = (agg[dStr] || 0) + val;
-      });
-    });
-    
-    const entries = Object.entries(agg)
-      .map(([date, amount]) => ({ date, amount }))
-      .sort((a,b) => a.date.localeCompare(b.date));
+  const { data: categories = [], isLoading: catLoading } = useQuery({
+    queryKey: ['categories'],
+    queryFn: fetchCategories,
+  });
 
-    // Simple mock filter for date representation if timeframe changes (Day/Month/Year logic)
-    if (timeframe === 'День') return entries.slice(-7);
-    if (timeframe === 'Год') return entries; // We'd ideally group by month
-    return entries; 
-  }, [dashboard, timeframe]);
+  const isLoading = dashLoading || catLoading;
 
+  // ── Pre-Calculated Data Tensors ──────────────────────────────────────
+  const dailyFlows = useMemo(() => {
+    if (!dashboard || !categories.length) return [];
+    return aggregateDailyFlows(dashboard, categories);
+  }, [dashboard, categories]);
+
+  const categoryTotals = useMemo(() => {
+    if (!dashboard) return [];
+    return aggregateCategoryTotals(dashboard.rows);
+  }, [dashboard]);
+
+  const totalIncome = useMemo(() =>
+    dailyFlows.reduce((s, d) => s + d.income, 0),
+    [dailyFlows],
+  );
+
+  const totalExpense = useMemo(() =>
+    dailyFlows.reduce((s, d) => s + d.expense, 0),
+    [dailyFlows],
+  );
+
+  // ── Render ───────────────────────────────────────────────────────────
   return (
-    <motion.div 
-      key={timeframe}
-      initial={{ opacity: 0, y: 10 }}
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: "easeOut" }}
-      className="max-w-7xl mx-auto space-y-16 py-8"
+      transition={{ duration: 0.6, ease: "easeOut" }}
+      className="max-w-7xl mx-auto space-y-14 py-8"
     >
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-premium text-4xl mb-2 tracking-tighter font-serif font-bold">Аналитика</h1>
-          <p className="text-[10px] font-mono text-aura-gold uppercase tracking-[0.3em] font-bold">Режим исследования</p>
+      {/* ═══ HEADER: Holographic Prism + Title + Date Picker ═══ */}
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
+        <div className="flex items-center gap-4">
+          <HolographicPrism />
+          <div>
+            <h1 className="text-[2.5rem] font-extrabold tracking-tight text-[#1C3F35] dark:text-white leading-none font-serif">
+              Аналитика
+            </h1>
+            <p className="text-[10px] font-mono text-[#1C3F35] dark:text-emerald-500 uppercase tracking-[0.3em] font-bold mt-1">
+              V.I.A. Data Cortex
+            </p>
+          </div>
         </div>
-        <div className="flex flex-col md:flex-row items-center gap-6">
-          {/* Date Picker */}
-          <div className="flex items-center gap-3 bg-slate-100 dark:bg-slate-800/50 p-1.5 rounded-xl border border-slate-200 dark:border-white/5 transition-colors">
-            <input 
-              type="date" 
-              value={startDate} 
-              onChange={(e) => setStartDate(e.target.value)} 
-              className="bg-transparent border-none text-[10px] uppercase font-mono font-bold text-slate-600 dark:text-slate-300 outline-none p-1 transition-all"
+
+        {/* Glass Date Picker */}
+        <div className="flex items-center gap-3 bg-white/60 dark:bg-[#111111]/80 backdrop-blur-xl border border-[#1C3F35]/10 dark:border-white/5 p-1.5 rounded-full shadow-sm transition-colors">
+          <div className="flex items-center gap-2 px-3">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="appearance-none bg-transparent text-[#1C3F35] dark:text-white/80 text-sm font-semibold outline-none cursor-pointer"
+              style={{ colorScheme: 'light dark' }}
             />
-            <span className="text-slate-300 dark:text-slate-600">—</span>
-            <input 
-              type="date" 
-              value={endDate} 
-              onChange={(e) => setEndDate(e.target.value)} 
-              className="bg-transparent border-none text-[10px] uppercase font-mono font-bold text-slate-600 dark:text-slate-300 outline-none p-1 transition-all"
+            <span className="text-[#1C3F35]/20 dark:text-white/20 font-medium text-sm">—</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="appearance-none bg-transparent text-[#1C3F35] dark:text-white/80 text-sm font-semibold outline-none cursor-pointer"
+              style={{ colorScheme: 'light dark' }}
             />
           </div>
-
-          <div className="flex bg-slate-100/80 dark:bg-slate-800/50 p-1 rounded-xl border border-slate-200 dark:border-white/5 transition-colors">
-            {['День', 'Месяц', 'Год'].map((period) => (
-              <button
-                key={period}
-                onClick={() => setTimeframe(period as any)}
-                className={`px-4 py-1.5 rounded-lg text-[10px] uppercase font-mono tracking-widest transition-all ${
-                  timeframe === period 
-                    ? 'bg-white dark:bg-aura-gold text-brand-600 dark:text-aura-graphite shadow-sm' 
-                    : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-                }`}
-              >
-                {period}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
-      {/* 1. Liquidity Chart */}
-      <div className="pt-8 border-t border-slate-100">
-        <div className="mb-6 relative">
-          <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-serif font-bold text-premium">Ликвидность</h2>
-            <div className="relative" onMouseEnter={() => setActiveTooltip('liquidity')} onMouseLeave={() => setActiveTooltip(null)}>
-              <Info className="w-4 h-4 text-aura-gold/60 cursor-help" />
-              <AnimatePresence>
-                {activeTooltip === 'liquidity' && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
-                    className="absolute left-6 top-0 w-64 bg-aura-graphite p-3 rounded-lg border border-aura-gold/20 shadow-2xl z-50 text-[10px] font-mono text-aura-ivory"
-                  >
-                    Динамика роста: Скорость увеличения вашего капитала. Значение {'>'} 1 означает рост благосостояния.
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-          <p className="text-sm font-mono text-aura-gold/60 mt-2">Эвалюация изменения свободного капитала во времени.</p>
+      {/* ═══ LOADING STATE ═══ */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-32">
+          <div className="w-10 h-10 border-2 border-aura-gold/20 border-t-aura-gold rounded-full animate-spin" />
         </div>
-        <div className="bg-white/60 dark:bg-[#121212]/80 backdrop-blur-3xl border border-slate-100 dark:border-white/5 rounded-[2.5rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.8)] h-80 w-full hover:shadow-[0_12px_40px_rgba(0,0,0,0.08)] transition-all duration-700">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorAmountAnalytics" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#1C3F35" stopOpacity={0.8} />
-                  <stop offset="95%" stopColor="#1C3F35" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(28,63,53,0.05)" />
-              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#1C3F35', opacity: 0.5, fontFamily: 'monospace' }} dy={10} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#1C3F35', opacity: 0.5, fontFamily: 'monospace' }} tickFormatter={(value) => `${value} ₽`} />
-              <Tooltip
-                contentStyle={{ 
-                  borderRadius: '16px', 
-                  border: '1px solid rgba(255,255,255,0.2)', 
-                  boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
-                  background: 'rgba(255, 255, 255, 0.4)',
-                  backdropFilter: 'blur(24px) saturate(150%)',
-                  padding: '12px 16px'
-                }}
-                itemStyle={{ color: '#1C3F35', fontWeight: 'bold' }}
-              />
-              <Area
-                type="monotone"
-                dataKey="amount"
-                stroke="#1C3F35"
-                strokeWidth={3}
-                fillOpacity={1}
-                fill="url(#colorAmountAnalytics)"
-                animationDuration={1500}
-                animationEasing="ease-in-out"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+      )}
 
-      {/* 2. Spending Flow */}
-      <div className="pt-8 border-t border-slate-100">
-        <div className="mb-6 relative">
-          <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-serif font-bold text-premium">Потоки Расходов</h2>
-            <div className="relative" onMouseEnter={() => setActiveTooltip('spending')} onMouseLeave={() => setActiveTooltip(null)}>
-              <Info className="w-4 h-4 text-aura-gold/60 cursor-help" />
-              <AnimatePresence>
-                {activeTooltip === 'spending' && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
-                    className="absolute left-6 top-0 w-64 bg-aura-graphite p-3 rounded-lg border border-aura-gold/20 shadow-2xl z-50 text-[10px] font-mono text-aura-ivory"
-                  >
-                    Интенсивность трат: Коэффициент расхода средств относительно доходов. Чем меньше показатель, тем устойчивее фундамент.
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-          <p className="text-sm font-mono text-aura-gold/60 mt-2">Ежедневный анализ интенсивности сгорания капитала.</p>
-        </div>
-        <SpendingChart startDate={startDate} endDate={endDate} />
-      </div>
+      {/* ═══ THE THREE DATA STORIES ═══ */}
+      {!isLoading && (
+        <div className="flex flex-col gap-14">
+          {/* Story 1: Cashflow Pulse */}
+          <SpendingChart
+            dailyFlows={dailyFlows}
+            totalIncome={totalIncome}
+            totalExpense={totalExpense}
+          />
 
-      {/* 3. Capital Structure */}
-      <div className="pt-8 border-t border-slate-100 dark:border-white/5 pb-16">
-        <div className="mb-6">
-          <h2 className="text-2xl font-serif font-bold text-premium dark:text-slate-100">Структура Капитала</h2>
-          <p className="text-sm font-mono text-aura-gold/60 mt-2">Распределение затраченных активов по категориям.</p>
-        </div>
-        <CategoryPieChart startDate={startDate} endDate={endDate} />
-      </div>
+          {/* Story 2: The Money Eater */}
+          <CategoryPieChart categoryTotals={categoryTotals} />
 
+          {/* Story 3: Capital Growth */}
+          <CapitalGrowthChart dailyFlows={dailyFlows} />
+        </div>
+      )}
     </motion.div>
   );
 }
