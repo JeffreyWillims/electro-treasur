@@ -32,18 +32,18 @@ const getRussianCategoryName = (rawName: string) => {
   return rawName; // Fallback
 };
 
-// ── Zero-Latency Emoji Dictionary ──────────────────────────────────────
-function getCategoryIcon(name: string): string {
+// ── Native Emoji Fallback (for preview only) ───────────────────────
+// Used only in the combo prefix for already-created categories
+function getCategoryEmoji(name: string): string {
   const n = name.toLowerCase();
   if (/корм|животн|пит(ом|ец)/.test(n)) return '🐾';
   if (/кофе|кафе/.test(n)) return '☕';
   if (/продукт|еда|grocery|food/.test(n)) return '🛒';
-  if (/такси|бензин|транспорт|transport|logistics/.test(n)) return '🚗';
+  if (/такси|бензин|транспорт|transport/.test(n)) return '🚗';
   if (/подписк|интернет|связь/.test(n)) return '🌐';
-  if (/сигарет|вейп|табак/.test(n)) return '💨';
-  if (/зарплат|доход|income|propulsion/.test(n)) return '💰';
-  if (/аренд|жильё|жилье|housing|rent|operation/.test(n)) return '🏠';
-  if (/здоров|врач|аптек|health|wellness/.test(n)) return '💊';
+  if (/зарплат|доход|income/.test(n)) return '💰';
+  if (/аренд|жильё|жилье|housing|rent/.test(n)) return '🏠';
+  if (/здоров|врач|аптек|health/.test(n)) return '💊';
   if (/отдых|развлеч|leisure/.test(n)) return '🎭';
   if (/инвест|рост|growth/.test(n)) return '📈';
   if (/покупк|shopping/.test(n)) return '🛍️';
@@ -117,7 +117,7 @@ export function QuickEntry() {
       setComboInput(newCat.name);
       setComboOpen(false);
       toast.success(`Категория «${newCat.name}» создана`, {
-        description: `${getCategoryIcon(newCat.name)} ${newCat.type === 'income' ? 'Доход' : 'Расход'}`,
+        description: `${newCat.icon ?? '✨'} · ${newCat.type === 'income' ? 'Доход' : 'Расход'}`,
       });
     },
     onError: (error: Error) => {
@@ -130,7 +130,6 @@ export function QuickEntry() {
     createCategoryMutation.mutate({
       name: comboInput.trim(),
       type,
-      icon: getCategoryIcon(comboInput.trim()),
     });
   };
 
@@ -169,10 +168,10 @@ export function QuickEntry() {
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/[^\d.,]/g, "").replace(',', '.');
     const parts = raw.split('.');
-    
+
     let integerPart = parts[0] || '';
     integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-    
+
     let formatted = integerPart;
     if (parts.length > 1 && parts[1] !== undefined) {
       formatted += '.' + parts[1].slice(0, 2);
@@ -218,10 +217,10 @@ export function QuickEntry() {
         <div className="relative flex bg-vault-pine/5 dark:bg-white/5 p-1 rounded-xl w-full mb-6 transition-colors duration-500">
           {/* Sliding indicator */}
           <div className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white dark:bg-[#FF7A00] border border-vault-pine/10 dark:border-[#FF7A00]/50 rounded-lg transition-transform duration-300 ease-out shadow-sm ${type === 'income' ? 'translate-x-full left-0' : 'translate-x-0 left-1'}`} />
-          
+
           {/* Buttons */}
           <button type="button" onClick={() => { setType('expense'); setSelectedCategoryId(null); setComboInput(''); }} className={`relative z-10 flex-1 py-3 text-lg font-bold transition-colors duration-300 ${type === 'expense' ? 'text-[#1C3F35] dark:text-[#050505]' : 'text-vault-pine/30 hover:text-vault-pine/50 dark:text-white/30 dark:hover:text-white/50'}`}>Расход</button>
-          
+
           <button type="button" onClick={() => { setType('income'); setSelectedCategoryId(null); setComboInput(''); }} className={`relative z-10 flex-1 py-3 text-lg font-bold transition-colors duration-300 ${type === 'income' ? 'text-[#1C3F35] dark:text-[#050505]' : 'text-vault-pine/30 hover:text-vault-pine/50 dark:text-white/30 dark:hover:text-white/50'}`}>Доход</button>
         </div>
 
@@ -267,9 +266,15 @@ export function QuickEntry() {
           <div
             className="relative flex items-center bg-white/40 dark:bg-black/20 border border-white/40 dark:border-white/10 rounded-2xl focus-within:border-[#1C3F35]/30 focus-within:ring-2 focus-within:ring-[#1C3F35]/10 dark:focus-within:border-[#FF7A00]/30 dark:focus-within:ring-[#FF7A00]/20 transition-all duration-300 overflow-hidden"
           >
-            {/* Emoji prefix */}
-            <span className="pl-4 text-lg pointer-events-none select-none">
-              {selectedCat ? getCategoryIcon(selectedCat.name) : '🔍'}
+            {/* Initials Avatar prefix */}
+            <span className="pl-4 pointer-events-none select-none flex items-center justify-center">
+              {selectedCat ? (
+                <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-white/10 border border-slate-200 dark:border-white/5 flex items-center justify-center text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase shadow-sm shrink-0">
+                  {getRussianCategoryName(selectedCat.name).charAt(0)}
+                </div>
+              ) : (
+                <span className="text-lg">📑</span>
+              )}
             </span>
             <input
               type="text"
@@ -311,28 +316,33 @@ export function QuickEntry() {
                       <p className="text-sm font-bold text-[#FF7A00] truncate">
                         Создать «{comboInput.trim()}»
                       </p>
-                      <p className="text-[10px] font-mono text-vault-pine/30 dark:text-white/20 uppercase tracking-wider">
-                        {getCategoryIcon(comboInput.trim())} · {type === 'income' ? 'доход' : 'расход'}
+                      <p className="text-[10px] font-mono text-vault-pine/30 dark:text-white/20 uppercase tracking-wider mt-1">
+                        · {type === 'income' ? 'доход' : 'расход'}
                       </p>
                     </div>
                   </button>
                 )}
 
                 {/* Filtered categories */}
-                {filteredCategories.map((cat) => (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => handleSelectCategory(cat)}
-                    className="w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-vault-pine/[0.03] dark:hover:bg-white/[0.04] transition-colors duration-150"
-                  >
-                    <span className="text-lg w-9 text-center">{getCategoryIcon(cat.name)}</span>
-                    <span className="flex-1 ml-1 text-sm font-semibold text-[#1C3F35] dark:text-white/90 truncate">{getRussianCategoryName(cat.name)}</span>
-                    {selectedCategoryId === cat.id && (
-                      <Check className="w-4 h-4 text-[#FF7A00]" />
-                    )}
-                  </button>
-                ))}
+                {filteredCategories.map((cat) => {
+                  const displayName = getRussianCategoryName(cat.name);
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => handleSelectCategory(cat)}
+                      className="w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-vault-pine/[0.03] dark:hover:bg-white/[0.04] transition-colors duration-150"
+                    >
+                      <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-white/10 border border-slate-200 dark:border-white/5 flex items-center justify-center text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase shadow-sm shrink-0">
+                        {displayName.charAt(0)}
+                      </div>
+                      <span className="flex-1 ml-1 text-sm font-semibold text-[#1C3F35] dark:text-white/90 truncate">{displayName}</span>
+                      {selectedCategoryId === cat.id && (
+                        <Check className="w-4 h-4 text-[#FF7A00]" />
+                      )}
+                    </button>
+                  );
+                })}
 
                 {/* Empty state */}
                 {filteredCategories.length === 0 && (!comboInput.trim() || exactMatch) && (
@@ -393,11 +403,11 @@ export function QuickEntry() {
               <motion.div
                 key="success"
                 initial={{ height: 4, width: "80%", borderRadius: 2, backgroundColor: "rgba(255,122,0,0.2)" }}
-                animate={{ 
-                  height: 4, 
-                  width: "100%", 
-                  backgroundColor: "#10B981", 
-                  boxShadow: "0 0 20px rgba(16,185,129,0.5)" 
+                animate={{
+                  height: 4,
+                  width: "100%",
+                  backgroundColor: "#10B981",
+                  boxShadow: "0 0 20px rgba(16,185,129,0.5)"
                 }}
                 exit={{ height: 60, width: "100%", opacity: 0 }}
                 className="absolute flex items-center overflow-hidden"

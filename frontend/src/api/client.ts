@@ -12,6 +12,7 @@ import type {
   DashboardResponse,
   TransactionCreate,
   TransactionResponse,
+  TransactionPaginatedResponse,
   TransactionUpdate,
   AnalyticsProfileResponse,
   SimulateRequest,
@@ -84,8 +85,27 @@ export function createTransaction(
   });
 }
 
-export function fetchTransactions(limit = 10, offset = 0): Promise<TransactionResponse[]> {
-  return request<TransactionResponse[]>(`/v1/transactions/?limit=${limit}&offset=${offset}`);
+export function fetchTransactions(
+  limit = 10, 
+  offset = 0,
+  categoryId?: string,
+  type?: string,
+  minAmount?: string,
+  maxAmount?: string,
+  startDate?: string,
+  endDate?: string
+): Promise<TransactionPaginatedResponse> {
+  const params = new URLSearchParams();
+  params.append('limit', limit.toString());
+  params.append('offset', offset.toString());
+  if (categoryId) params.append('category_id', categoryId);
+  if (type) params.append('type', type);
+  if (minAmount) params.append('min_amount', minAmount);
+  if (maxAmount) params.append('max_amount', maxAmount);
+  if (startDate) params.append('start_date', startDate);
+  if (endDate) params.append('end_date', endDate);
+
+  return request<TransactionPaginatedResponse>(`/v1/transactions/?${params.toString()}`);
 }
 
 export function updateTransaction(

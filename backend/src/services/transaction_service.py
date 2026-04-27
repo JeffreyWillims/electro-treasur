@@ -15,14 +15,15 @@ Space: O(1) Redis memory per unique key (auto-evicted by TTL).
 from __future__ import annotations
 
 from redis.asyncio import Redis
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from src.config import settings
-from src.domain.models import Transaction
+from src.domain.models import Category, Transaction
 from src.schemas.transaction import (
     TransactionCreate,
+    TransactionPaginatedResponse,
     TransactionResponse,
     TransactionUpdate,
 )
@@ -90,17 +91,47 @@ async def create_transaction(
 async def list_transactions(
     session: AsyncSession,
     user_id: int,
-    limit: int = 50,
+    limit: int = 10,
     offset: int = 0,
-) -> list[TransactionResponse]:
+    category_id: int | None = None,
+    tx_type: str | None = None,
+    min_amount: Decimal | None = None,
+    max_amount: Decimal | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> TransactionPaginatedResponse:
     """
-    Fetch transactions for a given user with category names.
+    Fetch transactions for a given user with dynamic filtering.
     Time Complexity: O(log N + M) where N is total transactions and M is the limit.
     """
+    conditions = [Transaction.user_id == user_id]
+    
+    if category_id is not None:
+        conditions.append(Transaction.category_id == category_id)
+    if tx_type is not None:
+        conditions.append(Category.type == tx_type)
+    if min_amount is not None:
+        conditions.append(Transaction.amount >= min_amount)
+    if max_amount is not None:
+        conditions.append(Transaction.amount <= max_amount)
+    if start_date is not None:
+        from datetime import datetime, time
+        start_datetime = datetime.combine(start_date, time.min)
+        conditions.append(Transaction.executed_at >= start_datetime)
+    if end_date is not None:
+        from datetime import datetime, time
+        end_datetime = datetime.combine(end_date, time.max)
+        conditions.append(Transaction.executed_at <= end_datetime)
+
+    count_stmt = select(func.count(Transaction.id)).join(Transaction.category).where(*conditions)
+    total_result = await session.execute(count_stmt)
+    total = total_result.scalar() or 0
+
     stmt = (
         select(Transaction)
         .options(joinedload(Transaction.category))
-        .where(Transaction.user_id == user_id)
+        .join(Transaction.category)
+        .where(*conditions)
         .order_by(Transaction.executed_at.desc())
         .limit(limit)
         .offset(offset)
@@ -114,7 +145,7 @@ async def list_transactions(
         resp.category_name = tx.category.name if tx.category else "Unknown"
         responses.append(resp)
 
-    return responses
+    return TransactionPaginatedResponse(items=responses, total=total)
 
 
 async def get_transaction_by_id_and_user(

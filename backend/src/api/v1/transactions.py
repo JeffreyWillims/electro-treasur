@@ -15,6 +15,7 @@ from src.dependencies import get_current_user, get_db, get_redis_client
 from src.domain.models import User
 from src.schemas.transaction import (
     TransactionCreate,
+    TransactionPaginatedResponse,
     TransactionResponse,
     TransactionUpdate,
 )
@@ -58,13 +59,19 @@ async def post_transaction(
     )
 
 
-@router.get("/", response_model=list[TransactionResponse])
+@router.get("/", response_model=TransactionPaginatedResponse)
 async def get_transactions(
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    limit: int = 50,
+    limit: int = 10,
     offset: int = 0,
-) -> list[TransactionResponse]:
+    category_id: int | None = None,
+    type: str | None = None,
+    min_amount: Decimal | None = None,
+    max_amount: Decimal | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> TransactionPaginatedResponse:
     """
     Retrieve transactions for the authenticated user.
     """
@@ -73,6 +80,12 @@ async def get_transactions(
         user_id=current_user.id,
         limit=limit,
         offset=offset,
+        category_id=category_id,
+        tx_type=type,
+        min_amount=min_amount,
+        max_amount=max_amount,
+        start_date=start_date,
+        end_date=end_date,
     )
 
 

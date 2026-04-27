@@ -62,3 +62,10 @@ class TransactionResponse(BaseModel):
     idempotency_key: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class TransactionPaginatedResponse(BaseModel):
+    """Paginated list of transactions with total count."""
+
+    items: list[TransactionResponse]
+    total: int

@@ -4,12 +4,11 @@
  */
 import {
   LayoutDashboard,
+  CreditCard,
   Wallet,
-  PieChart,
-  Settings,
-  List,
-  Target,
+  LineChart,
   PiggyBank,
+  Settings,
   LogOut,
   Sliders,
   Sun,
@@ -25,20 +24,20 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 
 const NAV_ITEMS = [
-  { name: 'Обзор', path: '/', icon: LayoutDashboard, color: 'text-blue-500', hex: 'rgba(59,130,246,0.2)' },
-  { name: 'Операции', path: '/transactions', icon: List, color: 'text-indigo-500', hex: 'rgba(99,102,241,0.2)' },
-  { name: 'Бюджеты', path: '/budgets', icon: Target, color: 'text-amber-500', hex: 'rgba(245,158,11,0.2)' },
-  { name: 'Аналитика', path: '/analytics', icon: PieChart, color: 'text-emerald-500', hex: 'rgba(16,185,129,0.2)' },
-  { name: 'Финплан', path: '/savings-navigator', icon: PiggyBank, color: 'text-pink-500', hex: 'rgba(236,72,153,0.2)' },
-  { name: 'Настройки', path: '/settings/profile', icon: Settings, color: 'text-slate-500', hex: 'rgba(100,116,139,0.2)' },
+  { name: 'Обзор', path: '/', emoji: '🧭' },
+  { name: 'Операции', path: '/transactions', emoji: '💳' },
+  { name: 'Бюджеты', path: '/budgets', emoji: '📝' },
+  { name: 'Аналитика', path: '/analytics', emoji: '📊' },
+  { name: 'Финплан', path: '/savings-navigator', emoji: '🎯' },
+  { name: 'Настройки', path: '/settings/profile', emoji: '⚙️' },
 ];
 
 function ThemeToggle() {
   const { isDarkMode, toggleTheme } = useTheme();
 
   return (
-    <div 
-      className={cn("w-14 h-8 rounded-full flex items-center p-1 cursor-pointer transition-all duration-500 bg-black/10 dark:bg-black/40 shadow-[inset_0_2px_4px_rgba(0,0,0,0.15)] dark:shadow-[inset_0_2px_6px_rgba(0,0,0,0.6)] border border-black/5 dark:border-white/5", isDarkMode ? 'justify-end' : 'justify-start')} 
+    <div
+      className={cn("w-14 h-8 rounded-full flex items-center p-1 cursor-pointer transition-all duration-500 bg-black/10 dark:bg-black/40 shadow-[inset_0_2px_4px_rgba(0,0,0,0.15)] dark:shadow-[inset_0_2px_6px_rgba(0,0,0,0.6)] border border-black/5 dark:border-white/5", isDarkMode ? 'justify-end' : 'justify-start')}
       onClick={toggleTheme}
     >
       <motion.div layout transition={{ type: "spring", stiffness: 700, damping: 30 }} className="w-6 h-6 bg-white dark:bg-[#121212] rounded-full shadow-md flex items-center justify-center">
@@ -121,7 +120,7 @@ function UserProfileWidget() {
                 {user?.email}
               </p>
             </div>
-            
+
             <div className="h-px bg-black/5 dark:bg-white/5 mb-2 mx-1" />
 
             <div className="space-y-0.5">
@@ -136,7 +135,7 @@ function UserProfileWidget() {
               <button
                 onClick={() => { logout(); setIsOpen(false); }}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-rose-500 hover:bg-rose-500/10 transition-colors"
-               >
+              >
                 <LogOut size={16} />
                 <span>Выйти</span>
               </button>
@@ -190,12 +189,12 @@ export function Sidebar() {
       >
         {/* ── Glowing Edges (Vision OS Style) ── */}
         <div className="absolute inset-0 rounded-3xl pointer-events-none p-[2px] z-50"
-             style={{
-               background: "linear-gradient(160deg, rgba(28,63,53,0.8) 0%, rgba(255,255,255,0.05) 50%, rgba(255,122,0,0.8) 100%)",
-               WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
-               WebkitMaskComposite: "xor",
-               maskComposite: "exclude",
-             }}>
+          style={{
+            background: "linear-gradient(160deg, rgba(28,63,53,0.8) 0%, rgba(255,255,255,0.05) 50%, rgba(255,122,0,0.8) 100%)",
+            WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+            WebkitMaskComposite: "xor",
+            maskComposite: "exclude",
+          }}>
         </div>
 
         {/* Mobile Close */}
@@ -222,50 +221,48 @@ export function Sidebar() {
 
         {/* Navigation */}
         <nav className="flex-1 space-y-2 mt-4">
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.name}
-                to={item.path}
-                end={item.path === '/'}
-                onClick={() => setMobileOpen(false)}
-                className={({ isActive }) =>
-                  cn(
-                    'group w-full flex items-center gap-4 p-2 rounded-2xl relative transition-all duration-300',
-                    isActive 
-                      ? 'bg-white/40 dark:bg-white/10 backdrop-blur-md shadow-sm' 
-                      : 'hover:bg-black/[0.02] dark:hover:bg-white/[0.02]'
-                  )
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    <div className="relative w-10 h-10 rounded-xl shrink-0">
-                      {/* The concave base */}
-                      <div className={cn(
-                        "absolute inset-0 rounded-xl transition-all duration-300",
-                        "bg-black/5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.1),0_1px_0_rgba(255,255,255,0.8)] border border-black/5",
-                        "dark:bg-black/40 dark:shadow-[inset_0_2px_6px_rgba(0,0,0,0.5),0_1px_0_rgba(255,255,255,0.05)] dark:border-white/5"
-                      )} />
-                      {/* The glow layer (visible on active or hover) */}
-                      <div 
-                        className={cn("absolute inset-0 rounded-xl transition-opacity duration-300", isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100")} 
-                        style={{ boxShadow: `inset 0 0 12px ${item.hex}` }} 
-                      />
-                      {/* The icon */}
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Icon className={cn("w-5 h-5", item.color)} strokeWidth={1.5} />
-                      </div>
+          {NAV_ITEMS.map((item) => (
+            <NavLink
+              key={item.name}
+              to={item.path}
+              end={item.path === '/'}
+              onClick={() => setMobileOpen(false)}
+              className={({ isActive }) =>
+                cn(
+                  'group w-full flex items-center gap-4 p-2 rounded-2xl relative transition-all duration-300',
+                  isActive
+                    ? 'bg-white/40 dark:bg-white/10 backdrop-blur-md shadow-sm'
+                    : 'hover:bg-black/[0.02] dark:hover:bg-white/[0.02]'
+                )
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <div className="relative w-10 h-10 rounded-xl shrink-0">
+                    {/* The concave base (вдавленная лунка) */}
+                    <div className={cn(
+                      "absolute inset-0 rounded-xl transition-all duration-300",
+                      "bg-black/5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.1),0_1px_0_rgba(255,255,255,0.8)] border border-black/5",
+                      "dark:bg-black/40 dark:shadow-[inset_0_2px_6px_rgba(0,0,0,0.5),0_1px_0_rgba(255,255,255,0.05)] dark:border-white/5"
+                    )} />
+
+                    {/* The Emoji */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className={cn(
+                        "text-xl transition-all duration-300 drop-shadow-sm",
+                        isActive ? "opacity-100 scale-110" : "opacity-50 grayscale-[50%] hover:grayscale-0 hover:opacity-100"
+                      )}>
+                        {item.emoji}
+                      </span>
                     </div>
-                    <span className="font-semibold text-[#1C3F35] dark:text-white tracking-tight text-base">
-                      {item.name}
-                    </span>
-                  </>
-                )}
-              </NavLink>
-            );
-          })}
+                  </div>
+                  <span className="font-semibold text-[#1C3F35] dark:text-white tracking-tight text-base">
+                    {item.name}
+                  </span>
+                </>
+              )}
+            </NavLink>
+          ))}
         </nav>
 
         {/* Compact Dock Bottom Section */}

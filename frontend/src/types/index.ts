@@ -54,6 +54,11 @@ export interface TransactionUpdate {
   comment?: string;
 }
 
+export interface TransactionPaginatedResponse {
+  items: TransactionResponse[];
+  total: number;
+}
+
 // ── Dashboard Matrix ───────────────────────────────────────────────────
 export interface DayCellSchema {
   day: number; // 1–31
