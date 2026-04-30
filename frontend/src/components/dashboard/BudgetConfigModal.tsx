@@ -52,7 +52,7 @@ export function BudgetConfigModal({ isOpen, onClose, row }: BudgetConfigModalPro
     if (isOpen) {
       if (row) {
         const planned = parseFloat(row.planned);
-        // eslint-disable-next-line react-hooks/set-state-in-effect
+         
         setAmountStr(planned > 0 ? planned.toString() : '');
         setSelectedCategoryId(row.category_id);
       } else {

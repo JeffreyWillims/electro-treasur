@@ -14,8 +14,11 @@ Space: O(1) Redis memory per unique key (auto-evicted by TTL).
 
 from __future__ import annotations
 
+from datetime import date
+from decimal import Decimal
+
 from redis.asyncio import Redis
-from sqlalchemy import select, func
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -99,13 +102,14 @@ async def list_transactions(
     max_amount: Decimal | None = None,
     start_date: date | None = None,
     end_date: date | None = None,
+    search: str | None = None,
 ) -> TransactionPaginatedResponse:
     """
     Fetch transactions for a given user with dynamic filtering.
     Time Complexity: O(log N + M) where N is total transactions and M is the limit.
     """
     conditions = [Transaction.user_id == user_id]
-    
+
     if category_id is not None:
         conditions.append(Transaction.category_id == category_id)
     if tx_type is not None:
@@ -116,14 +120,26 @@ async def list_transactions(
         conditions.append(Transaction.amount <= max_amount)
     if start_date is not None:
         from datetime import datetime, time
+
         start_datetime = datetime.combine(start_date, time.min)
         conditions.append(Transaction.executed_at >= start_datetime)
     if end_date is not None:
         from datetime import datetime, time
+
         end_datetime = datetime.combine(end_date, time.max)
         conditions.append(Transaction.executed_at <= end_datetime)
+    if search is not None and search.strip():
+        pattern = f"%{search.strip()}%"
+        conditions.append(
+            or_(
+                Transaction.comment.ilike(pattern),
+                Category.name.ilike(pattern),
+            )
+        )
 
-    count_stmt = select(func.count(Transaction.id)).join(Transaction.category).where(*conditions)
+    count_stmt = (
+        select(func.count(Transaction.id)).join(Transaction.category).where(*conditions)
+    )
     total_result = await session.execute(count_stmt)
     total = total_result.scalar() or 0
 

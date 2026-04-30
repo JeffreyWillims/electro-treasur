@@ -42,7 +42,10 @@ async def upsert_budget(
     await session.refresh(budget)
     return budget
 
-async def delete_budget(session: AsyncSession, user_id: int, category_id: int, month: int, year: int) -> bool:
+
+async def delete_budget(
+    session: AsyncSession, user_id: int, category_id: int, month: int, year: int
+) -> bool:
     stmt = select(Budget).where(
         Budget.user_id == user_id,
         Budget.category_id == category_id,
@@ -56,4 +59,3 @@ async def delete_budget(session: AsyncSession, user_id: int, category_id: int, m
         await session.commit()
         return True
     return False
-

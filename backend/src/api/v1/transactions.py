@@ -7,6 +7,9 @@ Idempotency-Key header protection against race conditions / double-spend.
 
 from __future__ import annotations
 
+from datetime import date
+from decimal import Decimal
+
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -71,6 +74,7 @@ async def get_transactions(
     max_amount: Decimal | None = None,
     start_date: date | None = None,
     end_date: date | None = None,
+    search: str | None = None,
 ) -> TransactionPaginatedResponse:
     """
     Retrieve transactions for the authenticated user.
@@ -86,6 +90,7 @@ async def get_transactions(
         max_amount=max_amount,
         start_date=start_date,
         end_date=end_date,
+        search=search,
     )
 
 

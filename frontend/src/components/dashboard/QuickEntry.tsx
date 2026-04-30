@@ -32,24 +32,6 @@ const getRussianCategoryName = (rawName: string) => {
   return rawName; // Fallback
 };
 
-// ── Native Emoji Fallback (for preview only) ───────────────────────
-// Used only in the combo prefix for already-created categories
-function getCategoryEmoji(name: string): string {
-  const n = name.toLowerCase();
-  if (/корм|животн|пит(ом|ец)/.test(n)) return '🐾';
-  if (/кофе|кафе/.test(n)) return '☕';
-  if (/продукт|еда|grocery|food/.test(n)) return '🛒';
-  if (/такси|бензин|транспорт|transport/.test(n)) return '🚗';
-  if (/подписк|интернет|связь/.test(n)) return '🌐';
-  if (/зарплат|доход|income/.test(n)) return '💰';
-  if (/аренд|жильё|жилье|housing|rent/.test(n)) return '🏠';
-  if (/здоров|врач|аптек|health/.test(n)) return '💊';
-  if (/отдых|развлеч|leisure/.test(n)) return '🎭';
-  if (/инвест|рост|growth/.test(n)) return '📈';
-  if (/покупк|shopping/.test(n)) return '🛍️';
-  if (/образован|учёб|education/.test(n)) return '📚';
-  return '✨';
-}
 
 // ── useOnClickOutside Hook ─────────────────────────────────────────────
 function useOnClickOutside(

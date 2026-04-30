@@ -3,12 +3,7 @@
  * Apple Liquid Glass aesthetic with floating island layout.
  */
 import {
-  LayoutDashboard,
-  CreditCard,
   Wallet,
-  LineChart,
-  PiggyBank,
-  Settings,
   LogOut,
   Sliders,
   Sun,

@@ -93,7 +93,8 @@ export function fetchTransactions(
   minAmount?: string,
   maxAmount?: string,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
+  search?: string,
 ): Promise<TransactionPaginatedResponse> {
   const params = new URLSearchParams();
   params.append('limit', limit.toString());
@@ -104,6 +105,7 @@ export function fetchTransactions(
   if (maxAmount) params.append('max_amount', maxAmount);
   if (startDate) params.append('start_date', startDate);
   if (endDate) params.append('end_date', endDate);
+  if (search) params.append('search', search);
 
   return request<TransactionPaginatedResponse>(`/v1/transactions/?${params.toString()}`);
 }

@@ -15,7 +15,7 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import func, select, or_
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.models import Budget, Category, Transaction
@@ -144,9 +144,7 @@ async def get_monthly_dashboard(
                 type=info["type"],
                 planned=planned,
                 fact=fact,
-                delta=(
-                    planned - fact if info["type"] == "expense" else fact - planned
-                ),
+                delta=(planned - fact if info["type"] == "expense" else fact - planned),
                 days=[
                     DayCellSchema(day=i + 1, amount=days_data[i])
                     for i in range(day_count)

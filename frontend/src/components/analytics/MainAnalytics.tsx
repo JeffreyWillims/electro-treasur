@@ -1,4 +1,4 @@
-/* eslint-disable */
+ 
 /**
  * MainAnalytics.tsx — Data Cortex (Single Query Orchestrator)
  *
