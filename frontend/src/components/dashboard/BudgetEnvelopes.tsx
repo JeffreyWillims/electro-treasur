@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { fetchDashboard, deleteBudget } from '@/api/client';
 import { cn } from '@/lib/utils';
+import { getLocalDateString } from '@/lib/dateUtils';
 import { Plus, Pencil, Trash } from 'lucide-react';
 import type { CategoryRowSchema } from '@/types';
 import { BudgetConfigModal } from './BudgetConfigModal';
@@ -44,8 +45,8 @@ export function BudgetEnvelopes() {
     queryKey: ['dashboard'],
     queryFn: () => {
       const d = new Date();
-      const start = new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0] as string;
-      const end = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0] as string;
+      const start = getLocalDateString(new Date(d.getFullYear(), d.getMonth(), 1));
+      const end = getLocalDateString(new Date(d.getFullYear(), d.getMonth() + 1, 0));
       return fetchDashboard(start, end);
     },
   });

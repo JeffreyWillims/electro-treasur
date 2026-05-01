@@ -10,6 +10,7 @@
  * Aesthetic: California Organic Luxury.
  */
 import { useState, useMemo, useDeferredValue } from 'react';
+import { getLocalDateString } from '@/lib/dateUtils';
 import { useQuery } from '@tanstack/react-query';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip,
@@ -106,8 +107,8 @@ export function SavingsNavigator() {
     const start = new Date();
     start.setDate(end.getDate() - 30);
     return {
-      startDateStr: start.toISOString().split('T')[0] as string,
-      endDateStr: end.toISOString().split('T')[0] as string,
+      startDateStr: getLocalDateString(start),
+      endDateStr: getLocalDateString(end),
     };
   }, []);
 

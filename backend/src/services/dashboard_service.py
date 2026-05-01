@@ -12,7 +12,7 @@ Algorithm:
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import func, or_, select
@@ -74,10 +74,15 @@ async def get_monthly_dashboard(
     tx_result = await session.execute(stmt_tx)
     tx_rows = tx_result.all()  # list[(category_id, type, exec_date, total)]
 
-    # ── Step 2: Fetch budgets ─────────────────────────
-    # Fetch budgets that match EITHER the start_date's month OR the end_date's month.
+    # ── Step 2: Fetch and aggregate budgets safely ──────────────────────
+    # GROUP BY category_id + SUM(amount_limit) so that multi-month ranges
+    # (e.g. Apr 01 – May 31) correctly accumulate limits instead of
+    # dict-overwriting the later month's value over the earlier one.
     stmt_bp = (
-        select(Budget.category_id, Budget.amount_limit)
+        select(
+            Budget.category_id,
+            func.sum(Budget.amount_limit).label("total_limit"),
+        )
         .where(
             Budget.user_id == user_id,
             or_(
@@ -85,11 +90,11 @@ async def get_monthly_dashboard(
                 (Budget.month == end_date.month) & (Budget.year == end_date.year),
             ),
         )
-        .order_by(Budget.year, Budget.month)
+        .group_by(Budget.category_id)
     )
     bp_result = await session.execute(stmt_bp)
     plans: dict[int, Decimal] = {
-        row.category_id: row.amount_limit for row in bp_result.all()
+        row.category_id: row.total_limit for row in bp_result.all()
     }
 
     # ── Step 3: Fetch category names ─────────
@@ -103,23 +108,42 @@ async def get_monthly_dashboard(
 
     # ── Step 4: O(N) single-pass aggregation into day matrix ─────────────
     #   matrix[category_id][day_index] = Decimal
+    #
+    #   Timezone guard: func.date(executed_at) runs in DB server timezone (UTC).
+    #   A local UTC+3 transaction at 00:30 local = 21:30 prev-day UTC → its
+    #   date() drifts one day back, producing delta_days = -1 or >= day_count.
+    #   We use `continue` (not clamp) so rogue rows don't corrupt bucket 0 or N-1.
     matrix: dict[int, list[Decimal]] = {}
     fact_totals: dict[int, Decimal] = {}
     period_income = Decimal("0.00")
     period_expense = Decimal("0.00")
 
-    for cat_id, cat_type, exec_date, total in tx_rows:
+    for cat_id, cat_type, raw_exec_date, total in tx_rows:
         cat_id = int(cat_id)
 
-        # Calculate day index based on start_date
+        # Железобетонный парсинг: PostgreSQL может вернуть str, datetime или date.
+        # [:10] отрезает время, если PostgreSQL вернул ISO-строку с timestamp.
+        if isinstance(raw_exec_date, str):
+            exec_date = date.fromisoformat(raw_exec_date[:10])
+        elif isinstance(raw_exec_date, datetime):
+            exec_date = raw_exec_date.date()
+        else:
+            exec_date = raw_exec_date  # Already a date object
+
+        # Day-index calculation with strict out-of-bounds guard.
         delta_days = (exec_date - start_date).days
-        day_index = max(0, min(delta_days, day_count - 1))
+
+        # Timezone drift → delta_days can be -1 or >= day_count.
+        # Drop silently: the row still contributes to total_balance_all_time
+        # (Step 0) but must not corrupt the fixed-length day vector.
+        if delta_days < 0 or delta_days >= day_count:
+            continue
 
         if cat_id not in matrix:
             matrix[cat_id] = [Decimal("0.00")] * day_count
             fact_totals[cat_id] = Decimal("0.00")
 
-        matrix[cat_id][day_index] += total
+        matrix[cat_id][delta_days] += total
         fact_totals[cat_id] += total
 
         if cat_type == "income":

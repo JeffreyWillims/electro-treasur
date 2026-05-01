@@ -35,8 +35,6 @@ export function RegisterForm() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#FDFBF7] dark:bg-[#050505] relative overflow-hidden px-4 py-8">
       {/* Background atmosphere */}
-      <div className="absolute left-[-2%] -top-[5%] h-[110%] w-32 bg-[#1C3F35]/30 filter blur-[80px] animate-liquid-interference pointer-events-none z-0" />
-      <div className="absolute left-0 -top-[10%] h-[120%] w-48 bg-[#3A8248]/50 filter blur-[80px] animate-liquid-pillar pointer-events-none z-0" />
       <div className="absolute -top-10 -right-20 w-[420px] h-[420px] bg-[#FF7A00]/40 rounded-full mix-blend-multiply filter blur-[100px] animate-blob z-0 pointer-events-none" />
 
       {/* THE GLASS MONOLITH */}

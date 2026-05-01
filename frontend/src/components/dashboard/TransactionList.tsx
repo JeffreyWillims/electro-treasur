@@ -12,9 +12,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchTransactions, fetchCategories, updateTransaction, deleteTransaction } from '@/api/client';
 import type { CategoryRead, TransactionResponse, TransactionUpdate } from '@/types';
 import { cn } from '@/lib/utils';
+import { getLocalDateString } from '@/lib/dateUtils';
 import { Search, X, SlidersHorizontal } from 'lucide-react';
+import { GlassDateRangePicker } from '@/components/ui/GlassDateRangePicker';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 
 const PAGE_SIZE = 10;
@@ -38,6 +40,7 @@ const getRussianCategoryName = (rawName: string) => {
 export function TransactionList() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
 
   // ── Inline Edit State ──────────────────────────────────────────────
@@ -56,13 +59,22 @@ export function TransactionList() {
   const [typeFilter, setTypeFilter] = useState('');
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
+  // ── Debounce: 300ms защита от Self-DDoS ────────────────────────────
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   // ── Pagination Query ─────────────────────────────────────────────────
   const {
     data,
     isLoading,
     isFetching,
   } = useQuery({
-    queryKey: ['transactions', page, selectedCategory, typeFilter, minAmount, maxAmount, startDate, endDate, searchQuery],
+    queryKey: ['transactions', page, selectedCategory, typeFilter, minAmount, maxAmount, startDate, endDate, debouncedSearch],
     queryFn: () => fetchTransactions(
       PAGE_SIZE,
       (page - 1) * PAGE_SIZE,
@@ -72,7 +84,7 @@ export function TransactionList() {
       maxAmount,
       startDate,
       endDate,
-      searchQuery,
+      debouncedSearch,
     ),
   });
 
@@ -89,14 +101,10 @@ export function TransactionList() {
     mutationFn: ({ id, payload }: { id: number; payload: TransactionUpdate }) =>
       updateTransaction(id, payload),
     onMutate: async ({ id, payload }) => {
-      const queryKey = ['transactions', page, selectedCategory, typeFilter, minAmount, maxAmount, startDate, endDate];
-      await queryClient.cancelQueries({ queryKey });
+      await queryClient.cancelQueries({ queryKey: ['transactions'] });
 
-      // Snapshot previous cache
-      const previousData = queryClient.getQueryData(queryKey);
-
-      // Optimistically update the cache
-      queryClient.setQueryData(queryKey, (old: typeof data) => {
+      // Optimistically update all cached transaction pages (любой набор фильтров)
+      queryClient.setQueriesData({ queryKey: ['transactions'] }, (old: any) => {
         if (!old) return old;
         return {
           ...old,
@@ -105,14 +113,8 @@ export function TransactionList() {
           ),
         };
       });
-
-      return { previousData, queryKey };
     },
-    onError: (_err, _vars, context) => {
-      // Rollback on error
-      if (context?.previousData) {
-        queryClient.setQueryData(context.queryKey, context.previousData);
-      }
+    onError: (_err, _vars, _context) => {
       toast.error('Не удалось обновить транзакцию');
     },
     onSettled: () => {
@@ -128,12 +130,10 @@ export function TransactionList() {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteTransaction(id),
     onMutate: async (id) => {
-      const queryKey = ['transactions', page, selectedCategory, typeFilter, minAmount, maxAmount, startDate, endDate];
-      await queryClient.cancelQueries({ queryKey });
-      const previousData = queryClient.getQueryData(queryKey);
+      await queryClient.cancelQueries({ queryKey: ['transactions'] });
 
-      // Optimistically remove from cache
-      queryClient.setQueryData(queryKey, (old: typeof data) => {
+      // Optimistically remove from all cached transaction pages
+      queryClient.setQueriesData({ queryKey: ['transactions'] }, (old: any) => {
         if (!old) return old;
         return {
           ...old,
@@ -143,12 +143,8 @@ export function TransactionList() {
       });
 
       setDrawerTx(null);
-      return { previousData, queryKey };
     },
-    onError: (_err, _id, context) => {
-      if (context?.previousData) {
-        queryClient.setQueryData(context.queryKey, context.previousData);
-      }
+    onError: (_err, _id, _context) => {
       toast.error('Не удалось удалить транзакцию');
     },
     onSettled: () => {
@@ -226,9 +222,17 @@ export function TransactionList() {
                   type="text"
                   placeholder="Поиск по транзакциям..."
                   value={searchQuery}
-                  onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full h-12 bg-white/50 dark:bg-white/5 border border-white/50 dark:border-white/10 rounded-xl px-12 text-slate-900 dark:text-white placeholder-slate-500 focus:ring-2 focus:ring-[#1C3F35]/20 outline-none transition-all"
                 />
+                {searchQuery.length > 0 && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
               <div className="relative">
                 <button
@@ -251,16 +255,16 @@ export function TransactionList() {
                         transition={{ duration: 0.2, ease: 'easeOut' }}
                         className="absolute right-0 top-[110%] w-80 p-6 bg-white/90 dark:bg-[#0A0A0A]/90 backdrop-blur-3xl border border-slate-200/60 dark:border-white/10 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.6)] z-50"
                       >
-                        <div className="flex flex-col gap-4">
-                          <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#1C3F35]/40 dark:text-emerald-400/40">Параметры фильтрации</p>
+                        <div className="flex flex-col gap-5">
+                          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-[#1C3F35]/40 dark:text-emerald-400/40">Параметры фильтрации</p>
 
                           {/* Category */}
                           <div>
-                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5 block">Категория</label>
+                            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 mb-2 block">Категория</label>
                             <select
                               value={selectedCategory}
                               onChange={(e) => { setSelectedCategory(e.target.value); setPage(1); }}
-                              className="w-full h-10 px-3 bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl outline-none text-sm text-slate-900 dark:text-white cursor-pointer appearance-none"
+                              className="w-full h-10 px-3 bg-slate-50/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl outline-none text-sm text-slate-900 dark:text-white cursor-pointer appearance-none focus:border-[#1C3F35] dark:focus:border-emerald-500 transition-colors"
                             >
                               <option value="">Все категории</option>
                               {categories.map(c => (
@@ -273,29 +277,31 @@ export function TransactionList() {
 
                           {/* Amount Range */}
                           <div>
-                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5 block">Сумма</label>
+                            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 mb-2 block">Сумма</label>
                             <div className="grid grid-cols-2 gap-2">
-                              <input type="number" placeholder="От ₽" value={minAmount} onChange={(e) => { setMinAmount(e.target.value); setPage(1); }} className="w-full h-10 px-3 bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl outline-none text-sm text-slate-900 dark:text-white placeholder-slate-400" />
-                              <input type="number" placeholder="До ₽" value={maxAmount} onChange={(e) => { setMaxAmount(e.target.value); setPage(1); }} className="w-full h-10 px-3 bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl outline-none text-sm text-slate-900 dark:text-white placeholder-slate-400" />
+                              <input type="number" placeholder="От ₽" value={minAmount} onChange={(e) => { setMinAmount(e.target.value); setPage(1); }} className="w-full h-10 px-3 bg-slate-50/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl outline-none text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:border-[#1C3F35] dark:focus:border-emerald-500 transition-colors" />
+                              <input type="number" placeholder="До ₽" value={maxAmount} onChange={(e) => { setMaxAmount(e.target.value); setPage(1); }} className="w-full h-10 px-3 bg-slate-50/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl outline-none text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:border-[#1C3F35] dark:focus:border-emerald-500 transition-colors" />
                             </div>
                           </div>
 
                           {/* Date Range */}
                           <div>
-                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5 block">Период</label>
-                            <div className="grid grid-cols-2 gap-2">
-                              <input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setPage(1); }} className="w-full h-10 px-3 bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl outline-none text-sm text-slate-900 dark:text-white" style={{ colorScheme: 'light dark' }} />
-                              <input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setPage(1); }} className="w-full h-10 px-3 bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl outline-none text-sm text-slate-900 dark:text-white" style={{ colorScheme: 'light dark' }} />
-                            </div>
+                            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 mb-2 block">Период</label>
+                            <GlassDateRangePicker
+                              startDate={startDate}
+                              endDate={endDate}
+                              onChange={(s, e) => { setStartDate(s); setEndDate(e); setPage(1); }}
+                              align="right"
+                            />
                           </div>
 
                           {/* Type */}
                           <div>
-                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5 block">Тип операции</label>
+                            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 mb-2 block">Тип операции</label>
                             <select
                               value={typeFilter}
                               onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
-                              className="w-full h-10 px-3 bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl outline-none text-sm text-slate-900 dark:text-white cursor-pointer appearance-none"
+                              className="w-full h-10 px-3 bg-slate-50/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl outline-none text-sm text-slate-900 dark:text-white cursor-pointer appearance-none focus:border-[#1C3F35] dark:focus:border-emerald-500 transition-colors"
                             >
                               <option value="">Все типы</option>
                               <option value="income">Доходы</option>
@@ -521,7 +527,7 @@ function DrawerContent({
   const [amount, setAmount] = useState(Math.abs(parseFloat(tx.amount.toString())).toString());
   const [categoryId, setCategoryId] = useState(tx.category_id);
   const [date, setDate] = useState(
-    tx.executed_at ? new Date(tx.executed_at).toISOString().split('T')[0] : ''
+    tx.executed_at ? getLocalDateString(new Date(tx.executed_at)) : ''
   );
   const [comment, setComment] = useState(tx.comment || '');
 

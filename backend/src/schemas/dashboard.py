@@ -1,10 +1,12 @@
 """
 Pydantic V2 schemas for the Dashboard aggregation endpoint.
 
-The matrix is:  Category → Plan → Fact → Delta → list[31 day cells]
-Each day cell holds the actual spend for that day-of-month (0-indexed → day 1 at index 0).
+The matrix is:  Category → Plan → Fact → Delta → list[N day cells]
+Each day cell holds the actual spend for that bucket index (day 1 at index 0).
+Dynamic Bucketing: the day vector length is determined at runtime by the
+selected date range — 7-day, 31-day, 90-day, or 365-day windows are all valid.
 
-Time Complexity of building the response: O(N) where N = number of transactions in the month.
+Time Complexity of building the response: O(N) where N = number of transactions in range.
 """
 
 from __future__ import annotations
@@ -16,9 +18,9 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class DayCellSchema(BaseModel):
-    """Single day's aggregated amount within the 31-day vector."""
+    """Single day's aggregated amount within the dynamic bucketing vector."""
 
-    day: int = Field(..., ge=1, le=31, description="Day of month (1-31)")
+    day: int = Field(..., ge=1, description="Day index in the selected range")
     amount: Decimal = Field(default=Decimal("0.00"), max_digits=12, decimal_places=2)
 
 

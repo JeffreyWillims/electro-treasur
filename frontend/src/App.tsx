@@ -15,7 +15,9 @@ import { FeedbackWidget } from '@/components/layout/FeedbackWidget';
 import { InsightModal } from '@/components/insights/InsightModal';
 import { useState } from 'react';
 import { ThemeProvider } from '@/context/ThemeContext';
+import { getLocalDateString } from '@/lib/dateUtils';
 import { motion } from 'framer-motion';
+import { GlassDateRangePicker } from '@/components/ui/GlassDateRangePicker';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,8 +32,6 @@ const queryClient = new QueryClient({
 function DashboardLayout() {
   return (
     <div className="flex min-h-screen bg-[#FDFBF7] dark:bg-[#050505] relative overflow-hidden">
-      <div className="absolute left-[-2%] -top-[5%] h-[110%] w-32 bg-[#1C3F35]/30 filter blur-[80px] animate-liquid-interference pointer-events-none z-0" />
-      <div className="absolute left-0 -top-[10%] h-[120%] w-48 bg-[#3A8248]/50 filter blur-[80px] animate-liquid-pillar pointer-events-none z-0" />
       <Sidebar />
 
       {/* Main Content Area — accounts for floating sidebar margins */}
@@ -46,14 +46,14 @@ function Overview() {
   const [startDate, setStartDate] = useState<string>(() => {
     const d = new Date();
     d.setDate(1);
-    return d.toISOString().split('T')[0] as string;
+    return getLocalDateString(d);
   });
   
   const [endDate, setEndDate] = useState<string>(() => {
     const d = new Date();
     d.setMonth(d.getMonth() + 1);
     d.setDate(0);
-    return d.toISOString().split('T')[0] as string;
+    return getLocalDateString(d);
   });
 
   const [isInsightOpen, setIsInsightOpen] = useState(false);
@@ -92,24 +92,13 @@ function Overview() {
           </div>
           
           {/* Glass Control Panel */}
-          <div className="flex flex-wrap items-center gap-3 bg-white/60 dark:bg-[#111111]/80 backdrop-blur-xl border border-vault-pine/10 dark:border-white/5 rounded-full p-1.5 shadow-sm">
-            <div className="flex items-center gap-2 px-3">
-              <input 
-                type="date" 
-                value={startDate} 
-                onChange={e => setStartDate(e.target.value)}
-                className="appearance-none bg-transparent text-vault-pine dark:text-white/80 text-sm font-semibold outline-none cursor-pointer"
-                style={{ colorScheme: 'light dark' }}
-              />
-              <span className="text-vault-pine/20 dark:text-white/20 font-medium text-sm">—</span>
-               <input 
-                type="date" 
-                value={endDate} 
-                onChange={e => setEndDate(e.target.value)}
-                className="appearance-none bg-transparent text-vault-pine dark:text-white/80 text-sm font-semibold outline-none cursor-pointer"
-                style={{ colorScheme: 'light dark' }}
-              />
-            </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <GlassDateRangePicker
+              startDate={startDate}
+              endDate={endDate}
+              onChange={(s, e) => { setStartDate(s); setEndDate(e); }}
+              align="right"
+            />
             
             <button 
               className="flex items-center gap-2 bg-[#1C3F35] dark:bg-[#FF7A00] hover:bg-[#1C3F35]/90 dark:hover:bg-[#FF7A00]/90 text-white font-semibold py-2 px-5 rounded-full shadow-lg transition-transform duration-300 active:scale-[0.98]"

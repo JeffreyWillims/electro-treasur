@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { PlusCircle, Tag, Search, Plus, Check } from 'lucide-react';
 import { createTransaction, fetchCategories, createCategory } from '@/api/client';
 import type { CategoryRead } from '@/types';
+import { getLocalDateString } from '@/lib/dateUtils';
 
 const CURRENCIES = ['RUB', 'USD', 'EUR'];
 
@@ -55,7 +56,7 @@ export function QuickEntry() {
   const [currency, setCurrency] = useState('RUB');
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [subcategory, setSubcategory] = useState('');
-  const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(() => getLocalDateString(new Date()));
   const [isSuccessAnim, setIsSuccessAnim] = useState(false);
 
   // ── Combobox State ────────────────────────────────────────────────────
@@ -172,7 +173,7 @@ export function QuickEntry() {
       amount: parseFloat(amount.replace(/\s/g, '')),
       currency,
       category_id: selectedCategoryId,
-      executed_at: new Date(date || new Date().toISOString()).toISOString(),
+      executed_at: date ? `${date}T12:00:00+03:00` : new Date().toISOString(),
       entry_type: 'manual',
       comment: subcategory || undefined,
     });

@@ -16,13 +16,14 @@ def _build_matrix(
     tx_rows: list[tuple[int, int, float]],
     plans: dict[int, Decimal],
     cat_names: dict[int, str],
+    day_count: int = 31,
 ) -> list[CategoryRowSchema]:
     """
     Pure-function mirror of dashboard_service.get_monthly_dashboard
     aggregation logic — no DB, no async, testable in isolation.
 
     Time:  O(N + K).
-    Space: O(K * 31).
+    Space: O(K * day_count).  day_count defaults to 31 for standard months.
     """
     matrix: dict[int, list[Decimal]] = {}
     fact_totals: dict[int, Decimal] = {}
@@ -31,8 +32,10 @@ def _build_matrix(
     for cat_id, day_num, total in tx_rows:
         cat_id = int(cat_id)
         day_index = int(day_num) - 1
+        if day_index < 0 or day_index >= day_count:
+            continue  # timezone-guard mirrors the real service
         if cat_id not in matrix:
-            matrix[cat_id] = [Decimal("0.00")] * 31
+            matrix[cat_id] = [Decimal("0.00")] * day_count
             fact_totals[cat_id] = Decimal("0.00")
         matrix[cat_id][day_index] += Decimal(str(total))
         fact_totals[cat_id] += Decimal(str(total))
@@ -43,7 +46,7 @@ def _build_matrix(
     for cat_id in all_cat_ids:
         planned = plans.get(cat_id, Decimal("0.00"))
         fact = fact_totals.get(cat_id, Decimal("0.00"))
-        days_data = matrix.get(cat_id, [Decimal("0.00")] * 31)
+        days_data = matrix.get(cat_id, [Decimal("0.00")] * day_count)
         rows.append(
             CategoryRowSchema(
                 category_id=cat_id,
@@ -51,7 +54,10 @@ def _build_matrix(
                 planned=planned,
                 fact=fact,
                 delta=planned - fact,
-                days=[DayCellSchema(day=i + 1, amount=days_data[i]) for i in range(31)],
+                days=[
+                    DayCellSchema(day=i + 1, amount=days_data[i])
+                    for i in range(day_count)
+                ],
             )
         )
     return rows
@@ -88,10 +94,16 @@ class TestDashboardAggregation:
         assert cat3.fact == Decimal("4700.00")  # 3500 + 1200
 
     def test_31_day_vector_length(self, sample_tx_rows: list) -> None:
-        """Every row must produce exactly 31 day cells."""
-        rows = _build_matrix(sample_tx_rows, {}, {})
+        """Every row must produce exactly day_count day cells (default 31)."""
+        rows = _build_matrix(sample_tx_rows, {}, {}, day_count=31)
         for row in rows:
             assert len(row.days) == 31
+
+    def test_61_day_vector_length(self, sample_tx_rows: list) -> None:
+        """Dynamic bucketing: 61-day range produces 61-cell vectors."""
+        rows = _build_matrix(sample_tx_rows, {}, {}, day_count=61)
+        for row in rows:
+            assert len(row.days) == 61
 
     def test_empty_transactions(self) -> None:
         """Categories with plans but no transactions appear with zero fact."""

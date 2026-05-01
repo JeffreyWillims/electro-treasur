@@ -10,6 +10,8 @@
  * muted pine/gold palette with premium micro-animations.
  */
 import { useState, useMemo } from 'react';
+import { GlassDateRangePicker } from '@/components/ui/GlassDateRangePicker';
+import { getLocalDateString } from '@/lib/dateUtils';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { fetchDashboard, fetchCategories } from '@/api/client';
@@ -134,13 +136,13 @@ export function MainAnalytics() {
   const [startDate, setStartDate] = useState<string>(() => {
     const d = new Date();
     d.setDate(1);
-    return d.toISOString().split('T')[0] as string;
+    return getLocalDateString(d);
   });
   const [endDate, setEndDate] = useState<string>(() => {
     const d = new Date();
     d.setMonth(d.getMonth() + 1);
     d.setDate(0);
-    return d.toISOString().split('T')[0] as string;
+    return getLocalDateString(d);
   });
 
   // ── DATA CORTEX: Single Orchestrated Query ───────────────────────────
@@ -200,25 +202,12 @@ export function MainAnalytics() {
         </div>
 
         {/* Glass Date Picker */}
-        <div className="flex items-center gap-3 bg-white/60 dark:bg-[#111111]/80 backdrop-blur-xl border border-[#1C3F35]/10 dark:border-white/5 p-1.5 rounded-full shadow-sm transition-colors">
-          <div className="flex items-center gap-2 px-3">
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="appearance-none bg-transparent text-[#1C3F35] dark:text-white/80 text-sm font-semibold outline-none cursor-pointer"
-              style={{ colorScheme: 'light dark' }}
-            />
-            <span className="text-[#1C3F35]/20 dark:text-white/20 font-medium text-sm">—</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="appearance-none bg-transparent text-[#1C3F35] dark:text-white/80 text-sm font-semibold outline-none cursor-pointer"
-              style={{ colorScheme: 'light dark' }}
-            />
-          </div>
-        </div>
+        <GlassDateRangePicker
+          startDate={startDate}
+          endDate={endDate}
+          onChange={(s, e) => { setStartDate(s); setEndDate(e); }}
+          align="right"
+        />
       </div>
 
       {/* ═══ LOADING STATE ═══ */}

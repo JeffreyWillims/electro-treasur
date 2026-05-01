@@ -27,6 +27,9 @@ export function BalanceCards({
 
   const monthlyIncome = actualIncome > 0 ? actualIncome : parseFloat(String(user?.monthly_income || 0));
 
+  // Период считается «пустым», если бэкенд не вернул ни одной строки
+  const hasData = (dashboard?.rows?.length ?? 0) > 0;
+
   const dissipation = monthlyIncome > 0 ? Math.round((monthlyExpense / monthlyIncome) * 100) : 0;
   const growth = monthlyIncome > 0 ? Math.round(((monthlyIncome - monthlyExpense) / monthlyIncome) * 100) : 0;
 
@@ -83,12 +86,18 @@ export function BalanceCards({
             <h3 className="text-xl md:text-xl font-sans italic font-black tracking-wide antialiased text-[#1C3F35] dark:text-[#FDFBF7] mb-9" style={{ textShadow: "1px 1px 0px rgba(255,255,255,0.8), 0px 4px 10px rgba(0,0,0,0.08)" }}>
               Доход
             </h3>
-            <div className="flex items-baseline justify-center gap-1.5">
-              <span className="text-3xl md:text-4xl font-extrabold tabular-nums tracking-tight text-emerald-600 dark:text-emerald-400 leading-none">
-                +{Math.round(monthlyIncome).toLocaleString('ru-RU')}
-              </span>
-              <span className="text-sm font-bold text-emerald-700/50 dark:text-emerald-400/40">RUB</span>
-            </div>
+            {hasData ? (
+              <div className="flex items-baseline justify-center gap-1.5">
+                <span className="text-3xl md:text-4xl font-extrabold tabular-nums tracking-tight text-emerald-600 dark:text-emerald-400 leading-none">
+                  +{Math.round(monthlyIncome).toLocaleString('ru-RU')}
+                </span>
+                <span className="text-sm font-bold text-emerald-700/50 dark:text-emerald-400/40">RUB</span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center">
+                <span className="text-sm font-serif text-slate-400 dark:text-slate-500 italic">Нет операций</span>
+              </div>
+            )}
           </div>
 
           {/* EXPENSE */}
@@ -96,12 +105,18 @@ export function BalanceCards({
             <h3 className="text-xl md:text-xl font-sans italic font-black tracking-wide antialiased text-[#1C3F35] dark:text-[#FDFBF7] mb-9" style={{ textShadow: "1px 1px 0px rgba(255,255,255,0.8), 0px 4px 10px rgba(0,0,0,0.08)" }}>
               Расход
             </h3>
-            <div className="flex items-baseline justify-center gap-1.5">
-              <span className="text-3xl md:text-4xl font-extrabold tabular-nums tracking-tight text-rose-600 dark:text-rose-500 leading-none">
-                -{Math.round(monthlyExpense).toLocaleString('ru-RU')}
-              </span>
-              <span className="text-sm font-bold text-rose-700/50 dark:text-rose-500/40">RUB</span>
-            </div>
+            {hasData ? (
+              <div className="flex items-baseline justify-center gap-1.5">
+                <span className="text-3xl md:text-4xl font-extrabold tabular-nums tracking-tight text-rose-600 dark:text-rose-500 leading-none">
+                  -{Math.round(monthlyExpense).toLocaleString('ru-RU')}
+                </span>
+                <span className="text-sm font-bold text-rose-700/50 dark:text-rose-500/40">RUB</span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center">
+                <span className="text-sm font-serif text-slate-400 dark:text-slate-500 italic">Нет операций</span>
+              </div>
+            )}
           </div>
 
         </div>
