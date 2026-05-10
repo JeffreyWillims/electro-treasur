@@ -45,7 +45,7 @@ router = APIRouter(prefix="/transactions", tags=["Transactions"])
 async def post_transaction(
     payload: TransactionCreate,
     session: AsyncSession = Depends(get_db),
-    redis: Redis = Depends(get_redis_client),  # type: ignore[type-arg]
+    redis: Redis = Depends(get_redis_client),
     current_user: User = Depends(get_current_user),
     idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
 ) -> TransactionResponse:
@@ -110,7 +110,7 @@ async def patch_transaction(
         user_id=current_user.id,
         payload=payload,
     )
-    if getattr(resp, "id", None) is None and resp is None:  # explicit check
+    if resp is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Transaction not found or not authorized",

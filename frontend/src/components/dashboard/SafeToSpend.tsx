@@ -18,15 +18,7 @@ export function SafeToSpend() {
     },
   });
 
-  const { data: prevDashboard } = useQuery({
-    queryKey: ['dashboard', 'prev'],
-    queryFn: () => {
-      const d = new Date();
-      const start = getLocalDateString(new Date(d.getFullYear(), d.getMonth() - 1, 1));
-      const end = getLocalDateString(new Date(d.getFullYear(), d.getMonth(), 0));
-      return fetchDashboard(start, end);
-    },
-  });
+
 
   if (isLoading) {
     return (
@@ -57,27 +49,22 @@ export function SafeToSpend() {
   console.log("MATH_CHECK:", { monthlyIncome, totalPlanned, overspent, daysLeft, limit });
 
 
-  // Rollover (⛄) calculation from previous month
-  const prevIncome = parseFloat(prevDashboard?.period_income || '0');
-  const prevExpense = parseFloat(prevDashboard?.period_expense || '0');
-  const rollover = Math.max(0, prevIncome - prevExpense);
+
 
   return (
     <div className="w-full premium-card rounded-3xl p-6 md:p-8 relative backdrop-blur-[60px] backdrop-saturate-200 bg-white/60 dark:bg-[#111111]/60 border border-white/30 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] sticky top-4 z-40 transition-all duration-300 group">
-      {/* Кинетическое Ядро (The Citrine Core SVG) */}
-      <div className="absolute left-6 top-6 w-24 h-24 pointer-events-none opacity-20 dark:opacity-40">
-        <svg viewBox="0 0 100 100" className="w-full h-full">
-          {/* Внешнее кольцо (медленное вращение) */}
-          <motion.circle 
-            cx="50" cy="50" r="45" 
+      {/* ── Kinetic Core (Phantom Emerald & Citrine Glow) ── */}
+      <div className="absolute left-6 top-6 w-24 h-24 pointer-events-none opacity-30 dark:opacity-40 z-0">
+        <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_15px_rgba(255,122,0,0.6)] dark:drop-shadow-[0_0_15px_rgba(255,122,0,0.8)]">
+          <motion.circle
+            cx="50" cy="50" r="45"
             stroke="currentColor" strokeWidth="0.5" strokeDasharray="4 4"
-            className="text-emerald-600 dark:text-emerald-400"
+            className="text-[#1C3F35] dark:text-emerald-500"
             animate={{ rotate: 360 }}
             transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
           />
-          {/* Внутренний кристалл (пульсация) */}
-          <motion.path 
-            d="M50 20L80 50L50 80L20 50L50 20Z" 
+          <motion.path
+            d="M50 20L80 50L50 80L20 50L50 20Z"
             fill="url(#citrineGradient)"
             animate={{ scale: [0.9, 1.1, 0.9], opacity: [0.5, 0.8, 0.5] }}
             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
@@ -88,8 +75,7 @@ export function SafeToSpend() {
               <stop offset="100%" stopColor="#FFA011" />
             </linearGradient>
           </defs>
-          {/* Направляющие линии */}
-          <path d="M50 5V15M50 85V95M5 50H15M85 50H95" stroke="currentColor" strokeWidth="1" className="text-emerald-500" />
+          <path d="M50 5V15M50 85V95M5 50H15M85 50H95" stroke="currentColor" strokeWidth="1" className="text-[#1C3F35] dark:text-emerald-500" />
         </svg>
       </div>
 
@@ -102,15 +88,7 @@ export function SafeToSpend() {
           Безопасный лимит
         </h2>
 
-        {rollover > 0 && (
-          <motion.div 
-            initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-            className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-mono text-[10px] font-bold uppercase tracking-wider"
-          >
-            <span>⛄ Rollover:</span>
-            <span>+{rollover.toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₽</span>
-          </motion.div>
-        )}
+
 
         <div className="flex flex-col items-center justify-center w-full gap-1">
           <span 

@@ -30,7 +30,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
-async def get_redis_client() -> Redis:  # type: ignore[type-arg]
+async def get_redis_client() -> Redis:
     """Return a shared async Redis client."""
     return await get_redis()
 
@@ -51,8 +51,8 @@ async def get_current_user(
         token_data = decode_access_token(token)
         if token_data.email is None:
             raise credentials_exception
-    except JWTError:
-        raise credentials_exception
+    except JWTError as e:
+        raise credentials_exception from e
 
     user = await get_user_by_email(db, email=token_data.email)
     if user is None:

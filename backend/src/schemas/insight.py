@@ -4,6 +4,8 @@ Pydantic V2 schemas for LLM Insight endpoints.
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel
 
 
@@ -26,4 +28,4 @@ class InsightResultResponse(BaseModel):
 
     task_id: str
     status: str  # "pending" | "complete"
-    result: dict | None = None
+    result: dict[str, Any] | None = None

@@ -17,9 +17,7 @@ class TransactionCreate(BaseModel):
     """Payload accepted by POST /api/v1/transactions/."""
 
     category_id: int
-    amount: Decimal = Field(
-        ..., max_digits=12, decimal_places=2, description="Monetary amount"
-    )
+    amount: Decimal = Field(..., max_digits=12, decimal_places=2, description="Monetary amount")
     currency: str = Field(default="RUB", description="ISO Currency code")
     is_recurring: bool = Field(default=False, description="Flag for recurring payments")
     entry_type: str = Field(default="manual", description="Manual or automated entry")

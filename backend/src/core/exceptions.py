@@ -22,9 +22,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 def setup_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
-    async def global_exception_handler(
-        request: Request, exc: Exception
-    ) -> JSONResponse:
+    async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
         error_id = f"aura_err_{int(datetime.now().timestamp())}_{uuid.uuid4().hex[:6]}"
 
         # Log the full traceback with the error_id for observability

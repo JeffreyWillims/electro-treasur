@@ -40,28 +40,38 @@ function HolographicPrism() {
   return (
     <div className="relative w-12 h-12 flex items-center justify-center">
       <svg viewBox="0 0 100 100" className="w-12 h-12" fill="none">
-        {/* Orbital Ellipses — Pine Rings */}
-        <ellipse
-          cx="50" cy="50" rx="42" ry="18"
-          stroke="#1C3F35" strokeOpacity="0.25" strokeWidth="1.2"
-        />
-        <ellipse
-          cx="50" cy="50" rx="36" ry="30"
-          stroke="#1C3F35" strokeOpacity="0.18" strokeWidth="1"
-          transform="rotate(55 50 50)"
-        />
-        <ellipse
-          cx="50" cy="50" rx="30" ry="24"
-          stroke="#1C3F35" strokeOpacity="0.12" strokeWidth="0.8"
-          transform="rotate(-35 50 50)"
-        />
+        {/* Orbital Ring 1 — slow CW */}
+        <motion.g
+          animate={{ rotate: 360 }}
+          transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
+          style={{ transformOrigin: "50px 50px" }}
+        >
+          <ellipse cx="50" cy="50" rx="42" ry="18" stroke="currentColor" className="text-[#1C3F35] dark:text-emerald-500" strokeOpacity="0.4" strokeWidth="1.5" />
+        </motion.g>
 
-        {/* Pulsing Glow Core */}
+        {/* Orbital Ring 2 — medium CCW */}
+        <motion.g
+          animate={{ rotate: -360 }}
+          transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+          style={{ transformOrigin: "50px 50px" }}
+        >
+          <ellipse cx="50" cy="50" rx="36" ry="30" stroke="currentColor" className="text-[#1C3F35] dark:text-emerald-500" strokeOpacity="0.3" strokeWidth="1" transform="rotate(55 50 50)" />
+        </motion.g>
+
+        {/* Orbital Ring 3 — fast CW */}
+        <motion.g
+          animate={{ rotate: 360 }}
+          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+          style={{ transformOrigin: "50px 50px" }}
+        >
+          <ellipse cx="50" cy="50" rx="30" ry="24" stroke="currentColor" className="text-[#1C3F35] dark:text-emerald-500" strokeOpacity="0.2" strokeWidth="0.8" transform="rotate(-35 50 50)" />
+        </motion.g>
+
+        {/* Citrine Glow Core — Tailwind drop-shadow */}
         <motion.circle
           cx="50" cy="50" r="15"
-          fill="#FF7A00" fillOpacity="0.1"
-          filter="blur(6px)"
-          animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0.6, 0.3] }}
+          className="fill-[#FF7A00] drop-shadow-[0_0_10px_rgba(255,122,0,0.8)]"
+          animate={{ scale: [1, 1.4, 1], opacity: [0.3, 0.7, 0.3] }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         />
 
@@ -75,10 +85,7 @@ function HolographicPrism() {
             d="M 50 38 L 58 50 L 50 62 L 42 50 Z"
             fill="#FF7A00"
             fillOpacity="0.9"
-            animate={{
-              fillOpacity: [0.7, 1, 0.7],
-              scale: [0.95, 1.05, 0.95],
-            }}
+            animate={{ fillOpacity: [0.7, 1, 0.7], scale: [0.95, 1.05, 0.95] }}
             transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
             style={{ transformOrigin: "50px 50px", filter: "drop-shadow(0 0 6px rgba(255, 122, 0, 0.5))" }}
           />
@@ -185,17 +192,17 @@ export function MainAnalytics() {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
-      className="max-w-7xl mx-auto space-y-14 py-8"
+      className="max-w-7xl mx-auto space-y-12 px-6 md:px-8 pt-12 pb-24"
     >
       {/* ═══ HEADER: Holographic Prism + Title + Date Picker ═══ */}
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
           <HolographicPrism />
-          <div>
-            <h1 className="text-[2.5rem] font-extrabold tracking-tight text-[#1C3F35] dark:text-white leading-none font-serif">
+          <div className="flex flex-col">
+            <h1 className="text-4xl md:text-5xl font-serif font-extrabold text-[#1C3F35] dark:text-emerald-50 tracking-tight mb-2" style={{ textShadow: "1px 1px 0px rgba(255,255,255,0.8), -1px -1px 0px rgba(0,0,0,0.05)" }}>
               Аналитика
             </h1>
-            <p className="text-[10px] font-mono text-[#1C3F35] dark:text-emerald-500 uppercase tracking-[0.3em] font-bold mt-1">
+            <p className="text-[10px] font-mono text-[#1C3F35]/70 dark:text-emerald-400 uppercase tracking-[0.25em] font-bold">
               V.I.A. Data Cortex
             </p>
           </div>

@@ -24,6 +24,8 @@ dev = [
     "pytest-asyncio>=0.25.0",
     "httpx>=0.28.0",
     "ruff>=0.8.0",
+    "mypy>=1.11.0",
+    "types-passlib>=1.7.7",
 ]
 
 [tool.pytest.ini_options]
@@ -34,5 +36,15 @@ testpaths = ["tests"]
 target-version = "py312"
 line-length = 99
 
-[tool.isort]
-profile = "black"
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = [
+    "E501",   # line-too-long — handled by formatter
+    "B008",   # function-call-in-default-argument — FastAPI DI pattern (Depends/Query)
+]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true
+exclude = ["migrations/", "tests/"]

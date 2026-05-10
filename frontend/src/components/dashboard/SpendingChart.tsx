@@ -89,16 +89,14 @@ export function SpendingChart({ dailyFlows, totalIncome, totalExpense }: Spendin
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: 0.1 }}
-      className="bg-white/60 dark:bg-[#0A0A0A]/80 backdrop-blur-3xl border border-[#1C3F35]/[0.06] dark:border-white/[0.04] rounded-[2rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.6)] hover:shadow-[0_16px_50px_rgba(0,0,0,0.07)] dark:hover:shadow-[0_16px_50px_rgba(0,0,0,0.8)] transition-all duration-700"
+      className="bg-white/60 dark:bg-[#0A0A0A]/80 backdrop-blur-3xl border border-[#1C3F35]/[0.06] dark:border-white/[0.04] rounded-[2.5rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.6)] hover:shadow-[0_16px_50px_rgba(0,0,0,0.07)] dark:hover:shadow-[0_16px_50px_rgba(0,0,0,0.8)] transition-all duration-700"
     >
       {/* ── Header + Insight ──────────────────────────────────────────── */}
       <div className="mb-8">
-        <h3 className="text-2xl font-serif font-bold text-[#1C3F35] dark:text-white tracking-tight leading-none">
-          Потоки капитала
-        </h3>
-        <p className="text-[10px] font-mono text-[#C5A059]/70 dark:text-[#C5A059]/50 uppercase tracking-[0.2em] mt-1.5 font-bold">
-          Cashflow Pulse
-        </p>
+        <div>
+          <h3 className="text-2xl font-serif font-bold text-[#1C3F35] dark:text-white tracking-tight leading-none mb-1.5">Потоки капитала</h3>
+          <p className="text-xs font-mono text-slate-400 dark:text-slate-500 uppercase tracking-widest font-bold">Движение средств</p>
+        </div>
 
         {/* Dynamic Insight Banner */}
         <motion.div
@@ -132,17 +130,15 @@ export function SpendingChart({ dailyFlows, totalIncome, totalExpense }: Spendin
                 dataKey="day"
                 axisLine={false}
                 tickLine={false}
-                tick={{ fontSize: 10, fill: 'currentColor', opacity: 0.35 }}
+                tick={{ fontSize: 10, fill: '#64748B', fontFamily: 'Space Mono, monospace', fontWeight: 600 }}
                 tickMargin={12}
-                style={{ fontFamily: 'ui-monospace, monospace' }}
               />
               <YAxis
                 axisLine={false}
                 tickLine={false}
-                tick={{ fontSize: 10, fill: 'currentColor', opacity: 0.35 }}
-                tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`}
+                tick={{ fontSize: 10, fill: '#64748B', fontFamily: 'Space Mono, monospace', fontWeight: 600 }}
+                tickFormatter={(v) => v >= 1000 ? (v / 1000).toLocaleString('ru-RU') + 'k' : `${v}`}
                 tickMargin={8}
-                style={{ fontFamily: 'ui-monospace, monospace' }}
               />
               <Tooltip
                 content={<CashflowTooltip />}

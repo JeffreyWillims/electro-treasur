@@ -34,7 +34,7 @@ from src.schemas.transaction import (
 
 async def create_transaction(
     session: AsyncSession,
-    redis: Redis,  # type: ignore[type-arg]
+    redis: Redis,
     user_id: int,
     payload: TransactionCreate,
     idempotency_key: str | None,
@@ -83,7 +83,7 @@ async def create_transaction(
     # ── Step 3: Cache in Redis — O(1) SET with TTL ──────────────────────
     if idempotency_key:
         await redis.set(
-            cache_key,  # type: ignore[possibly-undefined]
+            cache_key,
             response.model_dump_json(),
             ex=settings.redis_idempotency_ttl,
         )
@@ -137,9 +137,7 @@ async def list_transactions(
             )
         )
 
-    count_stmt = (
-        select(func.count(Transaction.id)).join(Transaction.category).where(*conditions)
-    )
+    count_stmt = select(func.count(Transaction.id)).join(Transaction.category).where(*conditions)
     total_result = await session.execute(count_stmt)
     total = total_result.scalar() or 0
 

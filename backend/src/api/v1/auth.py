@@ -40,9 +40,7 @@ async def login_for_access_token(
     OAuth2 compatible token login, get an access token for future requests.
     """
     user = await get_user_by_email(db, email=form_data.username)
-    if not user or not (
-        await verify_password(form_data.password, user.hashed_password)
-    ):
+    if not user or not (await verify_password(form_data.password, user.hashed_password)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",

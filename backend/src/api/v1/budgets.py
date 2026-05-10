@@ -14,7 +14,7 @@ async def set_budget_limit(
     payload: BudgetUpsert,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-):
+) -> dict[str, str]:
     try:
         budget = await upsert_budget(
             session=db,
@@ -26,7 +26,7 @@ async def set_budget_limit(
         )
         return {"status": "success", "amount_limit": str(budget.amount_limit)}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -36,7 +36,7 @@ async def remove_budget(
     year: int = Query(...),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-):
+) -> None:
     try:
         deleted = await delete_budget(db, current_user.id, category_id, month, year)
         if not deleted:
@@ -45,4 +45,4 @@ async def remove_budget(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e

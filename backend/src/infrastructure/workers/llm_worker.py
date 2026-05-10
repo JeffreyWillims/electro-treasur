@@ -18,6 +18,7 @@ import asyncio
 import json
 import logging
 from datetime import datetime
+from typing import Any
 
 from arq.connections import RedisSettings
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -35,7 +36,7 @@ SYSTEM_PROMPT = (
 
 async def _cpu_bound_llm_simulation(
     start_date: str, end_date: str, income: float, expense: float
-) -> dict:
+) -> dict[str, Any]:
     """
     Simulates LLM processing (CPU-heavy) for the financial mentor.
     """
@@ -65,8 +66,8 @@ async def _cpu_bound_llm_simulation(
 
 
 async def generate_annual_llm_insight(
-    ctx: dict, user_id: int, start_date_str: str, end_date_str: str
-) -> dict:
+    ctx: dict[str, Any], user_id: int, start_date_str: str, end_date_str: str
+) -> dict[str, Any]:
     """
     arq task: generate financial insight via mock LLM for date range.
     """
@@ -101,26 +102,22 @@ async def generate_annual_llm_insight(
             json.dumps(result, ensure_ascii=False),
             ex=settings.redis_insight_ttl,
         )
-        logger.info(
-            "Cached insight at key=%s TTL=%ds", cache_key, settings.redis_insight_ttl
-        )
+        logger.info("Cached insight at key=%s TTL=%ds", cache_key, settings.redis_insight_ttl)
 
     return result
 
 
-async def startup(ctx: dict) -> None:
+async def startup(ctx: dict[str, Any]) -> None:
     """arq worker startup hook — initialize Redis connection."""
     from redis.asyncio import Redis
 
     ctx["redis"] = Redis.from_url(settings.redis_url, decode_responses=True)
     engine = create_async_engine(settings.database_url)
-    ctx["SessionLocal"] = async_sessionmaker(
-        bind=engine, autoflush=False, expire_on_commit=False
-    )
+    ctx["SessionLocal"] = async_sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
     logger.info("arq worker started, Redis & DB connected.")
 
 
-async def shutdown(ctx: dict) -> None:
+async def shutdown(ctx: dict[str, Any]) -> None:
     """arq worker shutdown hook — close Redis connection."""
     redis = ctx.get("redis")
     if redis:

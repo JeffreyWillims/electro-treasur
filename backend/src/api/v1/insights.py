@@ -79,14 +79,16 @@ async def poll_insight(task_id: str) -> InsightResultResponse:
     Time: O(1) — Redis GET.
     """
     pool = await _get_arq_pool()
-    from arq.jobs import Job
+    from arq.jobs import Job, JobResult
 
     try:
         job = Job(task_id, pool)
         info = await job.info()
-        if info and info.success and info.result is not None:
+        if isinstance(info, JobResult) and info.success and info.result is not None:
             return InsightResultResponse(
-                task_id=task_id, status="complete", result=info.result
+                task_id=task_id,
+                status="complete",
+                result=info.result,
             )
     except Exception:
         # log if needed

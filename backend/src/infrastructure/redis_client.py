@@ -17,7 +17,7 @@ from src.config import settings
 _pool: ConnectionPool | None = None
 
 
-async def get_redis() -> Redis:  # type: ignore[type-arg]
+async def get_redis() -> Redis:
     """
     Return an async Redis client backed by a shared connection pool.
 

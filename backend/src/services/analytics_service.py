@@ -3,7 +3,7 @@
 from datetime import date, timedelta
 from decimal import Decimal
 
-from sqlalchemy import func, select
+from sqlalchemy import false, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.models import Budget, Category, CategoryType, Transaction
@@ -16,9 +16,7 @@ from src.schemas.analytics import (
 )
 
 
-async def get_analytics_profile(
-    session: AsyncSession, user_id: int
-) -> AnalyticsProfileResponse:
+async def get_analytics_profile(session: AsyncSession, user_id: int) -> AnalyticsProfileResponse:
     today = date.today()
     three_months_ago = today - timedelta(days=90)
 
@@ -30,25 +28,17 @@ async def get_analytics_profile(
 
     # Get sum of transactions per category for last 3 months
     trx_stmt = (
-        select(
-            Transaction.category_id, func.sum(Transaction.amount).label("total_amount")
-        )
+        select(Transaction.category_id, func.sum(Transaction.amount).label("total_amount"))
         .where(
             Transaction.user_id == user_id,
             Transaction.executed_at >= three_months_ago,
-            (
-                Transaction.category_id.in_([c.id for c in categories])
-                if categories
-                else False
-            ),
+            (Transaction.category_id.in_([c.id for c in categories]) if categories else false()),
         )
         .group_by(Transaction.category_id)
     )
 
     trx_results = (await session.execute(trx_stmt)).all()
-    trx_map = {
-        row.category_id: Decimal(row.total_amount) / Decimal(3) for row in trx_results
-    }
+    trx_map = {row.category_id: Decimal(row.total_amount) / Decimal(3) for row in trx_results}
 
     # Get budgets to fallback
     budget_stmt = select(Budget).where(
@@ -65,9 +55,7 @@ async def get_analytics_profile(
         if avg_amt is None or avg_amt == 0:
             avg_amt = budget_map.get(cat.id, Decimal("0"))
         cat_avgs.append(
-            CategoryAvg(
-                category_id=cat.id, name=cat.name, avg_amount=Decimal(round(avg_amt, 2))
-            )
+            CategoryAvg(category_id=cat.id, name=cat.name, avg_amount=Decimal(round(avg_amt, 2)))
         )
 
     # Get average income
@@ -83,18 +71,14 @@ async def get_analytics_profile(
     total_inc = (await session.execute(inc_stmt)).scalar() or Decimal("0")
     avg_inc = Decimal(total_inc) / Decimal(3)
 
-    return AnalyticsProfileResponse(
-        categories=cat_avgs, avg_income=Decimal(round(avg_inc, 2))
-    )
+    return AnalyticsProfileResponse(categories=cat_avgs, avg_income=Decimal(round(avg_inc, 2)))
 
 
 async def simulate_savings(request: SimulateRequest) -> SimulateResponse:
     base_savings = request.initial_savings
     optimized_savings = request.initial_savings
 
-    base_expense_total = sum(
-        (c.avg_amount for c in request.base_expenses), Decimal("0")
-    )
+    base_expense_total = sum((c.avg_amount for c in request.base_expenses), Decimal("0"))
     base_monthly_addition = max(request.avg_income - base_expense_total, Decimal("0"))
 
     adj_map = {a.category_id: a.new_amount for a in request.adjustments}

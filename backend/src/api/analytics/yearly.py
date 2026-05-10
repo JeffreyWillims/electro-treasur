@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from typing import Any
 
 from arq.connections import ArqRedis, RedisSettings, create_pool
 from fastapi import APIRouter, Depends, status
@@ -46,7 +47,7 @@ class YearlyEnqueueResponse(BaseModel):
 class YearlyTaskStatusResponse(BaseModel):
     task_id: str
     status: str  # "pending" | "complete"
-    result: dict | None = None
+    result: dict[str, Any] | None = None
 
 
 # ── Endpoints ───────────────────────────────────────────────────────────
@@ -100,9 +101,7 @@ async def poll_yearly_task(task_id: str) -> YearlyTaskStatusResponse:
                 return YearlyTaskStatusResponse(
                     task_id=task_id, status="complete", result=result["result"]
                 )
-            return YearlyTaskStatusResponse(
-                task_id=task_id, status="complete", result=result
-            )
+            return YearlyTaskStatusResponse(task_id=task_id, status="complete", result=result)
         except (json.JSONDecodeError, TypeError):
             pass
 

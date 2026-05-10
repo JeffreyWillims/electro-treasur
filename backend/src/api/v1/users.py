@@ -54,6 +54,4 @@ async def post_user_category(
     """
     Create a new custom category for the current user.
     """
-    return await create_user_category(
-        db, user_id=current_user.id, category_in=category_in
-    )
+    return await create_user_category(db, user_id=current_user.id, category_in=category_in)

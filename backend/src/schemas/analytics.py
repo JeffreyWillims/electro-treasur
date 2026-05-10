@@ -26,9 +26,7 @@ class SimulateRequest(BaseModel):
     target_amount: Decimal = Field(..., gt=0)
     initial_savings: Decimal = Field(default=Decimal("0"), ge=0)
     adjustments: list[Adjustment]
-    bank_rate: Decimal = Field(
-        ..., description="Annual interest rate, e.g. 16.0 for 16%"
-    )
+    bank_rate: Decimal = Field(..., description="Annual interest rate, e.g. 16.0 for 16%")
     avg_income: Decimal = Field(default=Decimal("0"))
     base_expenses: list[CategoryAvg] = Field(default_factory=list)
     habit_savings: Decimal = Field(default=Decimal("0"))

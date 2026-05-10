@@ -12,7 +12,6 @@ import { Plus, Pencil, Trash } from 'lucide-react';
 import type { CategoryRowSchema } from '@/types';
 import { BudgetConfigModal } from './BudgetConfigModal';
 
-const ENVELOPE_ICONS = ['🏠', '🛒', '🚗', '📱', '🎭', '💊', '🎓', '✈️'];
 
 const getRussianCategoryName = (rawName: string) => {
   const name = rawName.toLowerCase();
@@ -53,7 +52,7 @@ export function BudgetEnvelopes() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-6 w-full">
         {[1, 2, 3, 4].map(i => (
           <div key={i} className="premium-card p-6 animate-pulse backdrop-blur-3xl backdrop-saturate-150 bg-white/40 dark:bg-[#111111]/40 border border-white/20">
             <div className="h-4 w-1/3 bg-[#FF7A00]/10 rounded mb-4" />
@@ -72,7 +71,7 @@ export function BudgetEnvelopes() {
 
   if (expenseRows.length === 0) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-6 w-full">
         <motion.div
            onClick={() => setIsCreateModalOpen(true)}
            className="premium-card p-10 min-h-[240px] flex flex-col items-center justify-center backdrop-blur-sm bg-white/10 dark:bg-[#111111]/10 border-2 border-dashed border-[#FF7A00]/30 hover:border-[#FF7A00]/60 cursor-pointer transition-all group"
@@ -93,7 +92,7 @@ export function BudgetEnvelopes() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-6 w-full">
       {expenseRows.map((row: CategoryRowSchema, index: number) => {
         const planned = parseFloat(row.planned);
         const fact = parseFloat(row.fact);
@@ -105,7 +104,6 @@ export function BudgetEnvelopes() {
 
         const isOver = fact > planned;
         const isWarning = percent > 75 && !isOver;
-        const icon = isGuiltFree ? '🍸' : ENVELOPE_ICONS[index % ENVELOPE_ICONS.length];
 
         // Predictive Math
         const todayDate = new Date().getDate();
@@ -150,18 +148,24 @@ export function BudgetEnvelopes() {
               </button>
             </div>
 
-            {/* Prediction Badge */}
-            {(isGuiltFree || isBurnWarning) && (
-              <div className="absolute top-4 left-4 z-20 w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-xs shadow-sm">
-                {isGuiltFree ? '🍸' : '🔥'}
+            {/* Burn-rate Badge */}
+            {isBurnWarning && !isOver && (
+              <div className="absolute top-4 left-4 z-20 px-2 py-0.5 bg-amber-500/20 border border-amber-500/30 rounded-full flex items-center gap-1">
+                <span className="text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Burn</span>
               </div>
             )}
 
             <div className="relative z-10 flex flex-col justify-center items-center h-full gap-2 mt-auto mb-auto">
-              <div className="text-4xl filter drop-shadow-md mb-2">{icon}</div>
-              <h3 className="text-lg font-serif font-bold text-[#1C3F35] dark:text-[#FDFBF7] text-center leading-tight">
-                {getRussianCategoryName(row.category_name)}
-              </h3>
+              <div className="flex items-center gap-2 justify-center">
+                <div className="w-8 h-8 rounded-full bg-slate-100/50 dark:bg-white/10 border border-slate-200/50 dark:border-white/10 flex items-center justify-center shadow-inner shrink-0">
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">
+                    {getRussianCategoryName(row.category_name).charAt(0)}
+                  </span>
+                </div>
+                <h3 className="text-base font-serif font-bold text-[#1C3F35] dark:text-[#FDFBF7] leading-tight">
+                  {getRussianCategoryName(row.category_name)}
+                </h3>
+              </div>
               <div className="mt-2 text-[#1C3F35] dark:text-[#FDFBF7]">
                 <span className="text-2xl font-bold">{fact.toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₽</span>
                 <span className="text-sm font-mono text-[#1C3F35]/50 dark:text-[#FDFBF7]/50 ml-1 font-bold">/ {planned.toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₽</span>

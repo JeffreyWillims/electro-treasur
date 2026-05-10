@@ -34,19 +34,14 @@ export function BudgetConfigModal({ isOpen, onClose, row }: BudgetConfigModalPro
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  const { data: dashboard } = useQuery({
-    queryKey: ['dashboard', 'current'],
-    enabled: isOpen && !row,
-  });
-
   const { data: categories } = useQuery({
     queryKey: ['categories'],
     queryFn: fetchCategories,
-    enabled: isOpen && !row,
+    enabled: isOpen,
   });
 
-  const budgetedCategoryIds = dashboard?.rows.filter((r: CategoryRowSchema) => parseFloat(r.planned) > 0).map((r: CategoryRowSchema) => r.category_id) || [];
-  const availableCategories = categories?.filter((c) => !budgetedCategoryIds.includes(c.id) && c.type === 'expense') || [];
+  // All categories available — user may reassign an envelope
+  const availableCategories = categories || [];
 
   useEffect(() => {
     if (isOpen) {
@@ -81,7 +76,7 @@ export function BudgetConfigModal({ isOpen, onClose, row }: BudgetConfigModalPro
     const currentYear = d.getFullYear();
 
     // 1. Проверка сырых данных
-    const catId = row ? row.category_id : selectedCategoryId;
+    const catId = selectedCategoryId;
     console.log("DEBUG PAYLOAD:", { catId, val, currentMonth, currentYear });
     
     if (!catId) {
@@ -124,7 +119,7 @@ export function BudgetConfigModal({ isOpen, onClose, row }: BudgetConfigModalPro
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, '');
-    setAmountStr(raw);
+    setAmountStr(raw ? String(parseInt(raw, 10)) : '');
   };
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -134,25 +129,25 @@ export function BudgetConfigModal({ isOpen, onClose, row }: BudgetConfigModalPro
   const formattedAmount = currentVal > 0 ? currentVal.toLocaleString('ru-RU') : '';
 
   const sliderMax = Math.max(fact * 2, 50000);
-  const selectedCat = availableCategories.find(c => c.id === selectedCategoryId);
+  const selectedCat = availableCategories.find((c) => c.id === selectedCategoryId);
 
   return (
     <AnimatePresence>
       {isOpen && (
-        <>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
           />
           <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed bottom-0 left-0 right-0 z-[60] bg-white dark:bg-[#111111] border-t border-white/20 rounded-t-3xl p-6 shadow-2xl h-[50vh] flex flex-col"
+            initial={{ opacity: 0, scale: 0.95, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 16 }}
+            transition={{ type: 'spring', damping: 28, stiffness: 260 }}
+            className="relative w-full max-w-[440px] bg-white/60 dark:bg-[#111111]/80 backdrop-blur-3xl backdrop-saturate-200 border border-white/40 dark:border-white/10 rounded-[2.5rem] p-10 shadow-2xl flex flex-col z-10"
           >
             <div className="flex justify-between items-center mb-6">
               <div>
@@ -172,50 +167,57 @@ export function BudgetConfigModal({ isOpen, onClose, row }: BudgetConfigModalPro
             </div>
 
             <div className="flex-1 flex flex-col items-center justify-center space-y-6">
-              {!row && (
-                <div className="w-full max-w-md mb-2 relative z-[70]">
-                  <div 
-                    className="w-full p-4 bg-slate-100/50 dark:bg-white/5 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-xl text-[#1C3F35] dark:text-[#FDFBF7] font-bold cursor-pointer flex justify-between items-center transition-all hover:bg-slate-200/50 dark:hover:bg-white/10 shadow-sm"
-                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  >
-                    <span>{selectedCat ? selectedCat.name : "Выберите категорию..."}</span>
-                    <ChevronDown className={cn("w-5 h-5 text-slate-400 transition-transform", isDropdownOpen && "rotate-180")} />
-                  </div>
-                  <AnimatePresence>
-                    {isDropdownOpen && (
-                      <motion.div 
-                        initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-                        className="absolute top-full left-0 right-0 mt-2 bg-white/80 dark:bg-[#1A1A1A]/90 backdrop-blur-3xl border border-slate-200 dark:border-white/10 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.1)] overflow-hidden max-h-[200px] overflow-y-auto"
-                      >
-                        {availableCategories.length === 0 ? (
-                          <div className="p-4 text-center text-sm font-mono text-slate-500">Все категории уже распределены</div>
-                        ) : (
-                          availableCategories.map(c => (
-                            <div 
-                              key={c.id} 
-                              className="px-4 py-3 hover:bg-[#1C3F35]/5 dark:hover:bg-emerald-500/10 cursor-pointer font-bold text-[#1C3F35] dark:text-[#FDFBF7] transition-colors"
-                              onClick={() => {
-                                setSelectedCategoryId(c.id);
-                                setIsDropdownOpen(false);
-                              }}
-                            >
-                              {getRussianCategoryName(c.name)}
-                            </div>
-                          ))
-                        )}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+              {/* Category dropdown — always shown in both create and edit modes */}
+              <div className="w-full max-w-md mb-2 relative z-[70]">
+                <div 
+                  className="w-full p-4 bg-slate-100/50 dark:bg-white/5 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-xl text-[#1C3F35] dark:text-[#FDFBF7] font-bold cursor-pointer flex justify-between items-center transition-all hover:bg-slate-200/50 dark:hover:bg-white/10 shadow-sm"
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                >
+                  <span>{selectedCat ? getRussianCategoryName(selectedCat.name) : "Выберите категорию..."}</span>
+                  <ChevronDown className={cn("w-5 h-5 text-slate-400 transition-transform", isDropdownOpen && "rotate-180")} />
                 </div>
-              )}
+                <AnimatePresence>
+                  {isDropdownOpen && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                      className="absolute top-full left-0 right-0 mt-2 bg-white/80 dark:bg-[#1A1A1A]/90 backdrop-blur-3xl border border-slate-200 dark:border-white/10 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.1)] overflow-hidden max-h-[200px] overflow-y-auto"
+                    >
+                      {availableCategories.length === 0 ? (
+                        <div className="p-4 text-center text-sm font-mono text-slate-500">Нет доступных категорий</div>
+                      ) : (
+                        availableCategories.map((c) => (
+                          <div 
+                            key={c.id} 
+                            className={cn(
+                              "px-4 py-3 cursor-pointer font-bold text-[#1C3F35] dark:text-[#FDFBF7] transition-colors",
+                              c.id === selectedCategoryId
+                                ? "bg-[#FF7A00]/10 text-[#FF7A00]"
+                                : "hover:bg-[#1C3F35]/5 dark:hover:bg-emerald-500/10"
+                            )}
+                            onClick={() => {
+                              setSelectedCategoryId(c.id);
+                              setIsDropdownOpen(false);
+                            }}
+                          >
+                            {getRussianCategoryName(c.name)}
+                          </div>
+                        ))
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
 
-              <input
-                type="text"
-                value={formattedAmount}
-                onChange={handleInputChange}
-                placeholder="0"
-                className="text-4xl font-black text-center bg-transparent border-none outline-none w-full mb-4 text-[#1C3F35] dark:text-[#FDFBF7] placeholder-slate-300 dark:placeholder-slate-700"
-              />
+              <div className="flex items-baseline justify-center gap-2 mb-8">
+                <input
+                  type="text"
+                  value={formattedAmount}
+                  onChange={handleInputChange}
+                  placeholder="0"
+                  className="text-4xl font-black text-center bg-transparent border-none outline-none text-[#1C3F35] dark:text-[#FDFBF7] placeholder-slate-300 dark:placeholder-slate-700 w-full"
+                />
+                <span className="text-2xl font-bold text-[#1C3F35]/40 dark:text-white/30">₽</span>
+              </div>
 
               <div className="w-full max-w-md space-y-2">
                 <input
@@ -225,7 +227,10 @@ export function BudgetConfigModal({ isOpen, onClose, row }: BudgetConfigModalPro
                   step="100"
                   value={currentVal}
                   onChange={handleSliderChange}
-                  className="accent-emerald-600 dark:accent-[#FF7A00] w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer"
+                  className="apple-slider"
+                  style={{
+                    background: `linear-gradient(to right, #FF7A00 ${(currentVal / sliderMax) * 100}%, rgba(28,63,53,0.1) ${(currentVal / sliderMax) * 100}%)`
+                  }}
                 />
                 
                   <div className="text-center mt-2 h-6">
@@ -247,7 +252,7 @@ export function BudgetConfigModal({ isOpen, onClose, row }: BudgetConfigModalPro
 
             <button
               onClick={handleSubmit}
-              disabled={isSubmitting || currentVal === 0 || (!row && !selectedCategoryId)}
+              disabled={isSubmitting || currentVal === 0 || !selectedCategoryId}
               className="mt-6 w-full flex items-center justify-center gap-2 bg-[#FF7A00] hover:bg-[#E66E00] text-white py-4 rounded-xl font-bold uppercase tracking-wider font-mono disabled:opacity-50 disabled:cursor-not-allowed transition-all relative z-10"
             >
               {isSubmitting ? 'Сохранение...' : (
@@ -257,7 +262,7 @@ export function BudgetConfigModal({ isOpen, onClose, row }: BudgetConfigModalPro
               )}
             </button>
           </motion.div>
-        </>
+        </div>
       )}
     </AnimatePresence>
   );

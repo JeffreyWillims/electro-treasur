@@ -58,12 +58,8 @@ class DashboardResponse(BaseModel):
     total_balance_all_time: Decimal = Field(
         default=Decimal("0.00"), max_digits=12, decimal_places=2
     )
-    period_income: Decimal = Field(
-        default=Decimal("0.00"), max_digits=12, decimal_places=2
-    )
-    period_expense: Decimal = Field(
-        default=Decimal("0.00"), max_digits=12, decimal_places=2
-    )
+    period_income: Decimal = Field(default=Decimal("0.00"), max_digits=12, decimal_places=2)
+    period_expense: Decimal = Field(default=Decimal("0.00"), max_digits=12, decimal_places=2)
     rows: list[CategoryRowSchema]
 
     model_config = ConfigDict(from_attributes=True)

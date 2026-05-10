@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -67,9 +68,7 @@ async def get_monthly_dashboard(
             func.date(Transaction.executed_at) >= start_date,
             func.date(Transaction.executed_at) <= end_date,
         )
-        .group_by(
-            Transaction.category_id, Category.type, func.date(Transaction.executed_at)
-        )
+        .group_by(Transaction.category_id, Category.type, func.date(Transaction.executed_at))
     )
     tx_result = await session.execute(stmt_tx)
     tx_rows = tx_result.all()  # list[(category_id, type, exec_date, total)]
@@ -93,16 +92,12 @@ async def get_monthly_dashboard(
         .group_by(Budget.category_id)
     )
     bp_result = await session.execute(stmt_bp)
-    plans: dict[int, Decimal] = {
-        row.category_id: row.total_limit for row in bp_result.all()
-    }
+    plans: dict[int, Decimal] = {row.category_id: row.total_limit for row in bp_result.all()}
 
     # ── Step 3: Fetch category names ─────────
-    stmt_cat = select(Category.id, Category.name, Category.type).where(
-        Category.user_id == user_id
-    )
+    stmt_cat = select(Category.id, Category.name, Category.type).where(Category.user_id == user_id)
     cat_result = await session.execute(stmt_cat)
-    cat_info: dict[int, dict] = {
+    cat_info: dict[int, dict[str, Any]] = {
         row.id: {"name": row.name, "type": row.type} for row in cat_result.all()
     }
 
@@ -169,10 +164,7 @@ async def get_monthly_dashboard(
                 planned=planned,
                 fact=fact,
                 delta=(planned - fact if info["type"] == "expense" else fact - planned),
-                days=[
-                    DayCellSchema(day=i + 1, amount=days_data[i])
-                    for i in range(day_count)
-                ],
+                days=[DayCellSchema(day=i + 1, amount=days_data[i]) for i in range(day_count)],
             )
         )
 

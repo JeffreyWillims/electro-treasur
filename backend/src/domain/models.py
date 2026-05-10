@@ -37,7 +37,7 @@ class Base(DeclarativeBase):
     """Shared declarative base for all ORM models."""
 
 
-class CategoryType(str, enum.Enum):
+class CategoryType(enum.StrEnum):
     """Discriminator for income vs expense categories."""
 
     income = "income"
@@ -62,13 +62,9 @@ class User(Base):
     )
 
     # ── Relationships ───────────────────────────────────────────────────
-    categories: Mapped[list[Category]] = relationship(
-        back_populates="user", lazy="selectin"
-    )
+    categories: Mapped[list[Category]] = relationship(back_populates="user", lazy="selectin")
     budgets: Mapped[list[Budget]] = relationship(back_populates="user", lazy="selectin")
-    transactions: Mapped[list[Transaction]] = relationship(
-        back_populates="user", lazy="selectin"
-    )
+    transactions: Mapped[list[Transaction]] = relationship(back_populates="user", lazy="selectin")
 
 
 class Category(Base):
@@ -77,9 +73,7 @@ class Category(Base):
     __tablename__ = "categories"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), index=True
-    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     parent_id: Mapped[int | None] = mapped_column(
         ForeignKey("categories.id", ondelete="CASCADE"), nullable=True
     )
@@ -91,12 +85,10 @@ class Category(Base):
 
     # ── Relationships ───────────────────────────────────────────────────
     user: Mapped[User] = relationship(back_populates="categories")
-    parent: Mapped["Category"] = relationship(
-        back_populates="subcategories", remote_side=[id]
-    )
-    subcategories: Mapped[list["Category"]] = relationship(back_populates="parent")
-    budgets: Mapped[list["Budget"]] = relationship(back_populates="category")
-    transactions: Mapped[list["Transaction"]] = relationship(back_populates="category")
+    parent: Mapped[Category] = relationship(back_populates="subcategories", remote_side=[id])
+    subcategories: Mapped[list[Category]] = relationship(back_populates="parent")
+    budgets: Mapped[list[Budget]] = relationship(back_populates="category")
+    transactions: Mapped[list[Transaction]] = relationship(back_populates="category")
 
 
 class Budget(Base):
@@ -116,9 +108,7 @@ class Budget(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), index=True
-    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     category_id: Mapped[int] = mapped_column(
         ForeignKey("categories.id", ondelete="CASCADE"), index=True
     )
@@ -149,22 +139,14 @@ class Transaction(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), index=True
-    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     category_id: Mapped[int] = mapped_column(
         ForeignKey("categories.id", ondelete="CASCADE"), index=True
     )
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
-    currency: Mapped[str] = mapped_column(
-        String(3), nullable=False, server_default="RUB"
-    )
-    is_recurring: Mapped[bool] = mapped_column(
-        nullable=False, server_default=text("false")
-    )
-    entry_type: Mapped[str] = mapped_column(
-        String(32), nullable=False, server_default="manual"
-    )
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, server_default="RUB")
+    is_recurring: Mapped[bool] = mapped_column(nullable=False, server_default=text("false"))
+    entry_type: Mapped[str] = mapped_column(String(32), nullable=False, server_default="manual")
     comment: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     executed_at: Mapped[datetime] = mapped_column(

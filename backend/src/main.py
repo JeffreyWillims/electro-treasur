@@ -14,12 +14,14 @@ from __future__ import annotations
 
 import json
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from datetime import datetime
+from typing import Any, cast
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from redis.asyncio import Redis
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -58,11 +60,11 @@ app.add_middleware(
 
 
 @app.middleware("http")
-async def json_log_middleware(request: Request, call_next):
+async def json_log_middleware(request: Request, call_next: Callable[[Request], Any]) -> Response:
     start_time = time.perf_counter()
     status_code = 500
     try:
-        response = await call_next(request)
+        response = cast(Response, await call_next(request))
         status_code = response.status_code
     except Exception:
         raise
@@ -96,5 +98,5 @@ async def health_check(
         await db.execute(text("SELECT 1"))
         await redis_client.ping()
         return {"status": "ok", "service": "electro-treasur"}
-    except Exception:
-        raise HTTPException(status_code=503, detail="Service Unavailable: Node Offline")
+    except Exception as e:
+        raise HTTPException(status_code=503, detail="Service Unavailable: Node Offline") from e
