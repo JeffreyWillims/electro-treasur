@@ -19,6 +19,8 @@ import type {
   SimulateResponse,
   CategoryRead,
   CategoryCreate,
+  CategoryUpdate,
+  CategoryTransactionCount,
   UserRead,
   UserUpdate,
   BudgetUpsert,
@@ -217,6 +219,41 @@ export function createCategory(payload: CategoryCreate): Promise<CategoryRead> {
     method: 'POST',
     body: JSON.stringify(payload),
   });
+}
+
+export function fetchCategoryTransactionCount(
+  categoryId: number,
+): Promise<CategoryTransactionCount> {
+  return request<CategoryTransactionCount>(
+    `/v1/users/categories/${categoryId}/transaction-count`,
+  );
+}
+
+export function updateCategory(
+  categoryId: number,
+  payload: CategoryUpdate,
+): Promise<CategoryRead> {
+  return request<CategoryRead>(`/v1/users/categories/${categoryId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteCategory(categoryId: number): Promise<void> {
+  const token = localStorage.getItem('aura_token');
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const response = await fetch(`${API_BASE}/v1/users/categories/${categoryId}`, {
+    method: 'DELETE',
+    headers,
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new ApiError(response.status, errorBody.detail || `API error: ${response.status}`);
+  }
+  // 204 No Content — no body to parse
 }
 
 // ── Budgets ───────────────────────────────────────────────────────────

@@ -23,12 +23,15 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from redis.asyncio import Redis
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.analytics.yearly import router as analytics_router
 from src.api.v1.router import router as v1_router
 from src.core.exceptions import setup_exception_handlers
+from src.core.rate_limit import limiter
 from src.database import get_session
 from src.infrastructure.redis_client import close_redis, get_redis
 
@@ -48,6 +51,10 @@ app = FastAPI(
     description="HighLoad Financial Tracker — 100k CCU Orbital-Grade FinTech",
     lifespan=lifespan,
 )
+
+# ── Rate Limiter ─────────────────────────────────────────────────────────────
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, cast(Any, _rate_limit_exceeded_handler))
 
 # ── CORS ────────────────────────────────────────────────────────────────
 app.add_middleware(

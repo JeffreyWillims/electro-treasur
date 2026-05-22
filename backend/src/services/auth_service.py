@@ -7,9 +7,12 @@ from argon2.exceptions import VerifyMismatchError
 from jose import JWTError, jwt
 from pydantic import BaseModel
 
-# ── Security Configuration ───────────────────────────────────────────
-SECRET_KEY = "SUPER_SECRET_ORBITAL_KEY_CHANGE_ME"
-ALGORITHM = "HS256"
+from src.config import settings
+
+# ── Security Configuration ───────────────────────────────────────────────────
+# secret_key and algorithm are read from settings (ET_SECRET_KEY env var).
+# The app will fail fast on startup if ET_SECRET_KEY is not set.
+# ACCESS_TOKEN_EXPIRE_MINUTES is non-sensitive operational config.
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours for MVP stability
 
 ph = PasswordHasher()
@@ -30,7 +33,9 @@ def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = 
         expire = datetime.now(UTC) + timedelta(minutes=15)
 
     to_encode.update({"exp": expire})
-    encoded_jwt = cast(str, jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM))
+    encoded_jwt = cast(
+        str, jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
+    )
     return encoded_jwt
 
 
@@ -62,7 +67,7 @@ def decode_access_token(token: str) -> TokenData:
     Decodes and validates a JWT token.
     """
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
         email: str = payload.get("sub")
         if email is None:
             raise JWTError("Invalid token: missing subject")

@@ -54,10 +54,7 @@ def _build_matrix(
                 planned=planned,
                 fact=fact,
                 delta=planned - fact,
-                days=[
-                    DayCellSchema(day=i + 1, amount=days_data[i])
-                    for i in range(day_count)
-                ],
+                days=[DayCellSchema(day=i + 1, amount=days_data[i]) for i in range(day_count)],
             )
         )
     return rows

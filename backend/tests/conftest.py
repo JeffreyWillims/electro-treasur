@@ -1,7 +1,13 @@
 import asyncio
+import os
 from unittest.mock import AsyncMock
 
 import pytest
+
+# ── Test Environment Bootstrap ───────────────────────────────────────────────
+# Must be set BEFORE any src.* import so that pydantic-settings can hydrate
+# Settings() without requiring a real .env file in the test runner CWD.
+os.environ.setdefault("ET_SECRET_KEY", "test-only-secret-key-not-for-production")
 
 
 @pytest.fixture(scope="session")

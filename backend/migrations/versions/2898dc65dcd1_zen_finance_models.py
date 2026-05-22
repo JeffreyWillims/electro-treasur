@@ -6,16 +6,16 @@ Create Date: 2026-03-23 13:51:18.095883
 
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "2898dc65dcd1"
-down_revision: Union[str, None] = "001_initial_schema"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "001_initial_schema"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -44,9 +44,7 @@ def upgrade() -> None:
             name="uq_budget_user_cat_month_year",
         ),
     )
-    op.create_index(
-        op.f("ix_budgets_category_id"), "budgets", ["category_id"], unique=False
-    )
+    op.create_index(op.f("ix_budgets_category_id"), "budgets", ["category_id"], unique=False)
     op.create_index(op.f("ix_budgets_user_id"), "budgets", ["user_id"], unique=False)
     op.drop_index(op.f("ix_budget_plans_category_id"), table_name="budget_plans")
     op.drop_index(op.f("ix_budget_plans_user_id"), table_name="budget_plans")
@@ -58,9 +56,7 @@ def upgrade() -> None:
     )
     op.add_column(
         "transactions",
-        sa.Column(
-            "currency", sa.String(length=3), server_default="RUB", nullable=False
-        ),
+        sa.Column("currency", sa.String(length=3), server_default="RUB", nullable=False),
     )
     op.add_column(
         "transactions",
@@ -73,9 +69,7 @@ def upgrade() -> None:
     )
     op.add_column(
         "transactions",
-        sa.Column(
-            "entry_type", sa.String(length=32), server_default="manual", nullable=False
-        ),
+        sa.Column("entry_type", sa.String(length=32), server_default="manual", nullable=False),
     )
     # ### end Alembic commands ###
 
@@ -123,9 +117,7 @@ def downgrade() -> None:
             postgresql_nulls_not_distinct=False,
         ),
     )
-    op.create_index(
-        op.f("ix_budget_plans_user_id"), "budget_plans", ["user_id"], unique=False
-    )
+    op.create_index(op.f("ix_budget_plans_user_id"), "budget_plans", ["user_id"], unique=False)
     op.create_index(
         op.f("ix_budget_plans_category_id"),
         "budget_plans",

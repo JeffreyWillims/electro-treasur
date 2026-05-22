@@ -146,7 +146,7 @@ async def list_transactions(
         .options(joinedload(Transaction.category))
         .join(Transaction.category)
         .where(*conditions)
-        .order_by(Transaction.executed_at.desc())
+        .order_by(Transaction.executed_at.desc(), Transaction.id.desc())
         .limit(limit)
         .offset(offset)
     )

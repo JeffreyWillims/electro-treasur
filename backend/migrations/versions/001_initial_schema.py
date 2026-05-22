@@ -6,7 +6,7 @@ Create Date: 2026-03-20 10:33:00.000000
 
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
@@ -14,9 +14,9 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = "001_initial_schema"
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -48,9 +48,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(
-        op.f("ix_categories_user_id"), "categories", ["user_id"], unique=False
-    )
+    op.create_index(op.f("ix_categories_user_id"), "categories", ["user_id"], unique=False)
 
     # 4. budget_plans
     op.create_table(
@@ -68,9 +66,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["category_id"], ["categories.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "user_id", "category_id", "month", name="uq_budget_user_cat_month"
-        ),
+        sa.UniqueConstraint("user_id", "category_id", "month", name="uq_budget_user_cat_month"),
     )
     op.create_index(
         op.f("ix_budget_plans_category_id"),
@@ -78,9 +74,7 @@ def upgrade() -> None:
         ["category_id"],
         unique=False,
     )
-    op.create_index(
-        op.f("ix_budget_plans_user_id"), "budget_plans", ["user_id"], unique=False
-    )
+    op.create_index(op.f("ix_budget_plans_user_id"), "budget_plans", ["user_id"], unique=False)
 
     # 5. transactions
     op.create_table(
@@ -107,9 +101,7 @@ def upgrade() -> None:
         ["category_id"],
         unique=False,
     )
-    op.create_index(
-        op.f("ix_transactions_user_id"), "transactions", ["user_id"], unique=False
-    )
+    op.create_index(op.f("ix_transactions_user_id"), "transactions", ["user_id"], unique=False)
 
 
 def downgrade() -> None:

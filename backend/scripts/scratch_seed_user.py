@@ -4,9 +4,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from src.services.user_service import create_user
 
-DATABASE_URL = (
-    "postgresql+asyncpg://electro:electro_secret@localhost:5432/electro_treasur"
-)
+DATABASE_URL = "postgresql+asyncpg://electro:electro_secret@localhost:5432/electro_treasur"
 engine = create_async_engine(DATABASE_URL, echo=False)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 

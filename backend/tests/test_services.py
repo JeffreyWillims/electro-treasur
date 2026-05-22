@@ -14,9 +14,8 @@ Architecture note (post-refactor):
       Step 3 — category names/types
 """
 
-import asyncio
 import uuid
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from unittest.mock import MagicMock
 
@@ -45,13 +44,12 @@ async def test_transaction_idempotency(mock_db_session, mock_redis):
     exactly one DB add/commit cycle (O(1) dedup via Redis).
     """
     import json
-
     from unittest.mock import AsyncMock, patch
 
     user_id = 1
     idempotency_key = str(uuid.uuid4())
     tx_data = TransactionCreate(
-        category_id=2, amount=Decimal("500.00"), executed_at=datetime.utcnow()
+        category_id=2, amount=Decimal("500.00"), executed_at=datetime.now(UTC)
     )
 
     # Minimal cached JSON that TransactionResponse.model_validate_json can parse
@@ -64,7 +62,7 @@ async def test_transaction_idempotency(mock_db_session, mock_redis):
             "currency": "RUB",
             "is_recurring": False,
             "entry_type": "expense",
-            "executed_at": datetime.utcnow().isoformat(),
+            "executed_at": datetime.now(UTC).isoformat(),
             "idempotency_key": idempotency_key,
             "category_name": None,
             "comment": None,
@@ -88,7 +86,7 @@ async def test_transaction_idempotency(mock_db_session, mock_redis):
     tx_mock.currency = "RUB"
     tx_mock.is_recurring = False
     tx_mock.entry_type = "expense"
-    tx_mock.executed_at = datetime.utcnow()
+    tx_mock.executed_at = datetime.now(UTC)
     tx_mock.idempotency_key = idempotency_key
     tx_mock.category_name = None
     tx_mock.comment = None
@@ -100,19 +98,30 @@ async def test_transaction_idempotency(mock_db_session, mock_redis):
     from src.schemas.transaction import TransactionResponse
 
     with patch.object(
-        TransactionResponse, "model_validate", return_value=TransactionResponse(**{
-            "id": 99, "user_id": user_id, "category_id": 2,
-            "amount": Decimal("500.00"), "currency": "RUB", "is_recurring": False,
-            "entry_type": "expense", "executed_at": datetime.utcnow(),
-            "idempotency_key": idempotency_key, "category_name": None, "comment": None,
-        })
+        TransactionResponse,
+        "model_validate",
+        return_value=TransactionResponse(
+            **{
+                "id": 99,
+                "user_id": user_id,
+                "category_id": 2,
+                "amount": Decimal("500.00"),
+                "currency": "RUB",
+                "is_recurring": False,
+                "entry_type": "expense",
+                "executed_at": datetime.now(UTC),
+                "idempotency_key": idempotency_key,
+                "category_name": None,
+                "comment": None,
+            }
+        ),
     ):
-        # Request 1: cache miss → DB write
-        result1 = await create_transaction(
+        # Request 1: cache miss → DB write (result discarded; we assert via mock counts)
+        _result1 = await create_transaction(
             mock_db_session, mock_redis, user_id, tx_data, idempotency_key
         )
-        # Request 2: cache hit → no DB write
-        result2 = await create_transaction(
+        # Request 2: cache hit → no DB write (result discarded; we assert via mock counts)
+        _result2 = await create_transaction(
             mock_db_session, mock_redis, user_id, tx_data, idempotency_key
         )
 
@@ -180,10 +189,12 @@ async def test_dashboard_aggregation_algorithm(mock_db_session):
     cat_row1.id = 1
     cat_row1.name = "Mortgage"
     cat_row1.type = "expense"
+    cat_row1.icon = None  # Must be str | None — not a MagicMock
     cat_row2 = MagicMock()
     cat_row2.id = 2
     cat_row2.name = "Food"
     cat_row2.type = "expense"
+    cat_row2.icon = None  # Must be str | None — not a MagicMock
     step3_result.all.return_value = [cat_row1, cat_row2]
 
     # Wire mocks in query-execution order (Steps 0 → 1 → 2 → 3)
@@ -271,6 +282,7 @@ async def test_dashboard_multi_month_budget_sum(mock_db_session):
     cat.id = 1
     cat.name = "Rent"
     cat.type = "expense"
+    cat.icon = None  # Must be str | None — not a MagicMock
     step3.all.return_value = [cat]
 
     mock_db_session.execute.side_effect = [step0, step1, step2, step3]

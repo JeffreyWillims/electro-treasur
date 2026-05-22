@@ -1,0 +1,14 @@
+# ─────────────────────────────────────────────────────────────
+#  Electro-Treasur — E2E Test Suite Dependencies
+#  Stack: Python + Pytest + Playwright (Chromium/Firefox/WebKit)
+# ─────────────────────────────────────────────────────────────
+
+# Core test runner
+pytest>=8.3.0
+
+# Playwright Python bindings + pytest plugin (fixtures: page, browser, context)
+playwright>=1.49.0
+pytest-playwright>=0.6.0
+
+# Async test support (needed for async Playwright tests)
+pytest-asyncio>=0.24.0

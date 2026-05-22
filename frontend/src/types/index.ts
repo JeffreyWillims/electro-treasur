@@ -68,6 +68,7 @@ export interface DayCellSchema {
 export interface CategoryRowSchema {
   category_id: number;
   category_name: string;
+  category_icon?: string;
   type?: string;
   planned: string;
   fact: string;
@@ -190,6 +191,16 @@ export interface CategoryCreate {
   type: string;
   icon?: string;
   parent_id?: number;
+}
+
+export interface CategoryUpdate {
+  name?: string;
+  icon?: string; // HEX color string, e.g. "#FF7A00"
+}
+
+export interface CategoryTransactionCount {
+  category_id: number;
+  transaction_count: number;
 }
 
 // ── Recurring Reminder (Frontend-managed) ─────────────────────────────

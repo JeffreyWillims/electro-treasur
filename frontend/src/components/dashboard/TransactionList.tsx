@@ -198,7 +198,7 @@ export function TransactionList() {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
               <div>
                 <h1 className="text-4xl md:text-5xl font-extrabold text-[#1C3F35] dark:text-emerald-50 tracking-tight mb-8" style={{ textShadow: "1px 1px 0px rgba(255,255,255,0.8), -1px -1px 0px rgba(0,0,0,0.05)" }}>История</h1>
-                <p className="text-[10px] font-mono text-[#1C3F35] dark:text-emerald-400 uppercase tracking-[0.3em] font-bold mt-2">
+                <p className="text-[10.5px] md:text-[11px] font-mono text-[#1C3F35] dark:text-emerald-400 uppercase tracking-[0.3em] font-bold mt-2">
                   Финансовый Журнал
                 </p>
               </div>
@@ -366,8 +366,11 @@ export function TransactionList() {
                           className="group flex items-center justify-between py-6 border-b border-slate-200/30 dark:border-white/[0.03] last:border-0 hover:bg-slate-100/40 dark:hover:bg-white/[0.02] px-6 -mx-6 rounded-2xl transition-all duration-300 cursor-pointer"
                         >
                           <div className="flex items-center gap-6">
-                            <div className="w-12 h-12 rounded-2xl bg-[#F4F5F6] dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center shadow-inner shrink-0">
-                              <span className="text-sm font-bold text-slate-600 dark:text-slate-300 uppercase">
+                            <div
+                              className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-md shrink-0"
+                              style={{ backgroundColor: catDef?.icon || '#1C3F35' }}
+                            >
+                              <span className="text-sm font-bold text-white uppercase">
                                 {getRussianCategoryName(catName).charAt(0)}
                               </span>
                             </div>

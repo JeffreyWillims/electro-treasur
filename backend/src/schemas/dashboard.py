@@ -34,6 +34,7 @@ class CategoryRowSchema(BaseModel):
 
     category_id: int
     category_name: str
+    category_icon: str | None = None
     type: str | None = None
     planned: Decimal = Field(default=Decimal("0.00"), max_digits=12, decimal_places=2)
     fact: Decimal = Field(default=Decimal("0.00"), max_digits=12, decimal_places=2)

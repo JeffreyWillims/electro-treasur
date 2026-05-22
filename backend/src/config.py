@@ -11,6 +11,11 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     """Application-wide configuration loaded from environment / .env file."""
 
+    # ── JWT Security ─────────────────────────────────────────────────────
+    # No default — must be set via ET_SECRET_KEY env var. Fails fast on startup.
+    secret_key: str
+    algorithm: str = "HS256"
+
     # ── PostgreSQL (via PgBouncer) ──────────────────────────────────────
     database_url: str = (
         "postgresql+asyncpg://electro:electro_secret@localhost:5432/electro_treasur"
@@ -31,4 +36,4 @@ class Settings(BaseSettings):
     model_config = {"env_prefix": "ET_", "env_file": ".env", "extra": "ignore"}
 
 
-settings = Settings()
+settings = Settings()  # type: ignore[call-arg]  # secret_key loaded from .env at runtime

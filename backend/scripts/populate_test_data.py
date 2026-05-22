@@ -8,9 +8,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from src.domain.models import Base, Category, CategoryType, Transaction, User
 
-DATABASE_URL = (
-    "postgresql+asyncpg://electro:electro_secret@localhost:5432/electro_treasur"
-)
+DATABASE_URL = "postgresql+asyncpg://electro:electro_secret@localhost:5432/electro_treasur"
 
 engine = create_async_engine(DATABASE_URL, echo=False)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
@@ -22,9 +20,7 @@ async def main():
 
     async with AsyncSessionLocal() as session:
         # Create user
-        user = (
-            await session.execute(select(User).where(User.id == 1))
-        ).scalar_one_or_none()
+        user = (await session.execute(select(User).where(User.id == 1))).scalar_one_or_none()
         if not user:
             user = User(id=1, email="test@electro.local")
             session.add(user)

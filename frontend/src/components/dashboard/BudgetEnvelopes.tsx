@@ -157,8 +157,11 @@ export function BudgetEnvelopes() {
 
             <div className="relative z-10 flex flex-col justify-center items-center h-full gap-2 mt-auto mb-auto">
               <div className="flex items-center gap-2 justify-center">
-                <div className="w-8 h-8 rounded-full bg-slate-100/50 dark:bg-white/10 border border-slate-200/50 dark:border-white/10 flex items-center justify-center shadow-inner shrink-0">
-                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center shadow-md shrink-0"
+                  style={{ backgroundColor: row.category_icon || '#1C3F35' }}
+                >
+                  <span className="text-xs font-bold text-white uppercase">
                     {getRussianCategoryName(row.category_name).charAt(0)}
                   </span>
                 </div>

@@ -9,9 +9,7 @@ from src.domain.models import Budget, Category, User
 
 async def main():
     async with async_session_factory() as session:
-        result = await session.execute(
-            select(User).where(User.email == "beta@aura.com")
-        )
+        result = await session.execute(select(User).where(User.email == "beta@aura.com"))
         user = result.scalar_one_or_none()
         if not user:
             print("User Beta not found")
@@ -20,9 +18,7 @@ async def main():
         print(f"User Beta found: {user.id}")
         # Find or create category 'Аренда'
         res = await session.execute(
-            select(Category).where(
-                Category.user_id == user.id, Category.name == "Аренда"
-            )
+            select(Category).where(Category.user_id == user.id, Category.name == "Аренда")
         )
         cat = res.scalar_one_or_none()
         if not cat:
@@ -33,9 +29,7 @@ async def main():
 
         # Check if budget already exists
         res = await session.execute(
-            select(Budget).where(
-                Budget.user_id == user.id, Budget.category_id == cat.id
-            )
+            select(Budget).where(Budget.user_id == user.id, Budget.category_id == cat.id)
         )
         if res.scalar_one_or_none():
             print("Budget already exists")

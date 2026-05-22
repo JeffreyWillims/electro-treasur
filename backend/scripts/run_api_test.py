@@ -52,9 +52,7 @@ async def run_tests():
     opt_date = resp.optimized_target_date
     print(f"Base Date: {base_date}, Optimized Date: {opt_date}")
     if base_date and opt_date:
-        diff = (base_date.year - opt_date.year) * 12 + (
-            base_date.month - opt_date.month
-        )
+        diff = (base_date.year - opt_date.year) * 12 + (base_date.month - opt_date.month)
         print(f"Optimized path reaches goal {diff} months earlier.")
 
     print("\n=== PHASE 5: EDGE CASES ===")

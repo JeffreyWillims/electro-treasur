@@ -28,7 +28,7 @@ class UserRead(UserBase):
 
 
 class CategoryCreate(BaseModel):
-    name: str
+    name: str = Field(..., min_length=1, max_length=128)
     type: str
     icon: str | None = None
     parent_id: int | None = None
@@ -43,3 +43,17 @@ class CategoryRead(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class CategoryUpdate(BaseModel):
+    """Partial update payload for PATCH /users/categories/{id}."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=128)
+    icon: str | None = None  # HEX color string, e.g. "#FF7A00"
+
+
+class CategoryTransactionCount(BaseModel):
+    """Response payload for the safe-delete pre-flight check."""
+
+    category_id: int
+    transaction_count: int

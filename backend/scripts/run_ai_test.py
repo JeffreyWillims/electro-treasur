@@ -8,9 +8,7 @@ from redis.asyncio import Redis
 
 async def test_ai():
     print("Connecting to Redis...")
-    arq_redis = await create_pool(
-        RedisSettings(host="localhost", port=6379, database=1)
-    )
+    arq_redis = await create_pool(RedisSettings(host="localhost", port=6379, database=1))
     cache_redis = Redis.from_url("redis://localhost:6379/0", decode_responses=True)
 
     print("Enqueueing task...")

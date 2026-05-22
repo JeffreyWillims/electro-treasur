@@ -95,10 +95,12 @@ async def get_monthly_dashboard(
     plans: dict[int, Decimal] = {row.category_id: row.total_limit for row in bp_result.all()}
 
     # ── Step 3: Fetch category names ─────────
-    stmt_cat = select(Category.id, Category.name, Category.type).where(Category.user_id == user_id)
+    stmt_cat = select(Category.id, Category.name, Category.type, Category.icon).where(
+        Category.user_id == user_id
+    )
     cat_result = await session.execute(stmt_cat)
     cat_info: dict[int, dict[str, Any]] = {
-        row.id: {"name": row.name, "type": row.type} for row in cat_result.all()
+        row.id: {"name": row.name, "type": row.type, "icon": row.icon} for row in cat_result.all()
     }
 
     # ── Step 4: O(N) single-pass aggregation into day matrix ─────────────
@@ -160,6 +162,7 @@ async def get_monthly_dashboard(
             CategoryRowSchema(
                 category_id=cat_id,
                 category_name=info["name"],
+                category_icon=info.get("icon"),
                 type=info["type"],
                 planned=planned,
                 fact=fact,

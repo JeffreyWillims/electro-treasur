@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.domain.models import Category, CategoryType, User
-from src.schemas.user import CategoryCreate
+from src.domain.models import Category, CategoryType, Transaction, User
+from src.schemas.user import CategoryCreate, CategoryUpdate
 from src.services.auth_service import get_password_hash
 
 
@@ -86,3 +86,107 @@ async def create_user_category(
     await db.commit()
     await db.refresh(db_category)
     return db_category
+
+
+async def count_category_transactions(
+    db: AsyncSession,
+    category_id: int,
+    user_id: int,
+) -> int:
+    """
+    Pre-flight check: COUNT transactions linked to this category for this user.
+
+    Used by the frontend before rendering the ConfirmDeleteDialog.
+    Time Complexity: O(log N) — indexed FK scan on (category_id, user_id).
+
+    Returns:
+        int — number of transactions that WILL be CASCADE-deleted.
+    """
+    # Validate ownership first — prevents data leakage across users
+    owner_stmt = select(Category.id).where(
+        Category.id == category_id,
+        Category.user_id == user_id,
+    )
+    owner_result = await db.execute(owner_stmt)
+    if owner_result.scalar_one_or_none() is None:
+        return -1  # Sentinel: category not found / not owned
+
+    count_stmt = select(func.count(Transaction.id)).where(
+        Transaction.category_id == category_id,
+        Transaction.user_id == user_id,
+    )
+    result = await db.execute(count_stmt)
+    return result.scalar() or 0
+
+
+async def update_user_category(
+    db: AsyncSession,
+    category_id: int,
+    user_id: int,
+    payload: CategoryUpdate,
+) -> Category | None:
+    """
+    Partially update a category's name and/or icon color.
+
+    Ownership enforced: returns None if category_id belongs to another user.
+    Time Complexity: O(log N) — PK lookup.
+
+    Args:
+        db: Async DB session.
+        category_id: Target category PK.
+        user_id: Authenticated user ID (ownership guard).
+        payload: Partial update fields (name, icon).
+
+    Returns:
+        Updated Category ORM object, or None if not found / not owned.
+    """
+    stmt = select(Category).where(
+        Category.id == category_id,
+        Category.user_id == user_id,
+    )
+    result = await db.execute(stmt)
+    db_category = result.scalar_one_or_none()
+
+    if db_category is None:
+        return None
+
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(db_category, field, value)
+
+    await db.commit()
+    await db.refresh(db_category)
+    return db_category
+
+
+async def delete_user_category(
+    db: AsyncSession,
+    category_id: int,
+    user_id: int,
+) -> bool:
+    """
+    Hard-delete a category. PostgreSQL CASCADE will erase all linked
+    Transactions and Budgets via the FK ondelete='CASCADE' constraint.
+
+    THIS ACTION IS IRREVERSIBLE — the caller (API route) must ensure
+    the user has explicitly confirmed the deletion via the UI.
+
+    Ownership enforced: returns False if not found / not owned.
+    Time Complexity: O(log N) DELETE + O(M) CASCADE where M = linked rows.
+
+    Returns:
+        True on successful deletion, False if not found or not authorized.
+    """
+    stmt = select(Category).where(
+        Category.id == category_id,
+        Category.user_id == user_id,
+    )
+    result = await db.execute(stmt)
+    db_category = result.scalar_one_or_none()
+
+    if db_category is None:
+        return False
+
+    await db.delete(db_category)
+    await db.commit()
+    return True
