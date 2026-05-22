@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.domain.models import Category, CategoryType, Transaction, User
+from src.domain.models import Budget, Category, CategoryType, Transaction, User
 from src.schemas.user import CategoryCreate, CategoryUpdate
 from src.services.auth_service import get_password_hash
 
@@ -160,33 +160,52 @@ async def update_user_category(
 
 
 async def delete_user_category(
-    db: AsyncSession,
+    session: AsyncSession,
     category_id: int,
     user_id: int,
 ) -> bool:
     """
-    Hard-delete a category. PostgreSQL CASCADE will erase all linked
-    Transactions and Budgets via the FK ondelete='CASCADE' constraint.
+    Explicit 3-step cascade delete — prevents IntegrityError when DB-level
+    CASCADE is absent or not yet migrated.
+
+    Execution order (respects FK dependency graph):
+      Step 1 — DELETE all Transactions linked to this category.
+      Step 2 — DELETE all Budget limits linked to this category.
+      Step 3 — DELETE the Category itself.
+
+    Ownership enforced: returns False if category not found or belongs to
+    another user (prevents cross-user data leakage).
 
     THIS ACTION IS IRREVERSIBLE — the caller (API route) must ensure
-    the user has explicitly confirmed the deletion via the UI.
+    the user has explicitly confirmed deletion via the UI.
 
-    Ownership enforced: returns False if not found / not owned.
-    Time Complexity: O(log N) DELETE + O(M) CASCADE where M = linked rows.
+    Time Complexity: O(log N) ownership SELECT + O(M) bulk DELETE
+                     where M = linked Transactions + Budgets.
 
     Returns:
         True on successful deletion, False if not found or not authorized.
     """
+    # ── Step 0: Ownership guard ───────────────────────────────────────────
     stmt = select(Category).where(
         Category.id == category_id,
         Category.user_id == user_id,
     )
-    result = await db.execute(stmt)
-    db_category = result.scalar_one_or_none()
-
-    if db_category is None:
+    cat = (await session.execute(stmt)).scalar_one_or_none()
+    if cat is None:
         return False
 
-    await db.delete(db_category)
-    await db.commit()
+    # ── Step 1: Purge all linked Transactions ─────────────────────────────
+    await session.execute(
+        delete(Transaction).where(Transaction.category_id == category_id)
+    )
+
+    # ── Step 2: Purge all linked Budget limits ────────────────────────────
+    await session.execute(
+        delete(Budget).where(Budget.category_id == category_id)
+    )
+
+    # ── Step 3: Delete the Category itself ───────────────────────────────
+    await session.delete(cat)
+    await session.commit()
+
     return True
