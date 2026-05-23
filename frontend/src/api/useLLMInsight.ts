@@ -33,7 +33,7 @@ interface UseLLMInsightReturn {
   reset: () => void;
 }
 
-export function useLLMInsight(startDate: string, endDate: string, userId: number = 1): UseLLMInsightReturn {
+export function useLLMInsight(startDate: string, endDate: string): UseLLMInsightReturn {
   const [taskId, setTaskId] = useState<string | null>(null);
   const [isEnqueuing, setIsEnqueuing] = useState(false);
   const [enqueueError, setEnqueueError] = useState<string | null>(null);

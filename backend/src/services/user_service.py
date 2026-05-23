@@ -195,14 +195,10 @@ async def delete_user_category(
         return False
 
     # ── Step 1: Purge all linked Transactions ─────────────────────────────
-    await session.execute(
-        delete(Transaction).where(Transaction.category_id == category_id)
-    )
+    await session.execute(delete(Transaction).where(Transaction.category_id == category_id))
 
     # ── Step 2: Purge all linked Budget limits ────────────────────────────
-    await session.execute(
-        delete(Budget).where(Budget.category_id == category_id)
-    )
+    await session.execute(delete(Budget).where(Budget.category_id == category_id))
 
     # ── Step 3: Delete the Category itself ───────────────────────────────
     await session.delete(cat)

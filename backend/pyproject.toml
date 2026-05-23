@@ -44,6 +44,10 @@ ignore = [
     "B008",   # function-call-in-default-argument — FastAPI DI pattern (Depends/Query)
 ]
 
+[tool.black]
+line-length = 99
+target-version = ['py312']
+
 [tool.mypy]
 python_version = "3.12"
 strict = true

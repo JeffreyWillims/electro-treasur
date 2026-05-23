@@ -5,8 +5,8 @@ export function BudgetList() {
     <div className="max-w-7xl mx-auto space-y-12 px-6 md:px-8 pt-12">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl md:text-5xl font-extrabold text-[#1C3F35] dark:text-emerald-50 tracking-tight mb-4" style={{ textShadow: "1px 1px 0px rgba(255,255,255,0.8), -1px -1px 0px rgba(0,0,0,0.05)" }}>Бюджеты</h1>
-          <p className="text-[10.5px] md:text-[11px] font-mono text-[#1C3F35] dark:text-emerald-400 uppercase tracking-[0.3em] font-bold mt-2">
+          <h1 className="text-4xl md:text-5xl font-serif font-extrabold text-[#1C3F35] dark:text-emerald-50 tracking-tight mb-2" style={{ textShadow: "1px 1px 0px rgba(255,255,255,0.8), -1px -1px 0px rgba(0,0,0,0.05)" }}>Бюджеты</h1>
+          <p className="text-[10px] md:text-[10.5px] font-mono text-[#1C3F35] dark:text-emerald-400 uppercase tracking-[0.25em] font-bold mt-2">
             Система конвертов
           </p>
         </div>
@@ -19,8 +19,8 @@ export function BudgetList() {
       <div>
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h2 className="text-2xl md:text-3xl font-extrabold text-[#1C3F35] dark:text-emerald-50 tracking-tight mb-4" style={{ textShadow: "1px 1px 0px rgba(255,255,255,0.8), -1px -1px 0px rgba(0,0,0,0.05)" }}>Конверты {new Date().toLocaleString('ru', { month: 'long' })}</h2>
-            <p className="text-[10px] font-mono text-[#1C3F35]/70 dark:text-emerald-400/70 uppercase tracking-widest mt-2 font-bold">
+            <h2 className="text-2xl md:text-3xl font-serif font-extrabold text-[#1C3F35] dark:text-emerald-50 tracking-tight mb-2" style={{ textShadow: "1px 1px 0px rgba(255,255,255,0.8), -1px -1px 0px rgba(0,0,0,0.05)" }}>Конверты {new Date().toLocaleString('ru', { month: 'long' })}</h2>
+            <p className="text-[10px] md:text-[10.5px] font-mono text-[#1C3F35] dark:text-emerald-400 uppercase tracking-[0.25em] font-bold mt-2">
               Актуальные лимиты и перерасходы
             </p>
           </div>

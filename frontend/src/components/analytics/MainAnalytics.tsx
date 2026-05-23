@@ -202,7 +202,7 @@ export function MainAnalytics() {
             <h1 className="text-4xl md:text-5xl font-serif font-extrabold text-[#1C3F35] dark:text-emerald-50 tracking-tight mb-2" style={{ textShadow: "1px 1px 0px rgba(255,255,255,0.8), -1px -1px 0px rgba(0,0,0,0.05)" }}>
               Аналитика
             </h1>
-            <p className="text-[10px] font-mono text-[#1C3F35]/70 dark:text-emerald-400 uppercase tracking-[0.25em] font-bold">
+            <p className="text-[10px] md:text-[10.5px] font-mono text-[#1C3F35] dark:text-emerald-400 uppercase tracking-[0.25em] font-bold mt-2">
               V.I.A. Data Cortex
             </p>
           </div>

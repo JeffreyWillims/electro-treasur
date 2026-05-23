@@ -83,8 +83,7 @@ export function ConfirmDeleteDialog({ category, onClose, onDeleted }: ConfirmDel
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[200] flex items-center justify-center p-4"
-          style={{ background: 'rgba(0,0,0,0.75)' }}
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-white/20 dark:bg-black/60 backdrop-blur-md"
           onClick={(e) => {
             if (e.target === e.currentTarget && !deleteMutation.isPending) onClose();
           }}
@@ -96,7 +95,7 @@ export function ConfirmDeleteDialog({ category, onClose, onDeleted }: ConfirmDel
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.92, y: 16 }}
             transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-            className="relative w-full max-w-md bg-white dark:bg-[#161616] rounded-3xl shadow-[0_32px_80px_rgba(0,0,0,0.4)] border border-slate-200 dark:border-white/10 overflow-hidden"
+            className="relative w-full max-w-md bg-white/80 dark:bg-[#121212]/80 backdrop-blur-3xl border border-white/40 dark:border-white/10 rounded-3xl shadow-[0_32px_80px_rgba(0,0,0,0.15)] dark:shadow-[0_32px_80px_rgba(0,0,0,0.6)] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* ── Top danger stripe ──────────────────────────────────── */}
@@ -173,7 +172,7 @@ export function ConfirmDeleteDialog({ category, onClose, onDeleted }: ConfirmDel
                         onChange={(e) => setConfirmInput(e.target.value.toUpperCase())}
                         placeholder={CONFIRM_WORD}
                         disabled={deleteMutation.isPending}
-                        className="w-full bg-slate-100 dark:bg-white/[0.06] border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-base font-mono font-bold tracking-widest text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-white/20 outline-none focus:border-rose-400 dark:focus:border-rose-500 focus:ring-2 focus:ring-rose-400/20 transition-all duration-200 disabled:opacity-50"
+                        className="w-full h-14 px-5 text-lg font-mono font-bold tracking-widest uppercase rounded-2xl outline-none shadow-inner bg-slate-900/5 dark:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/20 focus:bg-white/50 dark:focus:bg-white/20 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/20 transition-all duration-300 disabled:opacity-50"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && isConfirmReady && !deleteMutation.isPending) {
                             deleteMutation.mutate();

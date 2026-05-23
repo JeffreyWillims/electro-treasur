@@ -200,10 +200,10 @@ export function SavingsNavigator() {
       <div className="flex items-center gap-4">
         <ChronosCore />
         <div>
-          <h1 className="text-[2.5rem] font-extrabold tracking-tight text-[#1C3F35] dark:text-white leading-none font-serif mb-1">
+          <h1 className="text-4xl md:text-5xl font-serif font-extrabold text-[#1C3F35] dark:text-emerald-50 tracking-tight mb-2" style={{ textShadow: "1px 1px 0px rgba(255,255,255,0.8), -1px -1px 0px rgba(0,0,0,0.05)" }}>
             Горизонт Капитала
           </h1>
-          <p className="text-[10px] font-mono text-[#C5A059]/70 uppercase tracking-[0.3em] font-bold">
+          <p className="text-[10px] md:text-[10.5px] font-mono text-[#1C3F35] dark:text-emerald-400 uppercase tracking-[0.25em] font-bold mt-2">
             Capital Horizon
           </p>
         </div>
