@@ -17,7 +17,7 @@ from src.domain.models import User
 from src.schemas.dashboard import DashboardResponse
 from src.services.dashboard_service import get_monthly_dashboard
 
-router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
+router = APIRouter(tags=["Dashboard"])
 
 
 @router.get(

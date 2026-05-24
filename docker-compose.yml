@@ -10,21 +10,23 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U electro"]
+      test: ["CMD-SHELL", "pg_isready -U electro -d electro_treasur"]
       interval: 5s
       timeout: 3s
       retries: 5
 
   pgbouncer:
     image: edoburu/pgbouncer:latest
+    restart: always
     environment:
-      DATABASE_URL: postgres://electro:electro_secret@postgres:5432/electro_treasur
+      LISTEN_PORT: 6432
+      DB_USER: electro
+      DB_PASSWORD: electro_secret
+      DB_HOST: postgres
+      DATABASES: "electro_treasur=host=postgres port=5432 auth_user=electro"
       POOL_MODE: transaction
       MAX_CLIENT_CONN: 10000
       DEFAULT_POOL_SIZE: 200
-      RESERVE_POOL_SIZE: 10
-      RESERVE_POOL_TIMEOUT: 3
-      SERVER_RESET_QUERY: DISCARD ALL
       AUTH_TYPE: scram-sha-256
     ports:
       - "6432:6432"
@@ -43,7 +45,7 @@ services:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
-      retries: 5
+      retries: 5 
 
   backend:
     build:
@@ -52,7 +54,7 @@ services:
     ports:
       - "8000:8000"
     env_file:
-      - ./backend/.env
+      - backend/.env
     depends_on:
       pgbouncer:
         condition: service_started
@@ -60,7 +62,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -72,6 +74,11 @@ services:
       dockerfile: Dockerfile
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - /var/www/certbot:/var/www/certbot:ro 
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       backend:
         condition: service_healthy

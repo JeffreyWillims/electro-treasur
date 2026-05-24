@@ -16,8 +16,7 @@ from src.services.auth_service import (
 )
 from src.services.user_service import create_user, get_user_by_email
 
-router = APIRouter(prefix="/auth", tags=["Authentication"])
-
+router = APIRouter(tags=["Authentication"]) 
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 @limiter.limit("3/minute")

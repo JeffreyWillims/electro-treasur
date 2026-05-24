@@ -128,3 +128,6 @@ websockets==16.0
     # via uvicorn
 wrapt==2.2.1
     # via deprecated
+argon2-cffi>=23.1.0
+email-validator>=2.1.0
+python-multipart>=0.0.9

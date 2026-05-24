@@ -21,7 +21,7 @@ from src.services.user_service import (
     update_user_profile,
 )
 
-router = APIRouter(prefix="/users", tags=["Users"])
+router = APIRouter(tags=["Users"])
 
 
 @router.get("/me", response_model=UserRead)

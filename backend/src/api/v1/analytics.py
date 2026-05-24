@@ -16,7 +16,7 @@ from src.schemas.analytics import (
 )
 from src.services.analytics_service import get_analytics_profile, simulate_savings
 
-router = APIRouter(prefix="/analytics", tags=["Analytics"])
+router = APIRouter(tags=["Analytics"])
 
 
 @router.get("/profile", response_model=AnalyticsProfileResponse)

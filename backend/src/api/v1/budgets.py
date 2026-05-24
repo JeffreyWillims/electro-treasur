@@ -6,7 +6,7 @@ from src.domain.models import User
 from src.schemas.budget import BudgetUpsert
 from src.services.budget_service import delete_budget, upsert_budget
 
-router = APIRouter(prefix="/budgets", tags=["Budgets"])
+router = APIRouter(tags=["Budgets"])
 
 
 @router.put("/", status_code=status.HTTP_200_OK)

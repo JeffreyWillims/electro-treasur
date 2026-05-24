@@ -21,7 +21,7 @@ from src.schemas.insight import (
     InsightResultResponse,
 )
 
-router = APIRouter(prefix="/insights", tags=["LLM Insights"])
+router = APIRouter(tags=["LLM Insights"])
 
 # ── arq connection pool (lazy singleton) ────────────────────────────────
 _arq_pool: ArqRedis | None = None
