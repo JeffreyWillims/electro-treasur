@@ -1,15 +1,13 @@
 [project]
 name = "electro-treasur"
 version = "0.1.0"
-description = ""
+description = "Monorepo root for Electro Treasur"
 authors = [
-    {name = "Evgeny Fedorov",email = "EvgenyFedorov@gmail.com"}
+    {name = "Evgeny Fedorov", email = "EvgenyFedorov@gmail.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.14"
-dependencies = [
-]
-
+requires-python = ">=3.12"
+dependencies = []
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

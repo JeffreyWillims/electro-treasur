@@ -41,6 +41,7 @@ BASE_URL = "http://localhost:5173"
 #  TC-001 | SMOKE | Login page renders correctly
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 @pytest.mark.smoke
 @pytest.mark.auth
 def test_login_page_renders(page: Page) -> None:
@@ -84,6 +85,7 @@ def test_login_page_renders(page: Page) -> None:
 #  TC-002 | SMOKE | Tab navigation: Login → Register
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 @pytest.mark.smoke
 @pytest.mark.auth
 def test_tab_navigation_to_register(page: Page) -> None:
@@ -110,6 +112,7 @@ def test_tab_navigation_to_register(page: Page) -> None:
 #  TC-003 | AUTH | Успешный вход (ДОПОЛНИ СЮДА!)
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 @pytest.mark.auth
 def test_successful_login(page: Page) -> None:
     """
@@ -127,7 +130,7 @@ def test_successful_login(page: Page) -> None:
     login.navigate()
 
     # TODO: замени на реальные тестовые данные
-    TEST_EMAIL    = "your_test_user@example.com"
+    TEST_EMAIL = "your_test_user@example.com"
     TEST_PASSWORD = "your_test_password"
 
     # Шаг 1: Заполни поля
@@ -154,6 +157,7 @@ def test_successful_login(page: Page) -> None:
 #  TC-004 | AUTH | Неверный пароль → сообщение об ошибке
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 @pytest.mark.auth
 def test_invalid_credentials_shows_error(page: Page) -> None:
     """
@@ -176,6 +180,4 @@ def test_invalid_credentials_shows_error(page: Page) -> None:
     # toast = page.locator("[data-sonner-toast]")
     # expect(toast).to_be_visible(timeout=5000)
 
-    pytest.skip(
-        "TC-004: Раскомментируй submit() и expect-блок для toast."
-    )
+    pytest.skip("TC-004: Раскомментируй submit() и expect-блок для toast.")

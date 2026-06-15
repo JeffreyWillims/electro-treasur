@@ -16,7 +16,8 @@ from src.services.auth_service import (
 )
 from src.services.user_service import create_user, get_user_by_email
 
-router = APIRouter(tags=["Authentication"]) 
+router = APIRouter(tags=["Authentication"])
+
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 @limiter.limit("3/minute")
@@ -25,15 +26,11 @@ async def register_user(
     user_in: UserCreate,
     db: AsyncSession = Depends(get_db),
 ) -> Any:
-    """
-    Registers a new user in the system.
-    Rate limited: 3 attempts per minute per IP to prevent mass account creation.
-    """
     user = await get_user_by_email(db, email=user_in.email)
     if user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A user with this email already exists.",
+            detail="Пользователь с таким адресом электронной почты уже существует.",
         )
     return await create_user(db, user_in=user_in.model_dump())
 
@@ -45,15 +42,24 @@ async def login_for_access_token(
     db: AsyncSession = Depends(get_db),
     form_data: OAuth2PasswordRequestForm = Depends(),
 ) -> Any:
-    """
-    OAuth2 compatible token login, get an access token for future requests.
-    Rate limited: 5 attempts per minute per IP — brute force protection.
-    """
+    # 1. Сначала достаем юзера
     user = await get_user_by_email(db, email=form_data.username)
-    if not user or not (await verify_password(form_data.password, user.hashed_password)):
+
+    # 2. Вычисляем пароль независимо от того, найден ли юзер (защита от Timing Attack)
+    if user:
+        is_password_correct = await verify_password(form_data.password, user.hashed_password)
+    else:
+        # Запускаем вычисление вхолостую с фейковым, но СТРУКТУРНО ВАЛИДНЫМ хэшем.
+        # Это реальный хэш от случайной строки, чтобы passlib/bcrypt не выдали ошибку 500.
+        dummy_hash = "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewKYcaxkG1GzXyCq"
+        await verify_password(form_data.password, dummy_hash)
+        is_password_correct = False
+
+    # 3. Принимаем решение
+    if not user or not is_password_correct:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail="Неверный адрес электронной почты или пароль",
             headers={"WWW-Authenticate": "Bearer"},
         )
 

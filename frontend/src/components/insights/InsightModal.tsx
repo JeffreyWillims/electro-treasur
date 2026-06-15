@@ -4,9 +4,9 @@
  */
 import { useLLMInsight } from '@/api/useLLMInsight';
 import { useEffect } from 'react';
-import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { Sparkles, X } from 'lucide-react';
+import { Sparkles, X, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export function InsightModal({
   isOpen,
@@ -33,107 +33,129 @@ export function InsightModal({
   };
 
   return (
-    <>
-      {/* Modal Backdrop */}
+    <AnimatePresence>
       {isOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in"
-          onClick={handleClose}
-        >
-          <div
-            className="relative w-full max-w-xl mx-4 bg-[#F8F9FA]/90 dark:bg-[#121212]/90 backdrop-blur-3xl border border-white dark:border-white/5 rounded-3xl p-8 shadow-2xl animate-slide-up transition-all duration-700"
-            onClick={(e) => e.stopPropagation()}
+        <>
+          {/* Modal Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 dark:bg-black/60 backdrop-blur-md p-4"
+            onClick={handleClose}
           >
-            {/* Close button */}
-            <button
-              onClick={handleClose}
-              className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+            <motion.div
+              initial={{ opacity: 0, y: 40, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 40, scale: 0.95 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+              className="relative w-full max-w-2xl bg-white/90 dark:bg-[#111111]/95 backdrop-blur-3xl border border-black/5 dark:border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-[0_32px_80px_rgba(0,0,0,0.15)] dark:shadow-[0_32px_80px_rgba(0,0,0,0.6)]"
+              onClick={(e) => e.stopPropagation()}
             >
-              <X className="w-5 h-5 text-slate-400 dark:text-slate-500" />
-            </button>
+              {/* Close button */}
+              <button
+                onClick={handleClose}
+                className="absolute top-6 right-6 w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-[#1C3F35]/50 dark:text-white/50 hover:bg-black/10 dark:hover:bg-white/10 hover:text-[#1C3F35] dark:hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
 
-            {/* Header */}
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#FF7A00] to-[#FFA011] flex items-center justify-center shadow-lg shadow-[#FF7A00]/20">
-                <Sparkles className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-slate-800 tracking-tight">Персональный финансовый разбор</h2>
-                <p className="text-sm text-slate-500 font-medium">{startDate} — {endDate}</p>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="space-y-4">
-              {isLoading && (
-                <div className="space-y-3">
-                  <Skeleton className="h-5 w-3/4 bg-slate-200 dark:bg-white/5" />
-                  <Skeleton className="h-4 w-full bg-slate-100 dark:bg-white/5" />
-                  <Skeleton className="h-4 w-5/6 bg-slate-100 dark:bg-white/5" />
-                  <Skeleton className="h-4 w-full bg-slate-100 dark:bg-white/5" />
-                  <div className="pt-4">
-                    <Skeleton className="h-20 w-full rounded-xl bg-slate-100 dark:bg-white/5" />
-                  </div>
-                  <div className="flex gap-3 pt-2">
-                    <Skeleton className="h-12 w-1/3 rounded-xl bg-slate-100 dark:bg-white/5" />
-                    <Skeleton className="h-12 w-1/3 rounded-xl bg-slate-100 dark:bg-white/5" />
-                    <Skeleton className="h-12 w-1/3 rounded-xl bg-slate-100 dark:bg-white/5" />
-                  </div>
-                  <p className="text-sm text-center text-slate-600 dark:text-slate-400 font-medium animate-pulse mt-6">
-                    🧠 Нейросеть анализирует денежные потоки...
+              {/* Header */}
+              <div className="flex items-center gap-5 mb-10">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FF7A00] to-[#FFA011] flex items-center justify-center shadow-[0_10px_20px_-5px_rgba(255,122,0,0.5)] shrink-0">
+                  <Sparkles className="w-7 h-7 text-white" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <h2 className="text-2xl md:text-3xl font-sans font-extrabold text-[#1C3F35] dark:text-white tracking-tight leading-none">
+                    AI Анализ
+                  </h2>
+                  <p className="text-[11px] font-mono font-bold uppercase tracking-[0.25em] text-[#FF7A00]">
+                    {new Date(startDate).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' })} — {new Date(endDate).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' })}
                   </p>
                 </div>
-              )}
+              </div>
 
-              {isError && (
-                <div className="p-4 bg-red-50 rounded-xl border border-red-200">
-                  <p className="text-sm text-expense font-medium">Ошибка: {error}</p>
-                  <button
-                    onClick={trigger}
-                    className="mt-2 text-xs text-brand-600 hover:underline"
-                  >
-                    Попробовать снова
-                  </button>
-                </div>
-              )}
+              {/* Content */}
+              <div className="space-y-8 min-h-[300px]">
+                {isLoading && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
+                    <div className="space-y-3">
+                      <Skeleton className="h-4 w-3/4 bg-black/5 dark:bg-white/5 rounded-lg" />
+                      <Skeleton className="h-4 w-full bg-black/5 dark:bg-white/5 rounded-lg" />
+                      <Skeleton className="h-4 w-5/6 bg-black/5 dark:bg-white/5 rounded-lg" />
+                    </div>
 
-              {data && (
-                <div className="space-y-4">
-                  <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">{data.insight}</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+                      <Skeleton className="h-24 w-full rounded-2xl bg-black/5 dark:bg-white/5" />
+                      <Skeleton className="h-24 w-full rounded-2xl bg-black/5 dark:bg-white/5" />
+                      <Skeleton className="h-24 w-full rounded-2xl bg-black/5 dark:bg-white/5" />
+                    </div>
 
-                  {/* Summary cards */}
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="p-3 bg-income/10 dark:bg-emerald-500/10 rounded-xl text-center">
-                      <p className="text-xs text-slate-500 dark:text-slate-400">Доход</p>
-                      <p className="text-sm font-bold text-income">
-                        ₽{Number(data.summary.total_income.replace(/_/g, '')).toLocaleString()}
+                    <div className="flex items-center justify-center gap-3 mt-8">
+                       <motion.div className="w-4 h-4 border-2 border-[#1C3F35]/20 dark:border-white/20 border-t-[#FF7A00] rounded-full" animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
+                       <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#1C3F35]/40 dark:text-white/40">
+                         V.I.A. анализирует потоки...
+                       </p>
+                    </div>
+                  </motion.div>
+                )}
+
+                {isError && (
+                  <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="p-6 bg-rose-50 dark:bg-rose-500/10 rounded-3xl border border-rose-200 dark:border-rose-500/20 flex flex-col items-center text-center">
+                    <AlertCircle className="w-8 h-8 text-rose-500 mb-4" />
+                    <p className="text-sm font-bold text-rose-600 dark:text-rose-400 mb-6">Ошибка подключения к ИИ:<br/><span className="font-normal opacity-80">{error}</span></p>
+                    <button
+                      onClick={trigger}
+                      className="px-6 py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl font-bold uppercase tracking-widest text-sm shadow-md transition-all active:scale-[0.98]"
+                    >
+                      Попробовать снова
+                    </button>
+                  </motion.div>
+                )}
+
+                {data && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
+                    <p className="text-base md:text-lg font-medium text-[#1C3F35]/80 dark:text-white/80 leading-relaxed">
+                      {data.insight}
+                    </p>
+
+                    {/* Summary cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="p-5 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 rounded-[1.5rem] flex flex-col items-center justify-center text-center">
+                        <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 mb-2">Доход</p>
+                        <p className="text-2xl font-sans font-black tracking-tighter tabular-nums text-emerald-600 dark:text-emerald-400 leading-none">
+                          +{Number(data.summary.total_income.replace(/_/g, '')).toLocaleString('ru-RU')}
+                          <span className="text-sm font-bold opacity-60 tracking-normal ml-1">₽</span>
+                        </p>
+                      </div>
+                      <div className="p-5 bg-rose-500/5 dark:bg-rose-500/10 border border-rose-500/20 rounded-[1.5rem] flex flex-col items-center justify-center text-center">
+                        <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-rose-600 dark:text-rose-400 mb-2">Расход</p>
+                        <p className="text-2xl font-sans font-black tracking-tighter tabular-nums text-rose-600 dark:text-rose-400 leading-none">
+                          -{Number(data.summary.total_expense.replace(/_/g, '')).toLocaleString('ru-RU')}
+                          <span className="text-sm font-bold opacity-60 tracking-normal ml-1">₽</span>
+                        </p>
+                      </div>
+                      <div className="p-5 bg-[#FF7A00]/5 dark:bg-[#FF7A00]/10 border border-[#FF7A00]/20 rounded-[1.5rem] flex flex-col items-center justify-center text-center">
+                        <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#FF7A00] mb-2">Сбережения</p>
+                        <p className="text-2xl font-sans font-black tracking-tighter tabular-nums text-[#FF7A00] leading-none">
+                          {data.summary.savings_rate}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-black/5 dark:border-white/5">
+                      <p className="text-[10px] font-mono text-[#1C3F35]/30 dark:text-white/30 text-center uppercase tracking-[0.25em] font-bold">
+                        V.I.A. СГЕНЕРИРОВАНО {new Date(data.generated_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
-                    <div className="p-3 bg-expense/10 dark:bg-red-500/10 rounded-xl text-center">
-                      <p className="text-xs text-slate-500 dark:text-slate-400">Расход</p>
-                      <p className="text-sm font-bold text-expense dark:text-red-400">
-                        ₽{Number(data.summary.total_expense.replace(/_/g, '')).toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="p-3 bg-brand-50 dark:bg-slate-800 rounded-xl text-center">
-                      <p className="text-xs text-slate-500 dark:text-slate-400">Сбережения</p>
-                      <p className="text-sm font-bold text-brand-700 dark:text-aura-gold">{data.summary.savings_rate}</p>
-                    </div>
-                  </div>
-
-                  <p
-                    className={cn(
-                      'text-xs text-slate-400 text-center',
-                    )}
-                  >
-                    Сгенерировано {new Date(data.generated_at).toLocaleString('ru-RU')}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+                  </motion.div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        </>
       )}
-    </>
+    </AnimatePresence>
   );
 }

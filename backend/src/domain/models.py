@@ -19,6 +19,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import (
+    BigInteger,
     DateTime,
     Enum,
     ForeignKey,
@@ -57,6 +58,7 @@ class User(Base):
     monthly_income: Mapped[Decimal] = mapped_column(
         Numeric(12, 2), nullable=False, server_default=text("0"), default=Decimal("0")
     )
+    telegram_chat_id: Mapped[int | None] = mapped_column(BigInteger, unique=True, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

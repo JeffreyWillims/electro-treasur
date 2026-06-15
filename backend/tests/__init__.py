@@ -1,1 +1,1 @@
-"""Tests package."""
+# Citrine Vault — Test Suite Root

@@ -33,7 +33,10 @@ class Settings(BaseSettings):
     # ── arq Worker ──────────────────────────────────────────────────────
     arq_redis_url: str = "redis://localhost:6379/1"
 
+    # ── Telegram Bot ─────────────────────────────────────────────────────
+    telegram_bot_token: str = ""
+
     model_config = {"env_prefix": "ET_", "env_file": ".env", "extra": "ignore"}
 
 
-settings = Settings()  # type: ignore[call-arg]  # secret_key loaded from .env at runtime
+settings = Settings()

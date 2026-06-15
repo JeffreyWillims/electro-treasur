@@ -10,10 +10,15 @@ from src.api.v1.insights import router as insights_router
 from src.api.v1.transactions import router as transactions_router
 from src.api.v1.users import router as users_router
 
-# Nginx мапит внешние /api/v1 -> на внутренние /v1
 router = APIRouter(prefix="/v1")
 
-# Централизованно задаем префиксы сущностей:
+
+@router.get("/health", tags=["System"], summary="Load Balancer Healthcheck")
+async def healthcheck() -> dict[str, str]:
+    """O(1) ping endpoint for Nginx/Kubernetes liveness probes."""
+    return {"status": "ok"}
+
+
 router.include_router(auth_router, prefix="/auth")
 router.include_router(users_router, prefix="/users")
 router.include_router(dashboard_router, prefix="/dashboard")

@@ -406,9 +406,8 @@ export function GlassDateRangePicker({
                           // End cap
                           isRightCap && 'bg-[#1C3F35] dark:bg-emerald-600 text-white rounded-r-full rounded-l-none',
                           // Single day
-                          isSingle && 'bg-[#FF7A00] text-white rounded-full',
-                          // Today ring (only when not a cap)
-                          isToday && !isStart && !isEnd && !isSingle && 'ring-1 ring-[#FF7A00]/60 text-[#FF7A00] font-bold rounded-lg',
+                          isSingle && 'bg-[#1C3F35] dark:bg-emerald-600 text-white rounded-full',
+                          isToday && !isStart && !isEnd && !isSingle && 'ring-1 ring-[#1C3F35]/60 dark:ring-emerald-500/60 text-[#1C3F35] dark:text-emerald-400 font-bold rounded-lg',
                           // Default text
                           !isStart && !isEnd && !isSingle && !isToday && 'text-slate-700 dark:text-white/80',
                         )}
@@ -422,7 +421,7 @@ export function GlassDateRangePicker({
 
               {/* Selection hint */}
               {selecting && (
-                <p className="text-[10px] font-mono text-[#FF7A00] mt-2 text-center animate-pulse tracking-wider">
+                <p className="text-sm font-sans font-bold text-[#1C3F35] dark:text-emerald-400 mt-4 text-center animate-pulse tracking-wide">
                   Выберите конец диапазона
                 </p>
               )}

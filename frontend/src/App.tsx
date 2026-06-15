@@ -1,8 +1,3 @@
-/**
- * App.tsx — Root application layout for Citrine Vault.
- * CSS Grid for responsive dashboard (floating sidebar + main content area).
- * TanStack QueryClientProvider wraps the entire tree.
- */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import { Toaster } from 'sonner';
@@ -14,8 +9,8 @@ import { Sparkles } from 'lucide-react';
 import { FeedbackWidget } from '@/components/layout/FeedbackWidget';
 import { InsightModal } from '@/components/insights/InsightModal';
 import { useState } from 'react';
-import { ThemeProvider } from '@/context/ThemeContext';
-import { getLocalDateString } from '@/lib/dateUtils';
+import { ThemeProvider, useTheme } from '@/context/ThemeContext';
+import { getLocalDateString, getMoscowDate } from '@/lib/dateUtils';
 import { motion } from 'framer-motion';
 import { GlassDateRangePicker } from '@/components/ui/GlassDateRangePicker';
 
@@ -44,13 +39,13 @@ function DashboardLayout() {
 
 function Overview() {
   const [startDate, setStartDate] = useState<string>(() => {
-    const d = new Date();
+    const d = getMoscowDate(); // БЕРЕМ МОСКОВСКОЕ ВРЕМЯ
     d.setDate(1);
     return getLocalDateString(d);
   });
-  
+
   const [endDate, setEndDate] = useState<string>(() => {
-    const d = new Date();
+    const d = getMoscowDate(); // БЕРЕМ МОСКОВСКОЕ ВРЕМЯ
     d.setMonth(d.getMonth() + 1);
     d.setDate(0);
     return getLocalDateString(d);
@@ -87,7 +82,7 @@ function Overview() {
               <h1 className="text-[2.5rem] font-extrabold tracking-tight text-[#1C3F35] dark:text-white leading-none">
                 V.I.A.
               </h1>
-              <p className="text-[10.5px] md:text-[11px] font-mono text-[#1C3F35] dark:text-emerald-400 uppercase tracking-[0.3em] font-bold mt-2">Value Insight Aggregator</p>
+              <p className="text-[11px] md:text-[12px] font-mono text-[#1C3F35] dark:text-emerald-400 uppercase tracking-[0.25em] font-bold mt-2">Value Insight Aggregator</p>
             </div>
           </div>
           
@@ -110,7 +105,7 @@ function Overview() {
               >
                 <Sparkles className="w-4 h-4" />
               </motion.div>
-              <span className="text-sm">Анализ потоков</span>
+              <span className="text-sm">AI Анализ</span>
             </button>
           </div>
         </div>
@@ -154,6 +149,29 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function ThemeAwareToaster() {
+  const { isDarkMode } = useTheme();
+  return (
+    <Toaster
+      position="top-right"
+      theme={isDarkMode ? 'dark' : 'light'}
+      toastOptions={{
+        classNames: {
+          // Оранжевый фон, белые буквы, стеклянный эффект
+          toast: '!bg-[#FF7A00] !backdrop-blur-3xl !border !border-white/20 !shadow-2xl !rounded-2xl !font-sans !text-white',
+          title: '!font-extrabold !tracking-tight !text-[15px]',
+          description: '!font-mono !uppercase !tracking-widest !text-[10px] !opacity-90',
+          // Иконки и акценты тоже белые
+          success: '!text-white',
+          error: '!bg-rose-500 !text-white !border-white/20',
+          info: '!bg-[#1C3F35] !text-white !border-white/20',
+          icon: '!text-white',
+        }
+      }}
+    />
+  );
+}
+
 export default function App() {
   return (
     <ThemeProvider>
@@ -165,19 +183,19 @@ export default function App() {
               <Route path="/login" element={<PublicRoute><LoginForm /></PublicRoute>} />
               <Route path="/register" element={<PublicRoute><RegisterForm /></PublicRoute>} />
 
-              {/* Protected Application Routes */}
+              {/* Protected Application Routes (ИЗМЕНЕНО: УБРАНЫ ЛИШНИЕ DIV) */}
               <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
                 <Route path="/" element={<Overview />} />
-                <Route path="/transactions" element={<div className="p-4"><TransactionList /></div>} />
-                <Route path="/budgets" element={<div className="p-4"><BudgetList /></div>} />
-                <Route path="/analytics" element={<div className="p-4"><MainAnalytics /></div>} />
-                <Route path="/savings-navigator" element={<div className="p-4"><SavingsNavigator /></div>} />
+                <Route path="/transactions" element={<TransactionList />} />
+                <Route path="/budgets" element={<BudgetList />} />
+                <Route path="/analytics" element={<MainAnalytics />} />
+                <Route path="/savings-navigator" element={<SavingsNavigator />} />
                 <Route path="/settings/profile" element={<ProfileSettings />} />
               </Route>
             </Routes>
           </BrowserRouter>
           <FeedbackWidget />
-          <Toaster position="top-right" richColors />
+          <ThemeAwareToaster />
         </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>

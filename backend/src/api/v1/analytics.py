@@ -1,9 +1,3 @@
-"""
-Analytics API Router for Savings Navigator.
-
-JWT-authenticated. User identity from Bearer token.
-"""
-
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 

@@ -1,63 +1,46 @@
-/**
- * BudgetEnvelopes — Premium "envelope" budget visualization cards.
- * Each category is a visual "envelope" showing fill level with animated progress.
- */
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { fetchDashboard, deleteBudget } from '@/api/client';
 import { cn } from '@/lib/utils';
-import { getLocalDateString } from '@/lib/dateUtils';
+import { getLocalDateString, getMoscowDate } from '@/lib/dateUtils'; // 🔥 ИСПРАВЛЕНИЕ МСК
 import { Plus, Pencil, Trash } from 'lucide-react';
 import type { CategoryRowSchema } from '@/types';
 import { BudgetConfigModal } from './BudgetConfigModal';
-
-
-const getRussianCategoryName = (rawName: string) => {
-  const name = rawName.toLowerCase();
-  if (name.includes('leisure') || name.includes('lifestyle')) return 'Отдых и развлечения';
-  if (name.includes('housing')) return 'Жилье';
-  if (name.includes('transport')) return 'Транспорт';
-  if (name.includes('food')) return 'Еда и продукты';
-  if (name.includes('health')) return 'Здоровье';
-  if (name.includes('income')) return 'Доход';
-  if (name.includes('shopping')) return 'Покупки';
-  if (name.includes('utilit') || name.includes('operation')) return 'ЖКХ и Операции';
-  if (name.includes('growth') || name.includes('invest')) return 'Инвестиции';
-  return rawName; // Fallback
-};
+import { getRussianCategoryName } from '@/lib/categories'; // 🔥 ИМПОРТ ЕДИНОГО СЛОВАРЯ
 
 export function BudgetEnvelopes() {
   const [selectedRow, setSelectedRow] = useState<CategoryRowSchema | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const queryClient = useQueryClient();
 
+  // 🔥 ИСПРАВЛЕНИЕ МСК ВРЕМЕНИ ДЛЯ ЗАПРОСОВ (BUG-2 & BUG-3)
+  const d = getMoscowDate();
+  const start = getLocalDateString(new Date(d.getFullYear(), d.getMonth(), 1));
+  const end = getLocalDateString(new Date(d.getFullYear(), d.getMonth() + 1, 0));
+
   const deleteMutation = useMutation({
-    mutationFn: ({ categoryId, month, year }: { categoryId: number, month: number, year: number }) => 
+    mutationFn: ({ categoryId, month, year }: { categoryId: number, month: number, year: number }) =>
       deleteBudget(categoryId, month, year),
     onSuccess: () => {
+      // ИСПРАВЛЕНИЕ: Инвалидируем правильный полный ключ кэша
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     }
   });
 
   const { data: dashboard, isLoading } = useQuery({
-    queryKey: ['dashboard'],
-    queryFn: () => {
-      const d = new Date();
-      const start = getLocalDateString(new Date(d.getFullYear(), d.getMonth(), 1));
-      const end = getLocalDateString(new Date(d.getFullYear(), d.getMonth() + 1, 0));
-      return fetchDashboard(start, end);
-    },
+    queryKey: ['dashboard', start, end], // 🔥 ИСПРАВЛЕНИЕ BUG-2
+    queryFn: () => fetchDashboard(start, end),
   });
 
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-6 w-full">
         {[1, 2, 3, 4].map(i => (
-          <div key={i} className="premium-card p-6 animate-pulse backdrop-blur-3xl backdrop-saturate-150 bg-white/40 dark:bg-[#111111]/40 border border-white/20">
-            <div className="h-4 w-1/3 bg-[#FF7A00]/10 rounded mb-4" />
-            <div className="h-8 w-2/3 bg-[#FF7A00]/10 rounded mb-6" />
-            <div className="h-1 bg-[#FF7A00]/10 rounded-full" />
+          <div key={i} className="bg-black/5 dark:bg-white/5 rounded-[2rem] p-6 min-h-[220px] animate-pulse border border-transparent">
+            <div className="h-4 w-1/3 bg-black/10 dark:bg-white/10 rounded-lg mt-8 mx-auto" />
+            <div className="h-10 w-2/3 bg-black/10 dark:bg-white/10 rounded-xl mt-4 mx-auto" />
+            <div className="h-3 w-1/2 bg-black/10 dark:bg-white/10 rounded-lg mt-4 mx-auto" />
           </div>
         ))}
       </div>
@@ -69,23 +52,25 @@ export function BudgetEnvelopes() {
     return planned > 0;
   }) || [];
 
+  const ghostCardClass = "bg-black/5 dark:bg-white/5 backdrop-blur-sm rounded-[2.5rem] p-8 min-h-[220px] flex flex-col items-center justify-center border-2 border-dashed border-black/10 dark:border-white/10 hover:border-[#FF7A00]/50 hover:bg-[#FF7A00]/5 cursor-pointer transition-all group shadow-sm hover:shadow-md";
+
   if (expenseRows.length === 0) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-6 w-full">
         <motion.div
            onClick={() => setIsCreateModalOpen(true)}
-           className="premium-card p-10 min-h-[240px] flex flex-col items-center justify-center backdrop-blur-sm bg-white/10 dark:bg-[#111111]/10 border-2 border-dashed border-[#FF7A00]/30 hover:border-[#FF7A00]/60 cursor-pointer transition-all group"
+           className={ghostCardClass}
          >
-           <div className="w-16 h-16 rounded-full bg-[#FF7A00]/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+           <div className="w-16 h-16 rounded-2xl bg-[#FF7A00]/10 flex items-center justify-center mb-4 group-hover:scale-110 group-active:scale-95 transition-all">
              <Plus className="w-8 h-8 text-[#FF7A00]" />
            </div>
-           <span className="font-serif font-bold text-lg text-[#1C3F35] dark:text-[#FDFBF7]">Создать Бюджет</span>
-           <span className="text-[10px] font-mono text-[#FF7A00]/70 uppercase tracking-widest mt-2 font-bold">Первый конверт</span>
+           <span className="font-sans font-extrabold tracking-tight text-lg text-[#1C3F35] dark:text-white">Создать Бюджет</span>
+           <span className="text-[10px] font-mono text-[#FF7A00] uppercase tracking-[0.25em] mt-2 font-bold">Первый конверт</span>
        </motion.div>
-       <BudgetConfigModal 
-          isOpen={isCreateModalOpen} 
-          onClose={() => setIsCreateModalOpen(false)} 
-          row={null} 
+       <BudgetConfigModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          row={null}
         />
       </div>
     );
@@ -97,25 +82,26 @@ export function BudgetEnvelopes() {
         const planned = parseFloat(row.planned);
         const fact = parseFloat(row.fact);
         const percent = planned > 0 ? (fact / planned) * 100 : 0;
-        
-        // Guilt-Free Logic
+
         const categoryLower = row.category_name.toLowerCase();
-        const isGuiltFree = categoryLower.includes('отдых') || categoryLower.includes('развлечения') || categoryLower.includes('leisure') || categoryLower.includes('бары') || categoryLower.includes('кафе');
+        const isGuiltFree = categoryLower.includes('отдых') || categoryLower.includes('развлечения') || categoryLower.includes('leisure') || categoryLower.includes('бары') || categoryLower.includes('кафе') || categoryLower.includes('лайфстайл');
 
         const isOver = fact > planned;
         const isWarning = percent > 75 && !isOver;
 
-        // Predictive Math
-        const todayDate = new Date().getDate();
-        const percentTimeElapsed = (todayDate / new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()) * 100;
+        // 🔥 ИСПРАВЛЕНИЕ BUG-3: Burn Rate расчет по МСК времени
+        const currentMsk = getMoscowDate();
+        const todayDate = currentMsk.getDate();
+        const daysInMonth = new Date(currentMsk.getFullYear(), currentMsk.getMonth() + 1, 0).getDate();
+        const percentTimeElapsed = (todayDate / daysInMonth) * 100;
         const isBurnWarning = percent > (percentTimeElapsed + 10) && !isOver;
 
         const fillBgClasses = isGuiltFree
-          ? "bg-gradient-to-t from-yellow-400/40 to-amber-300/10"
+          ? "bg-gradient-to-t from-[#C5A059]/30 to-[#C5A059]/10"
           : isOver
           ? "bg-gradient-to-t from-rose-500/30 to-rose-400/10"
           : isWarning
-          ? "bg-gradient-to-t from-amber-500/30 to-amber-400/10"
+          ? "bg-gradient-to-t from-[#FF7A00]/30 to-[#FF7A00]/10"
           : "bg-gradient-to-t from-emerald-500/30 to-emerald-400/10";
 
         return (
@@ -125,63 +111,61 @@ export function BudgetEnvelopes() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.08, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             className={cn(
-              "premium-card p-6 min-h-[220px] flex flex-col justify-between overflow-hidden relative group backdrop-blur-3xl backdrop-saturate-150 bg-white/40 dark:bg-[#111111]/40 border border-white/20",
-              "shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(255,255,255,0.02)] transition-all",
-              "hover:shadow-[0_0_30px_rgba(255,122,0,0.25)] hover:border-[#FF7A00]/40 z-10 hover:-translate-y-1 hover:scale-[1.02] duration-300 ease-out",
-              isOver && "border-rose-500/30"
+              "bg-white/40 dark:bg-[#111111]/40 backdrop-blur-3xl border border-black/5 dark:border-white/10 rounded-[2.5rem]",
+              "p-6 min-h-[220px] flex flex-col justify-between overflow-hidden relative group",
+              "shadow-lg hover:shadow-[0_20px_40px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_20px_40px_rgba(0,0,0,0.5)] transition-all",
+              "hover:border-[#FF7A00]/40 z-10 hover:-translate-y-1 hover:scale-[1.02] duration-300 ease-out",
+              isOver && "border-rose-500/30 dark:border-rose-500/30"
             )}
           >
-            {/* Action Buttons */}
             <div className="absolute top-4 right-4 z-50 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button onClick={(e) => { e.stopPropagation(); setSelectedRow(row); }} className="p-2 bg-white/20 hover:bg-[#FF7A00]/80 rounded-full backdrop-blur transition-colors text-slate-500 hover:text-white">
-                <Pencil className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={(e) => { 
-                  e.stopPropagation(); 
-                  const today = new Date();
-                  deleteMutation.mutate({ categoryId: row.category_id, month: today.getMonth() + 1, year: today.getFullYear() }); 
-                }} 
-                className="p-2 bg-white/20 hover:bg-rose-500/80 rounded-full backdrop-blur transition-colors text-rose-500 hover:text-white"
+              <button
+                onClick={(e) => { e.stopPropagation(); setSelectedRow(row); }}
+                className="w-8 h-8 flex items-center justify-center bg-white/80 dark:bg-black/50 hover:bg-[#FF7A00] rounded-full backdrop-blur transition-colors text-[#1C3F35]/50 dark:text-white/50 hover:text-white"
               >
-                <Trash className="w-4 h-4" />
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // 🔥 ИСПРАВЛЕНИЕ МСК
+                  const msktoday = getMoscowDate();
+                  deleteMutation.mutate({ categoryId: row.category_id, month: msktoday.getMonth() + 1, year: msktoday.getFullYear() });
+                }}
+                className="w-8 h-8 flex items-center justify-center bg-white/80 dark:bg-black/50 hover:bg-rose-500 rounded-full backdrop-blur transition-colors text-rose-500/70 hover:text-white"
+              >
+                <Trash className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            {/* Burn-rate Badge */}
             {isBurnWarning && !isOver && (
-              <div className="absolute top-4 left-4 z-20 px-2 py-0.5 bg-amber-500/20 border border-amber-500/30 rounded-full flex items-center gap-1">
-                <span className="text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Burn</span>
+              <div className="absolute top-5 left-6 z-20 px-2.5 py-1 bg-[#FF7A00]/10 border border-[#FF7A00]/20 rounded-lg flex items-center gap-1 shadow-sm">
+                <span className="text-[9px] font-mono font-bold text-[#FF7A00] uppercase tracking-widest leading-none">Burn Rate</span>
               </div>
             )}
 
-            <div className="relative z-10 flex flex-col justify-center items-center h-full gap-2 mt-auto mb-auto">
-              <div className="flex items-center gap-2 justify-center">
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center shadow-md shrink-0"
-                  style={{ backgroundColor: row.category_icon || '#1C3F35' }}
-                >
-                  <span className="text-xs font-bold text-white uppercase">
-                    {getRussianCategoryName(row.category_name).charAt(0)}
-                  </span>
-                </div>
-                <h3 className="text-base font-serif font-bold text-[#1C3F35] dark:text-[#FDFBF7] leading-tight">
+            <div className="relative z-10 flex flex-col justify-center items-center h-full gap-2 mt-auto mb-auto pointer-events-none">
+              <div className="flex flex-col items-center gap-2 justify-center mb-1">
+                <h3 className="text-[11px] font-mono font-bold uppercase tracking-[0.25em] text-[#1C3F35]/50 dark:text-white/40 leading-tight text-center">
                   {getRussianCategoryName(row.category_name)}
                 </h3>
               </div>
-              <div className="mt-2 text-[#1C3F35] dark:text-[#FDFBF7]">
-                <span className="text-2xl font-bold">{fact.toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₽</span>
-                <span className="text-sm font-mono text-[#1C3F35]/50 dark:text-[#FDFBF7]/50 ml-1 font-bold">/ {planned.toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₽</span>
+              <div className="text-[#1C3F35] dark:text-white flex flex-col items-center">
+                <span className="text-3xl md:text-4xl font-sans font-black tabular-nums tracking-tighter leading-none">
+                  {fact.toLocaleString('ru-RU', { maximumFractionDigits: 0 })}
+                </span>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.25em] text-[#1C3F35]/40 dark:text-white/40 mt-2">
+                  ИЗ {planned.toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₽
+                </span>
               </div>
             </div>
 
-            {/* The Liquid Fill Minimal */}
             <motion.div
               initial={{ height: 0 }}
               animate={{ height: `${Math.min(100, Math.max(3, percent))}%` }}
               transition={{ delay: index * 0.1, type: 'spring', damping: 20, mass: 0.8 }}
               className={cn(
-                "absolute bottom-0 left-0 w-full opacity-30 pointer-events-none z-0",
+                "absolute bottom-0 left-0 w-full opacity-40 pointer-events-none z-0",
                 fillBgClasses
               )}
             />
@@ -189,29 +173,27 @@ export function BudgetEnvelopes() {
         );
       })}
 
-      {/* Create Envelope Ghost Card */}
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        whileHover={{ scale: 1.02 }}
         transition={{ delay: expenseRows.length * 0.08, duration: 0.4 }}
         onClick={() => setIsCreateModalOpen(true)}
-        className="premium-card p-8 min-h-[240px] flex flex-col items-center justify-center backdrop-blur-sm bg-white/5 dark:bg-[#111111]/20 border-2 border-dashed border-emerald-500/30 hover:border-emerald-500/60 hover:bg-emerald-500/5 cursor-pointer transition-all group"
+        className={ghostCardClass}
       >
-        <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-          <Plus className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+        <div className="w-16 h-16 rounded-2xl bg-[#FF7A00]/10 flex items-center justify-center mb-4 group-hover:scale-110 group-active:scale-95 transition-all">
+          <Plus className="w-8 h-8 text-[#FF7A00]" />
         </div>
-        <span className="font-serif font-bold text-lg text-emerald-800 dark:text-emerald-300">Новый Конверт</span>
-        <span className="text-[10px] font-mono text-emerald-600/70 uppercase tracking-widest mt-2 font-bold text-center">Выделить средства</span>
+        <span className="font-sans font-extrabold tracking-tight text-lg text-[#1C3F35] dark:text-white">Новый Конверт</span>
+        <span className="text-[10px] font-mono text-[#FF7A00]/80 uppercase tracking-[0.25em] mt-2 font-bold text-center">Выделить средства</span>
       </motion.div>
-      
-      <BudgetConfigModal 
-        isOpen={!!selectedRow || isCreateModalOpen} 
+
+      <BudgetConfigModal
+        isOpen={!!selectedRow || isCreateModalOpen}
         onClose={() => {
           setSelectedRow(null);
           setIsCreateModalOpen(false);
-        }} 
-        row={selectedRow} 
+        }}
+        row={selectedRow}
       />
     </div>
   );

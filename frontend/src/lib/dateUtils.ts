@@ -1,26 +1,20 @@
 /**
- * dateUtils.ts — Timezone-Safe Date Utilities
- *
- * Problem: new Date().toISOString() returns UTC time.
- * For users in UTC+3, a transaction at 23:30 local time
- * is recorded as 20:30 UTC → appears as "yesterday" in the DB.
- *
- * Solution: Read local device fields (getFullYear, getMonth, getDate)
- * which always reflect the user's local timezone, regardless of UTC offset.
- *
- * Time Complexity: O(1). Zero external deps.
+ * dateUtils.ts — MSK (UTC+3) Enforced Time Module
  */
 
-/**
- * Returns a YYYY-MM-DD string using the LOCAL device date.
- * Safe for any UTC offset (UTC-12 to UTC+14).
- *
- * @param d - Date object (defaults to now)
- * @returns "YYYY-MM-DD" in local timezone
- */
-export const getLocalDateString = (d: Date = new Date()): string => {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
+// 1. Получаем текущую дату и время СТРОГО по Москве
+export function getMoscowDate(): Date {
+  const now = new Date();
+  // Переводим текущее системное время в строку московского времени
+  const mskString = now.toLocaleString("en-US", { timeZone: "Europe/Moscow" });
+  // Возвращаем объект Date, который думает, что он в Москве
+  return new Date(mskString);
+}
+
+// 2. Форматируем любую дату в строку формата YYYY-MM-DD
+export function getLocalDateString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
-};
+}

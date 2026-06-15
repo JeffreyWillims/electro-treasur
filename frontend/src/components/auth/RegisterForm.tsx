@@ -3,19 +3,30 @@ import { useAuth } from '@/context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UserPlus, Loader2, Wallet, Github } from 'lucide-react';
+import { UserPlus, Loader2, Wallet, Github, Eye, EyeOff } from 'lucide-react';
 
 export function RegisterForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
   const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setPasswordError('');
+
+    if (password !== confirmPassword) {
+      setPasswordError('⚠️ Пароли не совпадают');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await register({ email, password, full_name: fullName, phone: phone || '' });
@@ -142,16 +153,51 @@ export function RegisterForm() {
                     onChange={(e) => setPhone(e.target.value)}
                   />
                 </div>
-                <input
-                  type="password"
-                  required
-                  minLength={8}
-                  autoComplete="new-password"
-                  className={inputClass}
-                  placeholder="Пароль"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    minLength={8}
+                    autoComplete="new-password"
+                    className={inputClass + ' pr-12'}
+                    placeholder="Пароль"
+                    value={password}
+                    onChange={(e) => { setPassword(e.target.value); setPasswordError(''); }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors"
+                    aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    required
+                    minLength={8}
+                    autoComplete="new-password"
+                    className={inputClass + ' pr-12' + (passwordError ? ' border-red-400/60 dark:border-red-500/40' : '')}
+                    placeholder="Подтвердите пароль"
+                    value={confirmPassword}
+                    onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError(''); }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors"
+                    aria-label={showConfirmPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+                {passwordError && (
+                  <p className="text-sm text-red-500 dark:text-orange-400 font-medium px-2 pt-1">
+                    {passwordError}
+                  </p>
+                )}
               </motion.div>
             </AnimatePresence>
 

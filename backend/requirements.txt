@@ -130,4 +130,21 @@ wrapt==2.2.1
     # via deprecated
 argon2-cffi>=23.1.0
 email-validator>=2.1.0
+
 python-multipart>=0.0.9
+
+# ── Telegram Bot ───────────────────────────────────────────────────────────────
+aiogram>=3.4.0
+
+# ── Import / Export (Data Vault) ───────────────────────────────────────────────
+pandas>=2.2.0
+openpyxl>=3.1.2
+
+# ── Receipt OCR (Classic Computer Vision) ──────────────────────────────────
+pytesseract==0.3.10
+Pillow==10.2.0
+
+
+
+
+

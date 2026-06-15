@@ -24,6 +24,8 @@ import type {
   UserRead,
   UserUpdate,
   BudgetUpsert,
+  TelegramOtpResponse,
+  ImportResult,
 } from '@/types';
 
 const API_BASE = '/api';
@@ -64,6 +66,13 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+// ── Telegram Integration ──────────────────────────────────────────────
+export function generateTelegramOtp(): Promise<TelegramOtpResponse> {
+  return request<TelegramOtpResponse>('/v1/users/telegram-link', {
+    method: 'POST',
+  });
+}
+
 // ── Transactions ───────────────────────────────────────────────────────
 export function createTransaction(
   payload: TransactionCreate,
@@ -88,7 +97,7 @@ export function createTransaction(
 }
 
 export function fetchTransactions(
-  limit = 10, 
+  limit = 10,
   offset = 0,
   categoryId?: string,
   type?: string,
@@ -285,3 +294,60 @@ export function deleteBudget(categoryId: number, month: number, year: number): P
     }
   });
 }
+
+// ── Data Vault: Import / Export ────────────────────────────────────────────
+
+/**
+ * Download all user transactions as a CSV file.
+ * Creates a hidden <a> element, triggers click, then cleans up.
+ */
+export async function exportTransactions(): Promise<void> {
+  const token = localStorage.getItem('aura_token');
+  const headers: Record<string, string> = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const response = await fetch(`${API_BASE}/v1/transactions/export`, { headers });
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new ApiError(response.status, errorBody.detail || 'Export failed');
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = `citrine_vault_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Upload a CSV or Excel file for transaction import.
+ * Uses FormData — browser auto-sets multipart Content-Type with boundary.
+ */
+export async function importTransactions(file: File): Promise<ImportResult> {
+  const token = localStorage.getItem('aura_token');
+  const headers: Record<string, string> = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  // NOTE: Do NOT set Content-Type here — browser must set multipart boundary
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${API_BASE}/v1/transactions/import`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({ detail: 'Import failed' }));
+    throw new ApiError(response.status, errorBody.detail || `API error: ${response.status}`);
+  }
+
+  return response.json() as Promise<ImportResult>;
+}
+

@@ -14,6 +14,7 @@ Space: O(1) Redis memory per unique key (auto-evicted by TTL).
 
 from __future__ import annotations
 
+import contextlib
 from datetime import date
 from decimal import Decimal
 
@@ -23,7 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from src.config import settings
-from src.domain.models import Category, Transaction
+from src.domain.models import Category, CategoryType, Transaction
 from src.schemas.transaction import (
     TransactionCreate,
     TransactionPaginatedResponse,
@@ -113,7 +114,8 @@ async def list_transactions(
     if category_id is not None:
         conditions.append(Transaction.category_id == category_id)
     if tx_type is not None:
-        conditions.append(Category.type == tx_type)
+        with contextlib.suppress(ValueError):
+            conditions.append(Category.type == CategoryType(tx_type))
     if min_amount is not None:
         conditions.append(Transaction.amount >= min_amount)
     if max_amount is not None:

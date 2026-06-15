@@ -2,9 +2,8 @@ import asyncio
 import os
 import sys
 
-# Add src to path
 sys.path.append(os.path.join(os.getcwd(), "src"))
-# Also add current dir to path just in case
+
 sys.path.append(os.getcwd())
 
 from src.database import async_session_factory  # noqa: E402

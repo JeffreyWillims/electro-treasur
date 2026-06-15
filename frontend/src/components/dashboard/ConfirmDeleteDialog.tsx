@@ -1,14 +1,5 @@
 /**
- * ConfirmDeleteDialog — CASCADE-safe deletion guard for categories.
- *
- * Renders as a top-layer modal (z-[200]) above CategoryManagerModal.
- *
- * Two safety tiers:
- *   • transaction_count === 0 → soft warning, single click to confirm.
- *   • transaction_count  >  0 → hard block: user must type "УДАЛИТЬ"
- *     before the Confirm button unlocks. Prevents accidental data loss.
- *
- * UX Pattern: Stripe / GitHub destructive confirmation.
+ * ConfirmDeleteDialog — Premium CASCADE-safe deletion guard for categories.
  */
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -17,6 +8,32 @@ import { AlertTriangle, Trash2, X, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { fetchCategoryTransactionCount, deleteCategory } from '@/api/client';
 import type { CategoryRead } from '@/types';
+import { cn } from '@/lib/utils';
+
+// ── УНИФИЦИРОВАННЫЙ СЛОВАРЬ (Citrine Vault Standard) ───────────────────
+const CATEGORY_TRANSLATIONS: Record<string, string> = {
+  "Operations (Rent/Utility)": "Базовые расходы",
+  "Leisure (Lifestyle)": "Лайфстайл",
+  "Wellness (Health)": "Здоровье и Уход",
+  "Propulsion (Income)": "Поступления",
+  "Growth (Investments)": "Инвестиции",
+  "Income": "Доход",
+};
+
+const getRussianCategoryName = (rawName: string) => {
+  if (CATEGORY_TRANSLATIONS[rawName]) return CATEGORY_TRANSLATIONS[rawName];
+  const name = rawName.toLowerCase();
+  if (name.includes('leisure') || name.includes('lifestyle')) return 'Лайфстайл';
+  if (name.includes('housing')) return 'Жилье';
+  if (name.includes('transport') || name.includes('logistics')) return 'Транспорт';
+  if (name.includes('food')) return 'Продукты';
+  if (name.includes('health') || name.includes('wellness')) return 'Здоровье';
+  if (name.includes('income') || name.includes('propulsion')) return 'Доход';
+  if (name.includes('shopping')) return 'Покупки';
+  if (name.includes('utilit') || name.includes('operation')) return 'ЖКХ и Операции';
+  if (name.includes('growth') || name.includes('invest')) return 'Инвестиции';
+  return rawName;
+};
 
 const CONFIRM_WORD = 'УДАЛИТЬ';
 
@@ -31,38 +48,32 @@ export function ConfirmDeleteDialog({ category, onClose, onDeleted }: ConfirmDel
   const [confirmInput, setConfirmInput] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Reset input when dialog reopens for a new category
   useEffect(() => {
     setConfirmInput('');
     if (category) {
-      // Small delay to let animation settle before focusing
       setTimeout(() => inputRef.current?.focus(), 150);
     }
   }, [category]);
 
-  // ── Pre-flight: fetch transaction count ───────────────────────────────
   const { data: countData, isLoading: isCountLoading } = useQuery({
     queryKey: ['categoryTxCount', category?.id],
     queryFn: () => fetchCategoryTransactionCount(category!.id),
     enabled: !!category,
-    staleTime: 0, // Always fresh — we need an accurate count
+    staleTime: 0,
   });
 
   const txCount = countData?.transaction_count ?? 0;
   const isHardDelete = txCount > 0;
   const isConfirmReady = !isHardDelete || confirmInput === CONFIRM_WORD;
 
-  // ── Delete mutation ───────────────────────────────────────────────────
   const deleteMutation = useMutation({
     mutationFn: () => deleteCategory(category!.id),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['categories'] });
       await queryClient.invalidateQueries({ queryKey: ['transactions'] });
       await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      toast.success(`Категория «${category?.name}» удалена`, {
-        description: isHardDelete
-          ? `Вместе с ней удалено ${txCount} транзакций`
-          : 'Транзакций не было',
+      toast.success(`Категория «${getRussianCategoryName(category!.name)}» удалена`, {
+        description: isHardDelete ? `Вместе с ней удалено ${txCount} транзакций` : 'Транзакций не было',
       });
       onDeleted();
     },
@@ -76,94 +87,82 @@ export function ConfirmDeleteDialog({ category, onClose, onDeleted }: ConfirmDel
   return (
     <AnimatePresence>
       {category && (
-        // ── Backdrop ───────────────────────────────────────────────────
         <motion.div
           key="confirm-backdrop"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-white/20 dark:bg-black/60 backdrop-blur-md"
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40 dark:bg-black/60 backdrop-blur-md"
           onClick={(e) => {
             if (e.target === e.currentTarget && !deleteMutation.isPending) onClose();
           }}
         >
-          {/* ── Dialog Card ─────────────────────────────────────────── */}
           <motion.div
             key="confirm-card"
-            initial={{ opacity: 0, scale: 0.92, y: 16 }}
+            initial={{ opacity: 0, scale: 0.95, y: 16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.92, y: 16 }}
-            transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-            className="relative w-full max-w-md bg-white/80 dark:bg-[#121212]/80 backdrop-blur-3xl border border-white/40 dark:border-white/10 rounded-3xl shadow-[0_32px_80px_rgba(0,0,0,0.15)] dark:shadow-[0_32px_80px_rgba(0,0,0,0.6)] overflow-hidden"
+            exit={{ opacity: 0, scale: 0.95, y: 16 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+            className="relative w-full max-w-md bg-white/95 dark:bg-[#111111]/95 backdrop-blur-3xl border border-black/5 dark:border-white/10 rounded-[2.5rem] shadow-[0_32px_80px_rgba(0,0,0,0.15)] dark:shadow-[0_32px_80px_rgba(0,0,0,0.6)] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* ── Top danger stripe ──────────────────────────────────── */}
-            <div
-              className={`h-1.5 w-full ${isHardDelete ? 'bg-gradient-to-r from-rose-600 to-red-500' : 'bg-gradient-to-r from-amber-500 to-orange-400'}`}
-            />
+            {/* Top danger stripe */}
+            <div className={cn("h-1.5 w-full", isHardDelete ? 'bg-gradient-to-r from-rose-500 to-rose-400' : 'bg-gradient-to-r from-amber-500 to-[#FF7A00]')} />
 
-            <div className="p-6">
-              {/* ── Close button ────────────────────────────────────── */}
+            <div className="p-8">
+              {/* Close button */}
               <button
                 type="button"
                 onClick={onClose}
                 disabled={deleteMutation.isPending}
-                className="absolute top-5 right-5 p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+                className="absolute top-6 right-6 w-10 h-10 flex items-center justify-center rounded-full bg-black/5 dark:bg-white/5 text-[#1C3F35]/50 dark:text-white/50 hover:bg-black/10 dark:hover:bg-white/10 hover:text-[#1C3F35] dark:hover:text-white transition-colors"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
 
-              {/* ── Icon + heading ───────────────────────────────────── */}
-              <div className="flex items-start gap-4 mb-5">
-                <div
-                  className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center ${isHardDelete ? 'bg-rose-100 dark:bg-rose-500/15' : 'bg-amber-100 dark:bg-amber-500/15'}`}
-                >
-                  {isHardDelete ? (
-                    <ShieldAlert className="w-6 h-6 text-rose-600 dark:text-rose-400" />
-                  ) : (
-                    <AlertTriangle className="w-6 h-6 text-amber-600 dark:text-amber-400" />
-                  )}
+              {/* Icon + heading */}
+              <div className="flex items-center gap-5 mb-8">
+                <div className={cn("shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner", isHardDelete ? 'bg-rose-500/10 dark:bg-rose-500/20' : 'bg-[#FF7A00]/10 dark:bg-[#FF7A00]/20')}>
+                  {isHardDelete ? <ShieldAlert className="w-7 h-7 text-rose-500" /> : <AlertTriangle className="w-7 h-7 text-[#FF7A00]" />}
                 </div>
-                <div className="pt-0.5">
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">
+                <div>
+                  <h3 className="text-xl md:text-2xl font-sans font-extrabold tracking-tight text-[#1C3F35] dark:text-white leading-none mb-1.5">
                     {isHardDelete ? 'Опасное удаление' : 'Удалить категорию?'}
                   </h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                    «{category.name}»
+                  <p className="text-[11px] font-mono font-bold uppercase tracking-[0.25em] text-[#1C3F35]/50 dark:text-white/40">
+                    «{getRussianCategoryName(category.name)}»
                   </p>
                 </div>
               </div>
 
-              {/* ── Count loading skeleton ───────────────────────────── */}
               {isCountLoading ? (
-                <div className="h-16 rounded-2xl bg-slate-100 dark:bg-white/5 animate-pulse mb-4" />
+                <div className="h-20 rounded-2xl bg-black/5 dark:bg-white/5 animate-pulse mb-6" />
               ) : (
                 <>
-                  {/* ── Warning body ──────────────────────────────────── */}
+                  {/* Warning body */}
                   {isHardDelete ? (
-                    <div className="mb-5 p-4 rounded-2xl bg-rose-50 dark:bg-rose-500/[0.08] border border-rose-200 dark:border-rose-500/20">
-                      <p className="text-sm font-semibold text-rose-700 dark:text-rose-300 mb-1">
-                        Это действие удалит <span className="font-black">{txCount} транзакций</span>
+                    <div className="mb-8 p-5 rounded-[1.5rem] bg-rose-500/5 dark:bg-rose-500/10 border border-rose-500/20">
+                      <p className="text-sm font-bold text-rose-600 dark:text-rose-400 mb-2">
+                        Будет удалено <span className="font-sans font-black tabular-nums">{txCount} транзакций</span>
                       </p>
-                      <p className="text-xs text-rose-600/80 dark:text-rose-400/70 leading-relaxed">
-                        Все финансовые записи, привязанные к этой категории, будут безвозвратно
-                        удалены. Восстановление невозможно.
+                      <p className="text-xs text-rose-600/70 dark:text-rose-400/70 leading-relaxed font-medium">
+                        Все финансовые записи, привязанные к этой категории, будут безвозвратно удалены. Восстановление невозможно.
                       </p>
                     </div>
                   ) : (
-                    <div className="mb-5 p-4 rounded-2xl bg-amber-50 dark:bg-amber-500/[0.08] border border-amber-200 dark:border-amber-500/20">
-                      <p className="text-sm text-amber-700 dark:text-amber-300 leading-relaxed">
+                    <div className="mb-8 p-5 rounded-[1.5rem] bg-[#FF7A00]/5 dark:bg-[#FF7A00]/10 border border-[#FF7A00]/20">
+                      <p className="text-sm font-medium text-[#FF7A00] dark:text-[#FFA011] leading-relaxed">
                         Категория не содержит транзакций и будет удалена безвозвратно.
                       </p>
                     </div>
                   )}
 
-                  {/* ── Hard confirmation input ───────────────────────── */}
+                  {/* Hard confirmation input */}
                   {isHardDelete && (
-                    <div className="mb-5">
-                      <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">
-                        Введите «{CONFIRM_WORD}» для подтверждения
+                    <div className="mb-10">
+                      <label className="block text-[11px] font-mono font-bold uppercase tracking-[0.25em] text-[#1C3F35]/50 dark:text-white/50 mb-3 text-center">
+                        Введите «{CONFIRM_WORD}»
                       </label>
                       <input
                         ref={inputRef}
@@ -172,7 +171,13 @@ export function ConfirmDeleteDialog({ category, onClose, onDeleted }: ConfirmDel
                         onChange={(e) => setConfirmInput(e.target.value.toUpperCase())}
                         placeholder={CONFIRM_WORD}
                         disabled={deleteMutation.isPending}
-                        className="w-full h-14 px-5 text-lg font-mono font-bold tracking-widest uppercase rounded-2xl outline-none shadow-inner bg-slate-900/5 dark:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/20 focus:bg-white/50 dark:focus:bg-white/20 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/20 transition-all duration-300 disabled:opacity-50"
+                        className={cn(
+                          "w-full h-14 px-5 text-xl font-mono font-black tracking-[0.2em] text-center uppercase rounded-2xl transition-all duration-300 outline-none text-[#1C3F35] dark:text-white placeholder-[#1C3F35]/20 dark:placeholder-white/20",
+                          "bg-black/5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] border border-transparent disabled:opacity-50",
+                          "dark:bg-black/40 dark:shadow-[inset_0_2px_6px_rgba(0,0,0,0.5)]",
+                          "focus:bg-white focus:shadow-md focus:border-rose-500/50",
+                          "dark:focus:bg-[#1A1A1A] dark:focus:shadow-none dark:focus:border-rose-500/50"
+                        )}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && isConfirmReady && !deleteMutation.isPending) {
                             deleteMutation.mutate();
@@ -180,14 +185,10 @@ export function ConfirmDeleteDialog({ category, onClose, onDeleted }: ConfirmDel
                         }}
                       />
                       {/* Live match indicator */}
-                      <div className="mt-2 flex items-center gap-1.5">
-                        <div
-                          className={`w-1.5 h-1.5 rounded-full transition-colors duration-200 ${confirmInput === CONFIRM_WORD ? 'bg-rose-500' : 'bg-slate-300 dark:bg-white/20'}`}
-                        />
-                        <span className="text-[10px] font-mono text-slate-400 dark:text-white/30 uppercase tracking-widest">
-                          {confirmInput === CONFIRM_WORD
-                            ? 'Подтверждение получено'
-                            : `${confirmInput.length} / ${CONFIRM_WORD.length}`}
+                      <div className="mt-4 flex items-center justify-center gap-2">
+                        <div className={cn("w-2 h-2 rounded-full transition-colors duration-300 shadow-sm", confirmInput === CONFIRM_WORD ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]' : 'bg-black/10 dark:bg-white/20')} />
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-[0.25em] text-[#1C3F35]/40 dark:text-white/30">
+                          {confirmInput === CONFIRM_WORD ? 'Подтверждено' : `${confirmInput.length} / ${CONFIRM_WORD.length}`}
                         </span>
                       </div>
                     </div>
@@ -195,13 +196,13 @@ export function ConfirmDeleteDialog({ category, onClose, onDeleted }: ConfirmDel
                 </>
               )}
 
-              {/* ── Action buttons ───────────────────────────────────── */}
-              <div className="flex gap-3">
+              {/* Action buttons */}
+              <div className="flex gap-4">
                 <button
                   type="button"
                   onClick={onClose}
                   disabled={deleteMutation.isPending}
-                  className="flex-1 py-3 rounded-xl border border-slate-200 dark:border-white/10 text-sm font-semibold text-slate-600 dark:text-white/60 hover:bg-slate-50 dark:hover:bg-white/[0.04] transition-colors duration-200 disabled:opacity-50"
+                  className="flex-1 h-14 rounded-2xl bg-black/5 dark:bg-white/5 text-xs font-bold uppercase tracking-widest text-[#1C3F35]/60 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/10 hover:text-[#1C3F35] dark:hover:text-white transition-colors duration-200 disabled:opacity-50"
                 >
                   Отмена
                 </button>
@@ -209,21 +210,21 @@ export function ConfirmDeleteDialog({ category, onClose, onDeleted }: ConfirmDel
                   type="button"
                   onClick={() => deleteMutation.mutate()}
                   disabled={!isConfirmReady || deleteMutation.isPending || isCountLoading}
-                  className={`flex-1 py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-all duration-200
-                    ${
-                      isConfirmReady && !deleteMutation.isPending
-                        ? isHardDelete
-                          ? 'bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-500/20 cursor-pointer'
-                          : 'bg-amber-500 hover:bg-amber-600 shadow-lg shadow-amber-500/20 cursor-pointer'
-                        : 'bg-slate-200 dark:bg-white/10 text-slate-400 dark:text-white/30 cursor-not-allowed'
-                    }`}
+                  className={cn(
+                    "flex-1 h-14 rounded-2xl text-xs font-bold uppercase tracking-widest text-white flex items-center justify-center gap-2 transition-all duration-300",
+                    isConfirmReady && !deleteMutation.isPending
+                      ? isHardDelete
+                        ? 'bg-rose-500 hover:bg-rose-600 shadow-[0_10px_20px_-5px_rgba(244,63,94,0.4)] active:scale-[0.98]'
+                        : 'bg-gradient-to-r from-[#FF7A00] to-[#FFA011] hover:from-[#EA6A00] hover:to-[#FF7A00] shadow-[0_10px_30px_-5px_rgba(255,122,0,0.4)] active:scale-[0.98]'
+                      : 'bg-black/10 dark:bg-white/10 text-[#1C3F35]/30 dark:text-white/30 shadow-none cursor-not-allowed'
+                  )}
                 >
                   {deleteMutation.isPending ? (
-                    <span className="animate-pulse">Удаление...</span>
+                    <motion.div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full" animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
                   ) : (
                     <>
                       <Trash2 className="w-4 h-4" />
-                      Подтвердить
+                      Удалить
                     </>
                   )}
                 </button>

@@ -1,16 +1,12 @@
-"""
-Transactions Router — POST /api/v1/transactions/
-
-JWT-authenticated. User identity extracted from Bearer token via get_current_user.
-Idempotency-Key header protection against race conditions / double-spend.
-"""
-
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
+from typing import Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+# Добавлен импорт Query
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, UploadFile, status
+from fastapi.responses import StreamingResponse
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,6 +17,10 @@ from src.schemas.transaction import (
     TransactionPaginatedResponse,
     TransactionResponse,
     TransactionUpdate,
+)
+from src.services.import_export_service import (
+    export_transactions_csv,
+    import_transactions,
 )
 from src.services.transaction_service import (
     create_transaction,
@@ -49,10 +49,7 @@ async def post_transaction(
     current_user: User = Depends(get_current_user),
     idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
 ) -> TransactionResponse:
-    """
-    Insert a transaction with optional idempotency protection.
-    User identity derived from JWT — no header spoofing possible.
-    """
+
     return await create_transaction(
         session=session,
         redis=redis,
@@ -66,7 +63,8 @@ async def post_transaction(
 async def get_transactions(
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    limit: int = 10,
+    # 🔒 ХИРУРГИЧЕСКАЯ ЗАЩИТА: Ограничение пагинации сверху (Max 100)
+    limit: int = Query(10, ge=1, le=100, description="Max 100 transactions per page"),
     offset: int = 0,
     category_id: int | None = None,
     type: str | None = None,
@@ -94,6 +92,74 @@ async def get_transactions(
     )
 
 
+# ── Data Vault: Export / Import ────────────────────────────────────────────────
+
+_MAX_IMPORT_BYTES = 10 * 1024 * 1024  # 10 MB hard limit
+_ALLOWED_EXTENSIONS = {".csv", ".xlsx", ".xls"}
+
+
+@router.get("/export", summary="Export all transactions as CSV")
+async def export_transactions(
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> StreamingResponse:
+    buffer = await export_transactions_csv(session, user_id=current_user.id)
+    today = datetime.now().strftime("%Y-%m-%d")
+
+    return StreamingResponse(
+        content=buffer,
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="citrine_vault_{today}.csv"',
+        },
+    )
+
+
+@router.post("/import", summary="Import transactions from CSV/Excel")
+async def import_transactions_endpoint(
+    file: UploadFile = File(..., description="CSV or Excel file with transactions"),
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+
+    # Validate extension
+    filename = file.filename or "unknown.csv"
+    ext = "." + filename.rsplit(".", maxsplit=1)[-1].lower() if "." in filename else ""
+    if ext not in _ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Неподдерживаемый формат файла. Допустимые: {', '.join(_ALLOWED_EXTENSIONS)}",
+        )
+
+    # 🔒 ХИРУРГИЧЕСКАЯ ЗАЩИТА: O(1) Pre-check размера через HTTP Header (защита от OOM)
+    if file.size is not None and file.size > _MAX_IMPORT_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Файл слишком большой. Максимальный размер: {_MAX_IMPORT_BYTES // (1024 * 1024)} МБ.",
+        )
+
+    # Read file safely (только если прошел предварительную проверку)
+    file_bytes = await file.read()
+    if len(file_bytes) > _MAX_IMPORT_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Файл слишком большой. Максимальный размер: {_MAX_IMPORT_BYTES // (1024 * 1024)} МБ.",
+        )
+
+    result = await import_transactions(
+        session=session,
+        user_id=current_user.id,
+        file_bytes=file_bytes,
+        filename=filename,
+    )
+
+    return {
+        "created": result.created,
+        "skipped": result.skipped,
+        "errors": result.errors,
+    }
+
+
 @router.patch("/{transaction_id}", response_model=TransactionResponse)
 async def patch_transaction(
     transaction_id: int,
@@ -101,9 +167,7 @@ async def patch_transaction(
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> TransactionResponse:
-    """
-    Partially update an existing transaction.
-    """
+
     resp = await update_transaction(
         session=session,
         transaction_id=transaction_id,

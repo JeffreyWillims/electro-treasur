@@ -34,12 +34,12 @@ class LoginPage:
         self._page = page
 
         # ── Locators (resolved lazily by Playwright) ──────────────────────
-        self.brand_badge: Locator       = page.get_by_text("Citrine Vault")
-        self.tab_login: Locator         = page.get_by_text("Вход", exact=True)
-        self.tab_register: Locator      = page.get_by_text("Регистрация", exact=True)
-        self.email_input: Locator       = page.get_by_placeholder("Email")
-        self.password_input: Locator    = page.get_by_placeholder("Пароль")
-        self.submit_button: Locator     = page.get_by_text("Войти в аккаунт")
+        self.brand_badge: Locator = page.get_by_text("Citrine Vault")
+        self.tab_login: Locator = page.get_by_text("Вход", exact=True)
+        self.tab_register: Locator = page.get_by_text("Регистрация", exact=True)
+        self.email_input: Locator = page.get_by_placeholder("Email")
+        self.password_input: Locator = page.get_by_placeholder("Пароль")
+        self.submit_button: Locator = page.get_by_text("Войти в аккаунт")
 
     # ── Actions ───────────────────────────────────────────────────────────
 

@@ -3,11 +3,12 @@ import { useAuth } from '@/context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogIn, Loader2, Wallet, Github } from 'lucide-react';
+import { LogIn, Loader2, Wallet, Github, Eye, EyeOff } from 'lucide-react';
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -123,19 +124,29 @@ export function LoginForm() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
-                <input
-                  type="password"
-                  required
-                  autoComplete="current-password"
-                  className="w-full h-13 px-5 py-3.5 text-base rounded-2xl outline-none transition-all duration-400
-                    shadow-inner bg-white/40 dark:bg-white/5
-                    border border-white/50 dark:border-white/10
-                    text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500
-                    focus:bg-white/70 dark:focus:bg-white/10 focus:border-white/80 focus:shadow-[0_0_20px_rgba(255,255,255,0.25)]"
-                  placeholder="Пароль"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    autoComplete="current-password"
+                    className="w-full h-13 px-5 pr-12 py-3.5 text-base rounded-2xl outline-none transition-all duration-400
+                      shadow-inner bg-white/40 dark:bg-white/5
+                      border border-white/50 dark:border-white/10
+                      text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500
+                      focus:bg-white/70 dark:focus:bg-white/10 focus:border-white/80 focus:shadow-[0_0_20px_rgba(255,255,255,0.25)]"
+                    placeholder="Пароль"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors"
+                    aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
               </motion.div>
             </AnimatePresence>
 

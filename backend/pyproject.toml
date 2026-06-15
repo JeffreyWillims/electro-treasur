@@ -1,5 +1,5 @@
 [project]
-name = "electro-treasur"
+name = "electro-treasur-backend"
 version = "0.1.0"
 description = "HighLoad Financial Tracker MVP — 100k CCU Orbital-Grade FinTech"
 requires-python = ">=3.12"
@@ -23,7 +23,10 @@ dependencies = [
 dev = [
     "pytest>=8.3.0",
     "pytest-asyncio>=0.25.0",
+    "pytest-env>=1.1.0",
     "httpx>=0.28.0",
+    "factory-boy>=3.3.0",
+    "hypothesis>=6.100.0",
     "ruff>=0.8.0",
     "mypy>=1.11.0",
     "types-passlib>=1.7.7",
@@ -33,6 +36,12 @@ dev = [
 asyncio_mode = "auto"
 testpaths = ["tests"]
 
+[tool.pytest_env]
+ET_DATABASE_URL = "postgresql+asyncpg://electro:electro_secret@localhost:5432/electro_treasur_test"
+ET_SECRET_KEY = "test-secret-key-do-not-use-in-production-0000000000"
+ET_REDIS_URL = "redis://localhost:6379/15"
+ET_TELEGRAM_BOT_TOKEN = "fake:token"
+
 [tool.ruff]
 target-version = "py312"
 line-length = 99
@@ -40,16 +49,20 @@ line-length = 99
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 ignore = [
-    "E501",   # line-too-long — handled by formatter
-    "B008",   # function-call-in-default-argument — FastAPI DI pattern (Depends/Query)
+    "E501",
+    "B008",
 ]
-
-[tool.black]
-line-length = 99
-target-version = ['py312']
 
 [tool.mypy]
 python_version = "3.12"
 strict = true
 ignore_missing_imports = true
 exclude = ["migrations/", "tests/"]
+plugins = ["pydantic.mypy"]
+disallow_untyped_decorators = false
+disallow_subclassing_any = false
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true

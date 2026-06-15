@@ -222,3 +222,14 @@ export interface BudgetUpsert {
   month: number;
   year: number;
 }
+
+// ── Import / Export (Data Vault) ──────────────────────────────────────
+export interface ImportResult {
+  created: number;
+  skipped: number;
+  errors: string[];
+}
+export interface TelegramOtpResponse {
+  code: string;
+  expires_in: number;
+}

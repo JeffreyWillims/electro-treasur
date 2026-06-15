@@ -1,15 +1,8 @@
-"""
-Dashboard Router — GET /api/v1/dashboard/
-
-JWT-authenticated. Returns the monthly budget matrix:
-  Category → Plan → Fact → Delta → 31 day cells.
-"""
-
 from __future__ import annotations
 
 from datetime import date
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.dependencies import get_current_user, get_db
@@ -35,8 +28,18 @@ async def get_dashboard(
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> DashboardResponse:
-    """
-    Time:  O(N + K) where N=transactions, K=categories.
-    Space: O(K * N_days) for the day matrix.
-    """
+    # 1. Защита от логической ошибки инверсии дат (Fail Fast)
+    if start_date > end_date:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="start_date не может быть позже end_date",
+        )
+
+    # 2. Защита от Application-level DoS (ограничение агрегации 90 днями)
+    if (end_date - start_date).days > 90:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Диапазон дат не должен превышать 90 дней",
+        )
+
     return await get_monthly_dashboard(session, current_user.id, start_date, end_date)

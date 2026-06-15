@@ -15,18 +15,16 @@ async def set_budget_limit(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, str]:
-    try:
-        budget = await upsert_budget(
-            session=db,
-            user_id=current_user.id,
-            category_id=payload.category_id,
-            month=payload.month,
-            year=payload.year,
-            amount_limit=payload.amount_limit,
-        )
-        return {"status": "success", "amount_limit": str(budget.amount_limit)}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    budget = await upsert_budget(
+        session=db,
+        user_id=current_user.id,
+        category_id=payload.category_id,
+        month=payload.month,
+        year=payload.year,
+        amount_limit=payload.amount_limit,
+    )
+    return {"status": "success", "amount_limit": str(budget.amount_limit)}
 
 
 @router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -37,12 +35,7 @@ async def remove_budget(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    try:
-        deleted = await delete_budget(db, current_user.id, category_id, month, year)
-        if not deleted:
-            raise HTTPException(status_code=404, detail="Budget not found")
-        return None
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+    deleted = await delete_budget(db, current_user.id, category_id, month, year)
+
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Бюджет не найден")

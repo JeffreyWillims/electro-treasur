@@ -1,13 +1,3 @@
-/* eslint-disable */
-/**
- * SpendingChart.tsx — "Cashflow Pulse" Data Story
- *
- * Architecture: DUMB COMPONENT. Zero internal fetching.
- * Receives pre-aggregated daily flows + totals from parent Data Cortex.
- *
- * Visual: Capsule BarChart (Income vs Expense), dynamic financial insight.
- * Aesthetic: California Organic Luxury — glass card, premium typography.
- */
 import { useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip,
@@ -16,7 +6,6 @@ import {
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, Scale } from 'lucide-react';
 
-// ── Types ──────────────────────────────────────────────────────────────
 interface DailyFlow {
   day: number;
   income: number;
@@ -29,22 +18,27 @@ interface SpendingChartProps {
   totalExpense: number;
 }
 
-// ── Custom Tooltip ─────────────────────────────────────────────────────
 const CashflowTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white/95 dark:bg-[#1A1A1A]/95 backdrop-blur-2xl border border-[#1C3F35]/10 dark:border-white/10 px-5 py-4 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)]">
-        <p className="text-[10px] font-mono text-[#1C3F35]/50 dark:text-white/40 mb-2.5 uppercase font-bold tracking-widest">
+      <div className="bg-white/95 dark:bg-[#121212]/95 backdrop-blur-3xl border border-black/10 dark:border-white/10 px-5 py-4 rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.6)] z-50">
+        <p className="text-[10px] md:text-[11px] font-mono font-bold text-[#1C3F35]/50 dark:text-white/40 mb-3 uppercase tracking-[0.25em]">
           День {label}
         </p>
-        <div className="space-y-1.5">
-          <p className="text-sm font-semibold text-[#1C3F35] dark:text-emerald-400 tracking-tight">
-            + {(payload[0]?.value ?? 0).toLocaleString('ru-RU')} ₽
-            <span className="text-[10px] font-normal opacity-60 ml-1.5">доход</span>
+        <div className="space-y-3">
+          <p className="flex items-baseline gap-2">
+            <span className="text-xl font-sans font-black tabular-nums tracking-tighter text-emerald-600 dark:text-emerald-400 leading-none">
+              +{(payload[0]?.value ?? 0).toLocaleString('ru-RU')}
+              <span className="text-sm font-bold opacity-60 ml-1.5 tracking-normal">₽</span>
+            </span>
+            <span className="text-[10px] font-mono font-bold uppercase tracking-[0.25em] opacity-50 text-[#1C3F35] dark:text-white">доход</span>
           </p>
-          <p className="text-sm font-semibold text-[#FF7A00] dark:text-orange-400 tracking-tight">
-            − {(payload[1]?.value ?? 0).toLocaleString('ru-RU')} ₽
-            <span className="text-[10px] font-normal opacity-60 ml-1.5">расход</span>
+          <p className="flex items-baseline gap-2">
+            <span className="text-xl font-sans font-black tabular-nums tracking-tighter text-rose-600 dark:text-rose-500 leading-none">
+              −{(payload[1]?.value ?? 0).toLocaleString('ru-RU')}
+              <span className="text-sm font-bold opacity-60 ml-1.5 tracking-normal">₽</span>
+            </span>
+            <span className="text-[10px] font-mono font-bold uppercase tracking-[0.25em] opacity-50 text-[#1C3F35] dark:text-white">расход</span>
           </p>
         </div>
       </div>
@@ -53,33 +47,38 @@ const CashflowTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-// ── Component ──────────────────────────────────────────────────────────
 export function SpendingChart({ dailyFlows, totalIncome, totalExpense }: SpendingChartProps) {
   const delta = totalIncome - totalExpense;
 
   const insight = useMemo(() => {
     if (delta > 0) {
       return {
-        text: `Вы в плюсе на ${Math.abs(delta).toLocaleString('ru-RU')} ₽. Отличная работа!`,
+        prefix: 'Вы в плюсе на ',
+        amount: Math.abs(delta),
+        suffix: '. Отличная работа!',
         color: 'text-emerald-600 dark:text-emerald-400',
-        bgColor: 'bg-emerald-50 dark:bg-emerald-500/10',
-        borderColor: 'border-emerald-200/60 dark:border-emerald-500/20',
+        bgColor: 'bg-emerald-500/5 dark:bg-emerald-500/10',
+        borderColor: 'border-emerald-500/20',
         Icon: TrendingUp,
       };
     } else if (delta < 0) {
       return {
-        text: `Расходы превысили доходы на ${Math.abs(delta).toLocaleString('ru-RU')} ₽.`,
-        color: 'text-orange-600 dark:text-orange-400',
-        bgColor: 'bg-orange-50 dark:bg-orange-500/10',
-        borderColor: 'border-orange-200/60 dark:border-orange-500/20',
+        prefix: 'Расходы превысили доходы на ',
+        amount: Math.abs(delta),
+        suffix: '.',
+        color: 'text-rose-600 dark:text-rose-400',
+        bgColor: 'bg-rose-500/5 dark:bg-rose-500/10',
+        borderColor: 'border-rose-500/20',
         Icon: TrendingDown,
       };
     }
     return {
-      text: 'Идеальный баланс: доходы равны расходам.',
+      prefix: 'Идеальный баланс: доходы равны расходам.',
+      amount: null,
+      suffix: '',
       color: 'text-[#1C3F35]/70 dark:text-white/60',
-      bgColor: 'bg-slate-50 dark:bg-white/5',
-      borderColor: 'border-slate-200/60 dark:border-white/10',
+      bgColor: 'bg-black/5 dark:bg-white/5',
+      borderColor: 'border-transparent dark:border-white/5',
       Icon: Scale,
     };
   }, [delta]);
@@ -89,93 +88,66 @@ export function SpendingChart({ dailyFlows, totalIncome, totalExpense }: Spendin
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: 0.1 }}
-      className="bg-white/60 dark:bg-[#0A0A0A]/80 backdrop-blur-3xl border border-[#1C3F35]/[0.06] dark:border-white/[0.04] rounded-[2.5rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.6)] hover:shadow-[0_16px_50px_rgba(0,0,0,0.07)] dark:hover:shadow-[0_16px_50px_rgba(0,0,0,0.8)] transition-all duration-700"
+      className="bg-white/40 dark:bg-[#111111]/40 backdrop-blur-3xl border border-black/5 dark:border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-2xl transition-all duration-700"
     >
-      {/* ── Header + Insight ──────────────────────────────────────────── */}
       <div className="mb-8">
-        <div>
-          <h3 className="text-2xl font-serif font-bold text-[#1C3F35] dark:text-white tracking-tight leading-none mb-1.5">Потоки капитала</h3>
-          <p className="text-xs font-mono text-slate-400 dark:text-slate-500 uppercase tracking-widest font-bold">Движение средств</p>
+        <div className="flex flex-col gap-1.5">
+          <h3 className="text-xl md:text-2xl font-sans font-extrabold tracking-tight text-[#1C3F35] dark:text-white leading-none">
+            Потоки капитала
+          </h3>
+          {/* ИСПРАВЛЕНИЕ: Новый шрифт подзаголовка */}
+          <p className="text-[11px] md:text-[12px] font-sans font-extrabold uppercase tracking-wide text-[#FF7A00] dark:drop-shadow-[0_0_8px_rgba(255,122,0,0.5)] mt-1">
+            Движение средств
+          </p>
         </div>
 
-        {/* Dynamic Insight Banner */}
         <motion.div
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4, delay: 0.3 }}
-          className={`mt-5 flex items-center gap-3 px-5 py-3 rounded-2xl border ${insight.bgColor} ${insight.borderColor} transition-colors duration-500`}
+          className={`mt-6 flex items-center gap-3 px-5 py-4 rounded-2xl border ${insight.bgColor} ${insight.borderColor} transition-colors duration-500`}
         >
           <insight.Icon className={`w-5 h-5 ${insight.color} flex-shrink-0`} />
-          <p className={`text-sm font-semibold tracking-tight ${insight.color}`}>
-            {insight.text}
+          <p className={`text-sm md:text-base font-medium tracking-tight ${insight.color} leading-snug`}>
+            {insight.prefix}
+            {insight.amount !== null && (
+              <span className="font-sans font-black tabular-nums tracking-tighter mx-1">
+                {insight.amount.toLocaleString('ru-RU')}
+                <span className="text-[11px] font-bold opacity-60 ml-0.5 tracking-normal">₽</span>
+              </span>
+            )}
+            {insight.suffix}
           </p>
         </motion.div>
       </div>
 
-      {/* ── Chart ─────────────────────────────────────────────────────── */}
       <div className="h-[300px] w-full">
         {dailyFlows.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-[#1C3F35]/30 dark:text-white/20 font-serif italic text-sm">
-            Нет данных для визуализации
+          <div className="h-full flex items-center justify-center text-[11px] font-mono font-bold uppercase tracking-[0.25em] text-[#1C3F35]/40 dark:text-white/30">
+            Нет данных
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={dailyFlows} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barGap={2} style={{ outline: 'none' }}>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                vertical={false}
-                stroke="rgba(28, 63, 53, 0.05)"
-              />
-              <XAxis
-                dataKey="day"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 10, fill: '#64748B', fontFamily: 'Space Mono, monospace', fontWeight: 600 }}
-                tickMargin={12}
-              />
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 10, fill: '#64748B', fontFamily: 'Space Mono, monospace', fontWeight: 600 }}
-                tickFormatter={(v) => v >= 1000 ? (v / 1000).toLocaleString('ru-RU') + 'k' : `${v}`}
-                tickMargin={8}
-              />
-              <Tooltip
-                content={<CashflowTooltip />}
-                cursor={{ fill: 'rgba(28, 63, 53, 0.03)' }}
-                isAnimationActive={false}
-                wrapperStyle={{ outline: 'none' }}
-              />
-              <Bar
-                dataKey="income"
-                fill="#1C3F35"
-                radius={[6, 6, 6, 6]}
-                maxBarSize={18}
-                animationDuration={1200}
-                animationEasing="ease-in-out"
-              />
-              <Bar
-                dataKey="expense"
-                fill="#FF7A00"
-                radius={[6, 6, 6, 6]}
-                maxBarSize={18}
-                animationDuration={1200}
-                animationEasing="ease-in-out"
-              />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128, 128, 128, 0.1)" />
+              <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#888', fontWeight: 600, fontFamily: 'monospace' }} tickMargin={12} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#888', fontWeight: 600, fontFamily: 'monospace' }} tickFormatter={(v) => v >= 1000 ? (v / 1000).toLocaleString('ru-RU') + 'k' : `${v}`} tickMargin={8} />
+              <Tooltip content={<CashflowTooltip />} cursor={{ fill: 'rgba(128, 128, 128, 0.05)' }} isAnimationActive={false} wrapperStyle={{ outline: 'none' }} />
+              <Bar dataKey="income" fill="#10B981" radius={[6, 6, 6, 6]} maxBarSize={16} animationDuration={1200} animationEasing="ease-in-out" />
+              <Bar dataKey="expense" fill="#F43F5E" radius={[6, 6, 6, 6]} maxBarSize={16} animationDuration={1200} animationEasing="ease-in-out" />
             </BarChart>
           </ResponsiveContainer>
         )}
       </div>
 
-      {/* ── Legend ─────────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-6 mt-6 pt-5 border-t border-[#1C3F35]/[0.06] dark:border-white/[0.04]">
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#1C3F35]" />
-          <span className="text-xs font-semibold text-[#1C3F35]/70 dark:text-white/60">Доходы</span>
+      <div className="flex flex-wrap items-center justify-center md:justify-start gap-8 mt-8 pt-6 border-t border-black/5 dark:border-white/5">
+        <div className="flex items-center gap-3">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]" />
+          <span className="text-[10px] font-mono font-bold uppercase tracking-[0.25em] text-[#1C3F35]/60 dark:text-white/60">Доходы</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#FF7A00]" />
-          <span className="text-xs font-semibold text-[#1C3F35]/70 dark:text-white/60">Расходы</span>
+        <div className="flex items-center gap-3">
+          <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.4)]" />
+          <span className="text-[10px] font-mono font-bold uppercase tracking-[0.25em] text-[#1C3F35]/60 dark:text-white/60">Расходы</span>
         </div>
       </div>
     </motion.div>

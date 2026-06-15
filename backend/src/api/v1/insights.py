@@ -1,15 +1,10 @@
-"""
-Insights Router — arq-based LLM insight generation + polling.
-
-POST /api/v1/insights/  → enqueue arq task, return HTTP 202 + task_id.
-GET  /api/v1/insights/{task_id} → poll Redis for result.
-"""
-
 from __future__ import annotations
 
+import asyncio
 import uuid
 
 from arq.connections import ArqRedis, RedisSettings, create_pool
+from arq.jobs import Job, JobResult
 from fastapi import APIRouter, Depends, status
 
 from src.config import settings
@@ -25,13 +20,16 @@ router = APIRouter(tags=["LLM Insights"])
 
 # ── arq connection pool (lazy singleton) ────────────────────────────────
 _arq_pool: ArqRedis | None = None
+_pool_lock = asyncio.Lock()
 
 
 async def _get_arq_pool() -> ArqRedis:
     """Lazy-init arq Redis pool for enqueuing jobs."""
     global _arq_pool
     if _arq_pool is None:
-        _arq_pool = await create_pool(RedisSettings.from_dsn(settings.arq_redis_url))
+        async with _pool_lock:
+            if _arq_pool is None:
+                _arq_pool = await create_pool(RedisSettings.from_dsn(settings.arq_redis_url))
     return _arq_pool
 
 
@@ -46,11 +44,6 @@ async def enqueue_insight(
     body: InsightRequest,
     current_user: User = Depends(get_current_user),
 ) -> InsightEnqueueResponse:
-    """
-    Enqueue `generate_annual_llm_insight` into arq worker.
-
-    Time: O(1) — Redis LPUSH.
-    """
     pool = await _get_arq_pool()
     task_id = str(uuid.uuid4())
 
@@ -72,14 +65,7 @@ async def enqueue_insight(
     description="Returns 'pending' while the LLM task is running, or the result JSON on completion.",
 )
 async def poll_insight(task_id: str) -> InsightResultResponse:
-    """
-    Check arq job result via arq's built-in result storage.
-
-    Falls back to direct Redis key lookup for cached insights.
-    Time: O(1) — Redis GET.
-    """
     pool = await _get_arq_pool()
-    from arq.jobs import Job, JobResult
 
     try:
         job = Job(task_id, pool)

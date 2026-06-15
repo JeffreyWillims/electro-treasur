@@ -21,7 +21,7 @@ from src.infrastructure.redis_client import get_redis
 from src.services.auth_service import decode_access_token
 from src.services.user_service import get_user_by_email
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:

@@ -1,153 +1,263 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { updateMe } from '@/api/client';
+import { updateMe, generateTelegramOtp } from '@/api/client';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import { PacificRide } from '@/components/ui/PacificRide';
+import { Send, Save } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+// Форматирование суммы с пробелами
+const formatSum = (val: string | number): string => {
+  if (!val) return '';
+  const str = val.toString().replace(/\D/g, '');
+  return str.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+};
+
+const parseSum = (formatted: string): number => parseFloat(formatted.replace(/[^\d]/g, '')) || 0;
 
 export function ProfileSettings() {
   const { user, refreshUser } = useAuth();
-  
+
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [monthlyIncome, setMonthlyIncome] = useState('');
-  
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // ─── PACIFIC RIDE EASTER EGG ──────────────────────────────
+  const [clickCount, setClickCount] = useState(0);
 
   useEffect(() => {
     if (user) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFullName(user.full_name || '');
       setPhone(user.phone || '');
-      setMonthlyIncome(user.monthly_income?.toString() || '');
+      setMonthlyIncome(user.monthly_income ? formatSum(user.monthly_income) : '');
     }
   }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
     try {
       await updateMe({
         full_name: fullName || null,
         phone: phone || null,
-        monthly_income: monthlyIncome ? parseFloat(monthlyIncome) : null,
+        monthly_income: monthlyIncome ? parseSum(monthlyIncome) : null,
       });
       await refreshUser();
-      
+
       setIsSubmitting(false);
-      toast.success('Настройки успешно синхронизированы', {
-        className: 'font-serif tracking-tight',
-        descriptionClassName: 'font-mono text-[10px] uppercase text-[#FF7A00]'
-      });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      toast.success('Настройки успешно сохранены');
     } catch (err: any) {
       setIsSubmitting(false);
-      toast.error(err.message || 'Ошибка синхронизации', {
-        className: 'font-serif tracking-tight'
-      });
+      toast.error(err.message || 'Ошибка сохранения');
     }
   };
 
+  // ─── TELEGRAM DEEP LINK ────────────────────────────────────
+  const [isTgLoading, setIsTgLoading] = useState(false);
+  const TG_BOT_USERNAME = 'read_workbot';
+
+  const handleTelegramSync = async () => {
+    setIsTgLoading(true);
+    try {
+      const data = await generateTelegramOtp();
+      const tgUrl = `https://t.me/${TG_BOT_USERNAME}?start=${data.code}`;
+      window.open(tgUrl, '_blank');
+    } catch {
+      toast.error('Ошибка при генерации ссылки. Попробуйте ещё раз.');
+    } finally {
+      setIsTgLoading(false);
+    }
+  };
+
+  // 💎 Общие стили для блоков "настроек" (Glassmorphic iOS Style)
+  const sectionContainerStyles = cn(
+    "bg-white/40 dark:bg-[#111111]/40 backdrop-blur-3xl border border-black/5 dark:border-white/10",
+    "rounded-[2.5rem] overflow-hidden flex flex-col shadow-lg transition-all"
+  );
+
+  const rowStyles = cn(
+    "flex justify-between items-center p-6 md:p-8 border-b border-black/5 dark:border-white/5 last:border-0",
+    "hover:bg-black/5 dark:hover:bg-white/5 transition-colors focus-within:bg-white dark:focus-within:bg-[#1A1A1A] focus-within:shadow-sm"
+  );
+
+  const rowLabelStyles = "text-sm md:text-base font-sans font-extrabold tracking-tight text-[#1C3F35] dark:text-white shrink-0";
+  const rowInputStyles = "text-right bg-transparent outline-none w-full md:w-1/2 text-lg font-sans font-bold tracking-tight text-[#1C3F35]/80 dark:text-white/80 placeholder-[#1C3F35]/30 dark:placeholder-white/30";
+  const sectionHeaderStyles = "text-[11px] font-mono font-bold uppercase tracking-[0.25em] text-[#1C3F35]/50 dark:text-white/40 ml-6 mb-3";
+
   return (
-    <div className="w-full pt-16 pb-24 px-4 sm:px-6">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }} 
-        animate={{ opacity: 1, y: 0 }} 
-        transition={{ duration: 0.6 }}
-        className="max-w-3xl mx-auto w-full p-8 md:p-12 rounded-[2.5rem] bg-white/40 dark:bg-[#121212]/60 backdrop-blur-3xl backdrop-saturate-[180%] border border-white/60 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.05)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.4)] relative"
+    <div className="w-full pt-4 pb-24">
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
+        className="max-w-4xl mx-auto w-full"
       >
-        
-        {/* 2. THE AVATAR PLINTH */}
-        <div className="flex justify-center -mt-24 mb-6">
-          <div className="w-28 h-28 rounded-full bg-gradient-to-br from-[#1C3F35] to-[#0A1A12] dark:from-[#050505] dark:to-[#111111] flex items-center justify-center text-4xl text-white font-serif font-black shadow-[0_15px_35px_-5px_rgba(28,63,53,0.5)] border-4 border-white/80 dark:border-white/10">
-            {user?.full_name?.charAt(0) || user?.email.charAt(0).toUpperCase() || 'A'}
+        {/* 1. THE AVATAR PLINTH */}
+        <div className="flex flex-col items-center justify-center mb-12">
+          <div className="relative mb-6">
+            <div className="absolute inset-0 bg-[#FF7A00] rounded-full blur-3xl opacity-20 dark:opacity-40 animate-pulse" />
+            <div className="w-32 h-32 relative z-10 rounded-full bg-gradient-to-br from-[#1C3F35] to-[#0A1A12] dark:from-[#050505] dark:to-[#111111] flex items-center justify-center text-5xl text-white font-sans font-black shadow-[0_20px_40px_rgba(0,0,0,0.2)] border-[6px] border-[#FDFBF7] dark:border-[#050505] transition-transform hover:scale-105 duration-300">
+              {user?.full_name?.charAt(0).toUpperCase() || user?.email.charAt(0).toUpperCase() || 'A'}
+            </div>
           </div>
+          <h1 className="text-3xl md:text-4xl font-sans font-extrabold text-center text-[#1C3F35] dark:text-white tracking-tight leading-none mb-1.5">
+            {user?.full_name || 'Инкогнито'}
+          </h1>
+          <p className="text-[11px] font-mono font-bold uppercase tracking-[0.25em] text-[#FF7A00]">
+            Управление профилем
+          </p>
         </div>
 
-        <h1 className="text-4xl font-serif font-bold text-center mb-10 text-slate-900 dark:text-white tracking-tight">
-          {user?.full_name || 'Инкогнито'}
-        </h1>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-10">
 
-        <form onSubmit={handleSubmit} className="flex flex-col space-y-10">
-          
-          {/* 3. iOS SETTINGS LAYOUT - PERSONAL */}
-          <div className="space-y-3">
-            <h2 className="text-[10px] font-bold font-mono uppercase tracking-widest text-slate-400 ml-4">
+          {/* 2. iOS SETTINGS LAYOUT - PERSONAL */}
+          <div>
+            <h2 className={sectionHeaderStyles}>
               Личные данные
             </h2>
-            <div className="bg-white/50 dark:bg-white/5 rounded-3xl overflow-hidden flex flex-col border border-white/40 dark:border-white/5 shadow-sm">
-              
-              <div className="flex justify-between items-center p-6 border-b border-white/40 dark:border-white/5 last:border-0 hover:bg-white/30 dark:hover:bg-white/5 transition-colors">
-                <label className="text-base font-medium text-slate-500 dark:text-slate-400">Full Name</label>
+            <div className={sectionContainerStyles}>
+              <div className={rowStyles}>
+                <label className={rowLabelStyles}>Имя</label>
                 <input
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="text-right bg-transparent outline-none w-1/2 text-xl font-mono font-bold text-slate-900 dark:text-white placeholder-slate-300 dark:placeholder-slate-700"
+                  className={rowInputStyles}
                   placeholder="Иван"
                 />
               </div>
 
-              <div className="flex justify-between items-center p-6 border-b border-white/40 dark:border-white/5 last:border-0 hover:bg-white/30 dark:hover:bg-white/5 transition-colors">
-                <label className="text-base font-medium text-slate-500 dark:text-slate-400">Email Config</label>
+              <div className={rowStyles}>
+                <label className={rowLabelStyles}>Email-адрес</label>
                 <input
                   type="email"
                   readOnly
                   value={user?.email || ''}
-                  className="text-right bg-transparent outline-none w-1/2 text-xl font-mono font-bold text-slate-900/50 dark:text-white/50 cursor-not-allowed"
+                  className={cn(rowInputStyles, "text-[#1C3F35]/40 dark:text-white/30 cursor-not-allowed")}
                 />
               </div>
 
-              <div className="flex justify-between items-center p-6 border-b border-white/40 dark:border-white/5 last:border-0 hover:bg-white/30 dark:hover:bg-white/5 transition-colors">
-                <label className="text-base font-medium text-slate-500 dark:text-slate-400">Phone</label>
+              <div className={rowStyles}>
+                <label className={rowLabelStyles}>Телефон</label>
                 <input
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="text-right bg-transparent outline-none w-1/2 text-xl font-mono font-bold text-slate-900 dark:text-white placeholder-slate-300 dark:placeholder-slate-700"
+                  className={rowInputStyles}
                   placeholder="+7 (000) 000-00-00"
                 />
               </div>
-
             </div>
           </div>
 
           {/* 3. iOS SETTINGS LAYOUT - INCOME */}
-          <div className="space-y-3">
-            <h2 className="text-[10px] font-bold font-mono uppercase tracking-widest text-slate-400 ml-4">
+          <div>
+            <h2 className={sectionHeaderStyles}>
               Финансовые данные
             </h2>
-            <div className="bg-white/50 dark:bg-white/5 rounded-3xl overflow-hidden flex flex-col border border-white/40 dark:border-white/5 shadow-sm">
-              
-              <div className="flex justify-between items-center p-6 border-b border-white/40 dark:border-white/5 last:border-0 hover:bg-white/30 dark:hover:bg-white/5 transition-colors">
-                <label className="text-base font-medium text-slate-500 dark:text-slate-400">Базовый доход (₽)</label>
-                <input
-                  type="number"
-                  value={monthlyIncome}
-                  onChange={(e) => setMonthlyIncome(e.target.value)}
-                  className="text-right bg-transparent outline-none w-1/2 text-xl font-mono font-bold text-slate-900 dark:text-white placeholder-slate-300 dark:placeholder-slate-700"
-                  placeholder="0"
-                />
+            <div className={sectionContainerStyles}>
+              <div className={rowStyles}>
+                <label className={rowLabelStyles}>Базовый доход</label>
+                <div className="flex items-baseline gap-2 justify-end w-full md:w-1/2">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={monthlyIncome}
+                    onChange={(e) => setMonthlyIncome(formatSum(e.target.value))}
+                    className="text-right bg-transparent outline-none w-full text-2xl md:text-3xl font-sans font-black tabular-nums tracking-tighter text-[#1C3F35] dark:text-white placeholder-[#1C3F35]/30 dark:placeholder-white/30"
+                    placeholder="0"
+                  />
+                  <span className="text-sm md:text-base font-bold text-[#1C3F35] dark:text-white opacity-40 tracking-normal shrink-0">₽</span>
+                </div>
               </div>
-              
             </div>
           </div>
 
-          {/* 4. THE GOLDEN TRIGGER */}
-          <div className="pt-6">
+          {/* 4. TELEGRAM SYNC BLOCK */}
+          <div>
+            <h2 className={sectionHeaderStyles}>
+              Синхронизация
+            </h2>
+            <div className="rounded-[2.5rem] p-8 md:p-10 bg-[#2AABEE]/5 border border-[#2AABEE]/20 dark:bg-[#2AABEE]/10 dark:border-[#2AABEE]/30 shadow-lg flex flex-col md:flex-row items-center justify-between gap-6 transition-all">
+              <div className="flex items-center gap-5 w-full md:w-auto">
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 bg-[#2AABEE]/10 border border-[#2AABEE]/20 shadow-inner">
+                  <Send className="w-7 h-7 text-[#2AABEE] ml-1" />
+                </div>
+                <div>
+                  <p className="font-sans font-extrabold tracking-tight text-[#1C3F35] dark:text-white text-xl md:text-2xl leading-none mb-1.5">
+                    Telegram Бот
+                  </p>
+                  <p className="text-[10px] md:text-[11px] font-mono font-bold uppercase tracking-[0.25em] text-[#1C3F35]/50 dark:text-white/50">
+                    Ввод из мессенджера
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleTelegramSync}
+                disabled={isTgLoading}
+                className="w-full md:w-auto px-8 h-14 md:h-16 bg-[#2AABEE] hover:bg-[#229ED9] text-white rounded-2xl font-bold uppercase tracking-widest text-sm shadow-[0_10px_20px_-5px_rgba(42,171,238,0.4)] transition-all flex items-center justify-center gap-3 active:scale-[0.98] disabled:opacity-70 shrink-0"
+              >
+                {isTgLoading ? (
+                  <motion.div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full" animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    Привязать
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* 5. THE GOLDEN TRIGGER */}
+          <div className="pt-4">
             <button
               type="submit"
               disabled={isSubmitting}
-              className={`w-full h-16 rounded-2xl bg-gradient-to-r from-[#FF7A00] to-[#FFA011] text-white text-lg font-bold tracking-wide shadow-[0_10px_30px_-5px_rgba(255,122,0,0.4)] transition-all ${
-                isSubmitting ? 'animate-pulse opacity-90' : 'hover:shadow-[0_15px_40px_-5px_rgba(255,122,0,0.6)] hover:scale-[1.02]'
-              }`}
+              className="w-full h-[64px] bg-gradient-to-r from-[#FF7A00] to-[#FFA011] hover:from-[#EA6A00] hover:to-[#FF7A00] text-white rounded-[2rem] font-bold uppercase tracking-widest text-sm shadow-[0_10px_30px_-5px_rgba(255,122,0,0.4)] transition-all flex items-center justify-center gap-3 active:scale-[0.98] disabled:opacity-70"
             >
-              {isSubmitting ? 'Синхронизация...' : 'Сохранить монолит'}
+              {isSubmitting ? (
+                 <motion.div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full" animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
+              ) : (
+                <>
+                  <Save className="w-5 h-5" />
+                  Сохранить настройки
+                </>
+              )}
             </button>
           </div>
-
         </form>
       </motion.div>
+
+      {/* ─── CITRINE SIGIL (Easter Egg Trigger) ──────────────── */}
+      <div className="flex justify-center mt-16 mb-4 relative z-10">
+        <button
+          type="button"
+          onClick={() => setClickCount((c) => c + 1)}
+          className="group flex flex-col items-center gap-1 cursor-default select-none focus:outline-none"
+          aria-hidden="true"
+          tabIndex={-1}
+        >
+          <svg
+            viewBox="0 0 100 100"
+            className="w-10 h-10 opacity-25 dark:opacity-30 group-hover:opacity-60 transition-all duration-500 drop-shadow-[0_0_6px_rgba(255,122,0,0)] group-hover:drop-shadow-[0_0_8px_rgba(255,122,0,0.5)]"
+            fill="none"
+            strokeWidth="3"
+          >
+            <circle cx="50" cy="50" r="30" stroke="#FF7A00" strokeOpacity="0.8" />
+            <path d="M 50 10 L 50 90 M 10 50 L 90 50" stroke="#FF7A00" strokeOpacity="0.6" />
+            <path d="M 28 28 L 72 72 M 28 72 L 72 28" stroke="#FF7A00" strokeOpacity="0.3" />
+          </svg>
+        </button>
+      </div>
+
+      {/* ─── PACIFIC RIDE OVERLAY ──────────────────────────────── */}
+      {clickCount >= 3 && <PacificRide onClose={() => setClickCount(0)} />}
     </div>
   );
 }

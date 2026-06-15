@@ -1,24 +1,16 @@
 /**
  * RecurringReminders — Smart payment reminders with Edit/Delete/Done actions.
  * "Done" action auto-creates an expense transaction via POST API.
- * Uses localStorage for persistence (no backend endpoint for reminders yet).
+ * Uses localStorage for persistence.
  */
 import { useState, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import {
-  Bell,
-  Clock,
-  Check,
-  Pencil,
-  Trash2,
-  Plus,
-  X,
-  AlertTriangle,
+  Clock, Check, Pencil, Trash2, Plus, X, AlertTriangle,
 } from 'lucide-react';
 import { createTransaction, fetchCategories } from '@/api/client';
-import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 
 interface Reminder {
@@ -28,10 +20,35 @@ interface Reminder {
   currency: string;
   categoryId: number;
   categoryName: string;
-  dueDay: number; // day of month
+  dueDay: number;
 }
 
 const STORAGE_KEY = 'aura_reminders';
+
+// ── УНИФИЦИРОВАННЫЙ СЛОВАРЬ (Citrine Vault Standard) ───────────────────
+const CATEGORY_TRANSLATIONS: Record<string, string> = {
+  "Operations (Rent/Utility)": "Базовые расходы",
+  "Leisure (Lifestyle)": "Лайфстайл",
+  "Wellness (Health)": "Здоровье и Уход",
+  "Propulsion (Income)": "Поступления",
+  "Growth (Investments)": "Инвестиции",
+  "Income": "Доход",
+};
+
+const getRussianCategoryName = (rawName: string) => {
+  if (CATEGORY_TRANSLATIONS[rawName]) return CATEGORY_TRANSLATIONS[rawName];
+  const name = rawName.toLowerCase();
+  if (name.includes('leisure') || name.includes('lifestyle')) return 'Лайфстайл';
+  if (name.includes('housing')) return 'Жилье';
+  if (name.includes('transport') || name.includes('logistics')) return 'Транспорт';
+  if (name.includes('food')) return 'Продукты';
+  if (name.includes('health') || name.includes('wellness')) return 'Здоровье';
+  if (name.includes('income') || name.includes('propulsion')) return 'Доход';
+  if (name.includes('shopping')) return 'Покупки';
+  if (name.includes('utilit') || name.includes('operation')) return 'ЖКХ и Операции';
+  if (name.includes('growth') || name.includes('invest')) return 'Инвестиции';
+  return rawName;
+};
 
 function loadReminders(): Reminder[] {
   try {
@@ -48,9 +65,9 @@ function saveReminders(reminders: Reminder[]) {
 
 function getDefaultReminders(): Reminder[] {
   return [
-    { id: '1', title: 'Netflix', amount: 1499, currency: 'RUB', categoryId: 0, categoryName: 'Подписки', dueDay: 5 },
+    { id: '1', title: 'Netflix', amount: 1499, currency: 'RUB', categoryId: 0, categoryName: 'Лайфстайл', dueDay: 5 },
     { id: '2', title: 'Спортзал', amount: 3000, currency: 'RUB', categoryId: 0, categoryName: 'Здоровье', dueDay: 10 },
-    { id: '3', title: 'Интернет', amount: 890, currency: 'RUB', categoryId: 0, categoryName: 'Коммуникации', dueDay: 15 },
+    { id: '3', title: 'Интернет', amount: 890, currency: 'RUB', categoryId: 0, categoryName: 'ЖКХ и Операции', dueDay: 15 },
   ];
 }
 
@@ -83,7 +100,6 @@ export function RecurringReminders() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
 
-  // Edit form state
   const [editTitle, setEditTitle] = useState('');
   const [editAmount, setEditAmount] = useState('');
   const [editDueDay, setEditDueDay] = useState('');
@@ -98,16 +114,12 @@ export function RecurringReminders() {
     saveReminders(reminders);
   }, [reminders]);
 
-  // "Done" mutation — creates an expense transaction
   const doneMutation = useMutation({
     mutationFn: async (reminder: Reminder) => {
-      // Find expense category by name, or use first expense category
-      const expenseCat = categories.find(c => c.name === reminder.categoryName && c.type === 'expense')
+      const expenseCat = categories.find(c => c.name.toLowerCase().includes(reminder.categoryName.toLowerCase()))
         || categories.find(c => c.type === 'expense');
 
-      if (!expenseCat) {
-        throw new Error('Нет доступных категорий расходов');
-      }
+      if (!expenseCat) throw new Error('Нет доступных категорий расходов');
 
       return createTransaction({
         amount: reminder.amount,
@@ -118,17 +130,12 @@ export function RecurringReminders() {
       });
     },
     onSuccess: (_data, reminder) => {
-      // Remove from active reminders
       setReminders(prev => prev.filter(r => r.id !== reminder.id));
-      toast.success(`✓ ${reminder.title} — оплачено`, {
-        description: `${reminder.amount.toLocaleString('ru-RU')} ${reminder.currency}`,
-      });
+      toast.success(`Оплачено: ${reminder.title}`);
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
-    onError: (error: Error) => {
-      toast.error(`Ошибка: ${error.message}`);
-    },
+    onError: (error: Error) => toast.error(`Ошибка: ${error.message}`),
   });
 
   const startEdit = (reminder: Reminder) => {
@@ -154,7 +161,7 @@ export function RecurringReminders() {
 
   const deleteReminder = (id: string) => {
     setReminders(prev => prev.filter(r => r.id !== id));
-    toast('Напоминание удалено', { icon: '🗑️' });
+    toast.info('Напоминание удалено');
   };
 
   const addReminder = () => {
@@ -170,83 +177,60 @@ export function RecurringReminders() {
     };
     setReminders(prev => [...prev, newReminder]);
     setShowAdd(false);
-    setEditTitle('');
-    setEditAmount('');
-    setEditDueDay('');
-    setEditCategoryName('');
+    setEditTitle(''); setEditAmount(''); setEditDueDay(''); setEditCategoryName('');
     toast.success('Напоминание создано');
   };
 
+  // 💎 Эталонные стили для инпутов
+  const inputClasses = cn(
+    "w-full rounded-2xl h-12 md:h-14 px-4 transition-all duration-300 outline-none text-sm font-bold text-[#1C3F35] dark:text-white placeholder-[#1C3F35]/30 dark:placeholder-white/30",
+    "bg-black/5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] border border-transparent",
+    "dark:bg-black/40 dark:shadow-[inset_0_2px_6px_rgba(0,0,0,0.5)]",
+    "focus:bg-white focus:shadow-md focus:border-[#FF7A00]/50",
+    "dark:focus:bg-[#1A1A1A] dark:focus:shadow-none dark:focus:border-[#FF7A00]/50"
+  );
+
   return (
-    <div className="premium-card p-7">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-aura-gold/[0.06] rounded-xl">
-            <Bell className="w-[18px] h-[18px] text-aura-gold" />
-          </div>
-          <div>
-            <h3 className="text-premium text-lg leading-tight">Платежи</h3>
-            <p className="text-[9px] font-mono text-aura-gold/40 uppercase tracking-[0.15em] mt-0.5">
-              Регулярные списания
-            </p>
-          </div>
+    <div className="bg-white/40 dark:bg-[#111111]/40 backdrop-blur-3xl border border-black/5 dark:border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-2xl transition-all duration-700">
+
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col gap-1.5">
+          <h3 className="text-xl md:text-2xl font-sans font-extrabold tracking-tight text-[#1C3F35] dark:text-white leading-none">
+            Платежи
+          </h3>
+          <p className="text-[10px] md:text-[11px] font-mono font-bold text-[#FF7A00] uppercase tracking-[0.25em]">
+            Регулярные списания
+          </p>
         </div>
         <button
           onClick={() => { setShowAdd(true); setEditTitle(''); setEditAmount(''); setEditDueDay('1'); setEditCategoryName(''); }}
-          className="p-2 rounded-xl hover:bg-aura-gold/5 transition-colors group"
+          className="w-10 h-10 rounded-2xl bg-black/5 dark:bg-white/5 flex items-center justify-center hover:bg-black/10 dark:hover:bg-white/10 transition-colors shrink-0"
         >
-          <Plus size={16} className="text-aura-gold/40 group-hover:text-aura-gold transition-colors" />
+          <Plus className="w-5 h-5 text-[#1C3F35] dark:text-white" />
         </button>
       </div>
 
-      {/* Add Form */}
+      {/* ── Add Form ── */}
       <AnimatePresence>
         {showAdd && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden mb-4"
+            initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden mb-6"
           >
-            <div className="p-4 rounded-2xl bg-aura-gold/[0.03] border border-aura-gold/[0.06] space-y-3">
-              <input
-                type="text"
-                placeholder="Название платежа"
-                value={editTitle}
-                onChange={e => setEditTitle(e.target.value)}
-                className="input-aura text-xs py-2.5"
-              />
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="number"
-                  placeholder="Сумма"
-                  value={editAmount}
-                  onChange={e => setEditAmount(e.target.value)}
-                  className="input-aura text-xs py-2.5 font-mono"
-                />
-                <input
-                  type="number"
-                  placeholder="День месяца"
-                  min="1"
-                  max="31"
-                  value={editDueDay}
-                  onChange={e => setEditDueDay(e.target.value)}
-                  className="input-aura text-xs py-2.5 font-mono"
-                />
+            <div className="p-5 rounded-[2rem] bg-white/60 dark:bg-[#1A1A1A]/40 backdrop-blur-md border border-black/5 dark:border-white/5 space-y-4 shadow-sm">
+              <input type="text" placeholder="Название платежа" value={editTitle} onChange={e => setEditTitle(e.target.value)} className={inputClasses} />
+              <div className="grid grid-cols-2 gap-4">
+                <input type="number" placeholder="Сумма" value={editAmount} onChange={e => setEditAmount(e.target.value)} className={inputClasses} />
+                <input type="number" placeholder="День месяца" min="1" max="31" value={editDueDay} onChange={e => setEditDueDay(e.target.value)} className={inputClasses} />
               </div>
-              <input
-                type="text"
-                placeholder="Категория"
-                value={editCategoryName}
-                onChange={e => setEditCategoryName(e.target.value)}
-                className="input-aura text-xs py-2.5"
-              />
-              <div className="flex gap-2">
-                <button onClick={addReminder} className="btn-primary text-xs py-2 flex-1">
+              <input type="text" placeholder="Категория" value={editCategoryName} onChange={e => setEditCategoryName(e.target.value)} className={inputClasses} />
+              <div className="flex gap-3 pt-2">
+                <button onClick={addReminder} className="flex-1 h-12 md:h-14 bg-gradient-to-r from-[#FF7A00] to-[#FFA011] text-white rounded-2xl text-xs font-bold uppercase tracking-widest shadow-[0_10px_20px_-5px_rgba(255,122,0,0.4)] hover:shadow-[0_10px_20px_-5px_rgba(255,122,0,0.6)] active:scale-[0.98] transition-all flex items-center justify-center">
                   Добавить
                 </button>
-                <button onClick={() => setShowAdd(false)} className="btn-ghost text-xs py-2">
-                  <X size={14} />
+                <button onClick={() => setShowAdd(false)} className="px-5 md:px-6 h-12 md:h-14 bg-black/5 dark:bg-white/5 text-[#1C3F35]/60 dark:text-white/60 rounded-2xl hover:bg-black/10 dark:hover:bg-white/10 transition-colors flex items-center justify-center">
+                  <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
@@ -254,16 +238,12 @@ export function RecurringReminders() {
         )}
       </AnimatePresence>
 
-      {/* Reminders List */}
-      <div className="space-y-2">
+      {/* ── Reminders List ── */}
+      <div className="space-y-3">
         <AnimatePresence mode="popLayout">
           {reminders.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="py-10 text-center"
-            >
-              <p className="text-aura-gold/30 font-serif italic text-sm">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-12 text-center">
+              <p className="text-[11px] font-mono font-bold uppercase tracking-[0.25em] text-[#1C3F35]/40 dark:text-white/30">
                 Нет активных напоминаний
               </p>
             </motion.div>
@@ -271,100 +251,60 @@ export function RecurringReminders() {
             reminders.map((reminder) => {
               const urgency = getDueUrgency(reminder.dueDay);
               const isEditing = editingId === reminder.id;
+              const isProcessing = doneMutation.isPending && doneMutation.variables?.id === reminder.id;
 
               return (
                 <motion.div
                   key={reminder.id}
-                  layout
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 10, scale: 0.95 }}
-                  transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                  layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
                   className={cn(
-                    "group p-4 rounded-2xl border transition-all duration-300",
-                    urgency === 'overdue'
-                      ? "bg-rose-500/[0.03] border-rose-500/10"
-                      : urgency === 'urgent'
-                      ? "bg-amber-500/[0.03] border-amber-500/10"
-                      : "bg-aura-gold/[0.02] border-aura-gold/[0.04] hover:border-aura-gold/10"
+                    "group p-5 rounded-[1.5rem] border transition-all duration-300",
+                    urgency === 'overdue' ? "bg-rose-500/5 border-rose-500/20" :
+                    urgency === 'urgent' ? "bg-[#FF7A00]/5 border-[#FF7A00]/20" :
+                    "bg-white/50 dark:bg-white/5 border-black/5 dark:border-white/5 hover:bg-white/80 dark:hover:bg-white/10 hover:shadow-sm"
                   )}
                 >
                   {isEditing ? (
-                    /* Edit Mode */
-                    <div className="space-y-2.5">
-                      <input
-                        type="text"
-                        value={editTitle}
-                        onChange={e => setEditTitle(e.target.value)}
-                        className="input-aura text-xs py-2"
-                      />
-                      <div className="grid grid-cols-3 gap-2">
-                        <input
-                          type="number"
-                          value={editAmount}
-                          onChange={e => setEditAmount(e.target.value)}
-                          className="input-aura text-xs py-2 font-mono"
-                          placeholder="Сумма"
-                        />
-                        <input
-                          type="number"
-                          min="1"
-                          max="31"
-                          value={editDueDay}
-                          onChange={e => setEditDueDay(e.target.value)}
-                          className="input-aura text-xs py-2 font-mono"
-                          placeholder="День"
-                        />
-                        <input
-                          type="text"
-                          value={editCategoryName}
-                          onChange={e => setEditCategoryName(e.target.value)}
-                          className="input-aura text-xs py-2"
-                          placeholder="Категория"
-                        />
+                    <div className="space-y-4">
+                      <input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)} className={inputClasses} placeholder="Название платежа" />
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <input type="number" value={editAmount} onChange={e => setEditAmount(e.target.value)} className={inputClasses} placeholder="Сумма" />
+                        <input type="number" min="1" max="31" value={editDueDay} onChange={e => setEditDueDay(e.target.value)} className={inputClasses} placeholder="День" />
+                        <input type="text" value={editCategoryName} onChange={e => setEditCategoryName(e.target.value)} className={inputClasses} placeholder="Категория" />
                       </div>
-                      <div className="flex gap-2">
-                        <button onClick={saveEdit} className="btn-primary text-xs py-1.5 flex-1">
+                      <div className="flex gap-3 pt-2">
+                        <button onClick={saveEdit} className="flex-1 h-12 md:h-14 bg-gradient-to-r from-[#FF7A00] to-[#FFA011] text-white rounded-2xl text-xs font-bold uppercase tracking-widest shadow-[0_10px_20px_-5px_rgba(255,122,0,0.4)] active:scale-[0.98] transition-all flex items-center justify-center">
                           Сохранить
                         </button>
-                        <button onClick={() => setEditingId(null)} className="btn-ghost text-xs py-1.5">
+                        <button onClick={() => setEditingId(null)} className="px-5 md:px-6 h-12 md:h-14 bg-black/5 dark:bg-white/5 text-[#1C3F35]/60 dark:text-white/60 rounded-2xl hover:bg-black/10 dark:hover:bg-white/10 transition-colors flex items-center justify-center">
                           Отмена
                         </button>
                       </div>
                     </div>
                   ) : (
-                    /* Display Mode */
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
                         <div className={cn(
-                          "w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0",
-                          urgency === 'overdue'
-                            ? "bg-rose-500/10"
-                            : urgency === 'urgent'
-                            ? "bg-amber-500/10"
-                            : "bg-aura-gold/[0.06]"
+                          "w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm",
+                          urgency === 'overdue' ? "bg-rose-500/10 text-rose-500 border border-rose-500/20" :
+                          urgency === 'urgent' ? "bg-[#FF7A00]/10 text-[#FF7A00] border border-[#FF7A00]/20" :
+                          "bg-black/5 dark:bg-white/5 text-[#1C3F35]/50 dark:text-white/50 border border-transparent"
                         )}>
-                          {urgency === 'overdue' ? (
-                            <AlertTriangle size={15} className="text-rose-500" />
-                          ) : (
-                            <Clock size={15} className={cn(
-                              urgency === 'urgent' ? "text-amber-500" : "text-aura-gold/60"
-                            )} />
-                          )}
+                          {urgency === 'overdue' ? <AlertTriangle className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold text-aura-graphite dark:text-aura-ivory truncate">
+                          <p className="text-base font-sans font-extrabold tracking-tight text-[#1C3F35] dark:text-white truncate mb-1">
                             {reminder.title}
                           </p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[10px] font-mono text-aura-gold/40 uppercase">
-                              {reminder.categoryName}
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-mono font-bold text-[#1C3F35]/50 dark:text-white/40 uppercase tracking-[0.25em] truncate">
+                              {getRussianCategoryName(reminder.categoryName)}
                             </span>
-                            <span className="text-[8px] text-aura-gold/20">•</span>
+                            <span className="text-[10px] text-[#1C3F35]/20 dark:text-white/20">•</span>
                             <span className={cn(
-                              "text-[10px] font-mono font-bold uppercase",
+                              "text-[10px] font-mono font-bold uppercase tracking-[0.25em] whitespace-nowrap",
                               urgency === 'overdue' ? "text-rose-500" :
-                              urgency === 'urgent' ? "text-amber-500" : "text-aura-gold/50"
+                              urgency === 'urgent' ? "text-[#FF7A00]" : "text-[#1C3F35]/50 dark:text-white/50"
                             )}>
                               {getDueLabel(reminder.dueDay)}
                             </span>
@@ -372,34 +312,32 @@ export function RecurringReminders() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3">
-                        <span className="font-mono text-sm font-bold text-aura-graphite dark:text-aura-ivory whitespace-nowrap">
-                          {reminder.amount.toLocaleString('ru-RU')} ₽
-                        </span>
+                      <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto">
+                        <div className="text-right flex items-baseline gap-1">
+                          <span className="text-xl md:text-2xl font-sans font-black tabular-nums tracking-tighter text-[#1C3F35] dark:text-white leading-none">
+                            {reminder.amount.toLocaleString('ru-RU')}
+                          </span>
+                          <span className="text-sm font-bold opacity-60 tracking-normal text-[#1C3F35] dark:text-white">₽</span>
+                        </div>
 
-                        {/* Action Buttons (visible on hover) */}
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => startEdit(reminder)}
-                            className="p-1.5 rounded-lg hover:bg-aura-gold/10 transition-colors"
-                            title="Редактировать"
-                          >
-                            <Pencil size={12} className="text-aura-gold/50" />
+                        <div className="flex items-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => startEdit(reminder)} className="w-10 h-10 flex items-center justify-center rounded-2xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors text-[#1C3F35]/50 dark:text-white/50 hover:text-[#1C3F35] dark:hover:text-white" title="Редактировать">
+                            <Pencil className="w-4 h-4" />
                           </button>
-                          <button
-                            onClick={() => deleteReminder(reminder.id)}
-                            className="p-1.5 rounded-lg hover:bg-rose-500/10 transition-colors"
-                            title="Удалить"
-                          >
-                            <Trash2 size={12} className="text-rose-400/60" />
+                          <button onClick={() => deleteReminder(reminder.id)} className="w-10 h-10 flex items-center justify-center rounded-2xl bg-rose-500/5 hover:bg-rose-500/10 transition-colors text-rose-500/60 hover:text-rose-500" title="Удалить">
+                            <Trash2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => doneMutation.mutate(reminder)}
                             disabled={doneMutation.isPending}
-                            className="p-1.5 rounded-lg hover:bg-aura-emerald/10 transition-colors"
-                            title="Оплачено"
+                            className="w-10 h-10 flex items-center justify-center rounded-2xl bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors text-emerald-600 dark:text-emerald-400 font-bold"
+                            title="Оплатить"
                           >
-                            <Check size={12} className="text-aura-emerald" />
+                            {isProcessing ? (
+                              <motion.div className="w-4 h-4 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full" animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
+                            ) : (
+                              <Check className="w-4 h-4" />
+                            )}
                           </button>
                         </div>
                       </div>

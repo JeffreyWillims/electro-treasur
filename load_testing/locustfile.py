@@ -6,6 +6,7 @@ from faker import Faker
 
 fake = Faker()
 
+
 class AuraWealthUser(HttpUser):
     wait_time = between(1, 3)
 
@@ -16,18 +17,21 @@ class AuraWealthUser(HttpUser):
         self.full_name = fake.name()
 
         # Register User
-        res_reg = self.client.post("/api/v1/auth/register", json={
-            "email": self.email,
-            "password": self.password,
-            "full_name": self.full_name,
-            "monthly_income": random.randint(100000, 500000)
-        })
+        self.client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": self.email,
+                "password": self.password,
+                "full_name": self.full_name,
+                "monthly_income": random.randint(100000, 500000),
+            },
+        )
 
         # Login User (OAuth2 Password Bearer uses form data)
-        res_login = self.client.post("/api/v1/auth/login", data={
-            "username": self.email,
-            "password": self.password
-        })
+        res_login = self.client.post(
+            "/api/v1/auth/login",
+            data={"username": self.email, "password": self.password},
+        )
 
         if res_login.status_code == 200:
             token = res_login.json().get("access_token")
@@ -38,7 +42,9 @@ class AuraWealthUser(HttpUser):
     @task(8)
     def view_dashboard(self):
         """Simulate loading the Dashboard."""
-        self.client.get("/api/v1/dashboard/?month=3&year=2026", name="/api/v1/dashboard")
+        self.client.get(
+            "/api/v1/dashboard/?month=3&year=2026", name="/api/v1/dashboard"
+        )
 
     @task(3)
     def add_transaction(self):
@@ -49,12 +55,19 @@ class AuraWealthUser(HttpUser):
             "category_id": random.randint(1, 8),
             "executed_at": datetime.utcnow().isoformat() + "Z",
             "entry_type": "manual",
-            "comment": "Locust Load Test"
+            "comment": "Locust Load Test",
         }
         headers = {"Idempotency-Key": str(uuid.uuid4())}
-        self.client.post("/api/v1/transactions/", json=payload, headers=headers, name="/api/v1/transactions/")
+        self.client.post(
+            "/api/v1/transactions/",
+            json=payload,
+            headers=headers,
+            name="/api/v1/transactions/",
+        )
 
     @task(1)
     def request_ai_insight(self):
         """Simulate requesting a year's AI financial analysis."""
-        self.client.post("/api/v1/insights/", json={"year": 2025}, name="/api/v1/insights/")
+        self.client.post(
+            "/api/v1/insights/", json={"year": 2025}, name="/api/v1/insights/"
+        )
