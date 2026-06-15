@@ -9,6 +9,10 @@ venv/
 .pytest_cache/
 .coverage
 htmlcov/
+
+
 *.log
+*.err
+
 .DS_Store
 letsencrypt/
