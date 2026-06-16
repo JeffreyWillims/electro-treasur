@@ -16,3 +16,9 @@ htmlcov/
 
 .DS_Store
 letsencrypt/
+
+# ── Test artifacts ───────────────────────────
+.auth_state.json
+test-results.xml
+.mypy_cache/
+.ruff_cache/

@@ -33,7 +33,7 @@ def _process_image_sync(image_bytes: bytes) -> str:
         # Переводим в Ч/Б для повышения точности OCR
         image = image.convert("L")
         # Ищем текст на русском и английском
-        text = pytesseract.image_to_string(image, lang='rus+eng')
+        text = pytesseract.image_to_string(image, lang="rus+eng")
         return str(text)
     except Exception as e:
         logger.error(f"Tesseract Error: {e}")
