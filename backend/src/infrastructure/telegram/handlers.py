@@ -580,12 +580,15 @@ async def _create_bot_transaction(
         await message.answer(text, parse_mode="Markdown", reply_markup=_get_reply_menu())
 
 
-# ─── Photo / Document Upload (Ollama AI Vision) ───────────────────────────────
-
+# ============================================================================
+# Photo / Document Upload (Ollama AI Vision)
+# ============================================================================
 
 @router.message(F.photo | F.document)
 async def handle_receipt_upload(
-    message: Message, session: AsyncSession, current_user: User | None
+    message: Message,
+    session: AsyncSession,
+    current_user: User | None
 ) -> None:
     if not await check_auth(message, current_user):
         return
@@ -599,23 +602,24 @@ async def handle_receipt_upload(
         parse_mode="Markdown",
     )
 
+    # ─── 1. Определяем file_id и file_name ──────────────────────────
     if message.photo:
         file_id = message.photo[-1].file_id
+        file_name = "receipt.jpg"
     elif message.document:
         file_id = message.document.file_id
+        file_name = message.document.file_name or "document.pdf"
     else:
         await processing_msg.edit_text("❌ Не удалось определить файл.")
         return
 
-    available_categories = [cat.name for cat in current_user.categories[:20]]
+    # ─── 2. ИСПРАВЛЕННЫЙ ИМПОРТ И ВЫЗОВ (Surgical Change) ───────────
+    from src.services.ai_vision_service import analyze_document_universal
 
-    from src.services.ai_vision_service import analyze_receipt_with_ai
-
-    # НОВОЕ: Теперь AI сервис возвращает список словарей!
-    ai_results = await analyze_receipt_with_ai(
+    ai_results = await analyze_document_universal(
         bot=message.bot,
         file_id=file_id,
-        available_categories=available_categories,
+        file_name=file_name,
     )
 
     if not ai_results:
@@ -627,18 +631,21 @@ async def handle_receipt_upload(
         await message.answer("📲 Баланс обновлен", reply_markup=_get_reply_menu())
         return
 
-    result = await session.execute(select(Category).where(Category.user_id == current_user.id))
+    # ─── 3. Обработка результатов (теперь всегда list) ──────────────
+    result = await session.execute(
+        select(Category).where(Category.user_id == current_user.id)
+    )
     user_categories = result.scalars().all()
 
     saved_count = 0
 
-    # Цикл по ВСЕМ найденным транзакциям (подойдет и для 1 чека, и для 10 банковских операций)
     for item in ai_results:
         ai_amount = Decimal(str(item.get("amount", 0)))
         ai_cat_name = item.get("category", "")
         ai_description = item.get("description", "—")
         entry_type = item.get("type", "expense")
 
+        # Поиск категории
         search_terms = [ai_cat_name.lower()]
         for eng, ru in CATEGORY_TRANSLATIONS.items():
             if ai_cat_name.lower() in ru.lower() or ai_cat_name.lower() in eng.lower():
@@ -653,10 +660,11 @@ async def handle_receipt_upload(
                 category = cat
                 break
 
-        # Дефолтная категория, если ИИ не нашел точного совпадения
+        # Дефолтная категория
         if not category:
             fallback = (
-                "Propulsion (Income)" if entry_type == "income" else "Operations (Rent/Utility)"
+                "Propulsion (Income)" if entry_type == "income"
+                else "Operations (Rent/Utility)"
             )
             category = next(
                 (c for c in user_categories if fallback.lower() in c.name.lower()), None
@@ -685,8 +693,8 @@ async def handle_receipt_upload(
     if saved_count > 0:
         await session.commit()
 
+    # ─── 4. Ответ пользователю ────────────────────────────────────────
     if len(ai_results) == 1 and saved_count == 1:
-        # Для одиночного чека выводим красивый отчет
         item = ai_results[0]
         cat_name = _loc_category(item.get("category", ""))
         sign = "+" if item.get("type") == "income" else "-"
@@ -698,7 +706,6 @@ async def handle_receipt_upload(
             parse_mode="Markdown",
         )
     else:
-        # Для банковской выписки выводим массовый отчет
         await processing_msg.edit_text(
             f"✅ *Массовое распознавание завершено!*\n\n"
             f"Успешно сохранено транзакций: *{saved_count}*\n"
@@ -708,8 +715,6 @@ async def handle_receipt_upload(
 
     # Гарантируем, что меню не пропадет
     await message.answer("📲 Меню активно", reply_markup=_get_reply_menu())
-
-
 # ─── Reply Keyboard Button Handlers ─────────────────────────────────────────
 
 
