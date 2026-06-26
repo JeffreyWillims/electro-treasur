@@ -584,11 +584,10 @@ async def _create_bot_transaction(
 # Photo / Document Upload (Ollama AI Vision)
 # ============================================================================
 
+
 @router.message(F.photo | F.document)
 async def handle_receipt_upload(
-    message: Message,
-    session: AsyncSession,
-    current_user: User | None
+    message: Message, session: AsyncSession, current_user: User | None
 ) -> None:
     if not await check_auth(message, current_user):
         return
@@ -632,9 +631,7 @@ async def handle_receipt_upload(
         return
 
     # ─── 3. Обработка результатов (теперь всегда list) ──────────────
-    result = await session.execute(
-        select(Category).where(Category.user_id == current_user.id)
-    )
+    result = await session.execute(select(Category).where(Category.user_id == current_user.id))
     user_categories = result.scalars().all()
 
     saved_count = 0
@@ -663,14 +660,32 @@ async def handle_receipt_upload(
         # Дефолтная категория
         if not category:
             fallback = (
-                "Propulsion (Income)" if entry_type == "income"
-                else "Operations (Rent/Utility)"
+                "Propulsion (Income)" if entry_type == "income" else "Operations (Rent/Utility)"
             )
+            # Попытка 1: поиск по английскому имени (обратная совместимость)
             category = next(
                 (c for c in user_categories if fallback.lower() in c.name.lower()), None
             )
+            # Попытка 2: поиск по type (expense/income) — работает с русскими названиями
+            # 🔥 ИСПРАВЛЕНИЕ: безопасное сравнение — c.type может быть Enum или str
             if not category and user_categories:
-                category = user_categories[0]
+                same_type_cats = [
+                    c
+                    for c in user_categories
+                    if getattr(c.type, "value", str(c.type)).lower() == entry_type.lower()
+                ]
+                if same_type_cats:
+                    category = same_type_cats[0]
+                else:
+                    category = user_categories[0]
+                    logger.warning(
+                        "No category of type '%s' found for user %d, "
+                        "falling back to '%s' (type=%s)",
+                        entry_type,
+                        current_user.id,
+                        category.name,
+                        getattr(category.type, "value", category.type),
+                    )
 
         if category:
             raw_key = f"tg_batch_{message.chat.id}_{message.message_id}_{category.id}_{ai_amount}_{saved_count}"
@@ -715,6 +730,8 @@ async def handle_receipt_upload(
 
     # Гарантируем, что меню не пропадет
     await message.answer("📲 Меню активно", reply_markup=_get_reply_menu())
+
+
 # ─── Reply Keyboard Button Handlers ─────────────────────────────────────────
 
 

@@ -4,34 +4,23 @@ import { updateMe, generateTelegramOtp } from '@/api/client';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { PacificRide } from '@/components/ui/PacificRide';
-import { Send, Save } from 'lucide-react';
+import { Send, Save, Gamepad2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-// Форматирование суммы с пробелами
-const formatSum = (val: string | number): string => {
-  if (!val) return '';
-  const str = val.toString().replace(/\D/g, '');
-  return str.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-};
-
-const parseSum = (formatted: string): number => parseFloat(formatted.replace(/[^\d]/g, '')) || 0;
 
 export function ProfileSettings() {
   const { user, refreshUser } = useAuth();
 
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
-  const [monthlyIncome, setMonthlyIncome] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ─── PACIFIC RIDE EASTER EGG ──────────────────────────────
-  const [clickCount, setClickCount] = useState(0);
+  // Состояние для игры
+  const [isGameOpen, setIsGameOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
       setFullName(user.full_name || '');
       setPhone(user.phone || '');
-      setMonthlyIncome(user.monthly_income ? formatSum(user.monthly_income) : '');
     }
   }, [user]);
 
@@ -43,7 +32,6 @@ export function ProfileSettings() {
       await updateMe({
         full_name: fullName || null,
         phone: phone || null,
-        monthly_income: monthlyIncome ? parseSum(monthlyIncome) : null,
       });
       await refreshUser();
 
@@ -72,7 +60,7 @@ export function ProfileSettings() {
     }
   };
 
-  // 💎 Общие стили для блоков "настроек" (Glassmorphic iOS Style)
+  // 💎 Стили контейнеров настроек
   const sectionContainerStyles = cn(
     "bg-white/40 dark:bg-[#111111]/40 backdrop-blur-3xl border border-black/5 dark:border-white/10",
     "rounded-[2.5rem] overflow-hidden flex flex-col shadow-lg transition-all"
@@ -85,7 +73,7 @@ export function ProfileSettings() {
 
   const rowLabelStyles = "text-sm md:text-base font-sans font-extrabold tracking-tight text-[#1C3F35] dark:text-white shrink-0";
   const rowInputStyles = "text-right bg-transparent outline-none w-full md:w-1/2 text-lg font-sans font-bold tracking-tight text-[#1C3F35]/80 dark:text-white/80 placeholder-[#1C3F35]/30 dark:placeholder-white/30";
-  const sectionHeaderStyles = "text-[11px] font-mono font-bold uppercase tracking-[0.25em] text-[#1C3F35]/50 dark:text-white/40 ml-6 mb-3";
+  const sectionHeaderStyles = "text-sm md:text-[15px] font-sans font-extrabold uppercase tracking-widest text-[#1C3F35] dark:text-emerald-500 ml-6 mb-3";
 
   return (
     <div className="w-full pt-4 pb-24">
@@ -103,6 +91,7 @@ export function ProfileSettings() {
               {user?.full_name?.charAt(0).toUpperCase() || user?.email.charAt(0).toUpperCase() || 'A'}
             </div>
           </div>
+
           <h1 className="text-3xl md:text-4xl font-sans font-extrabold text-center text-[#1C3F35] dark:text-white tracking-tight leading-none mb-1.5">
             {user?.full_name || 'Инкогнито'}
           </h1>
@@ -153,30 +142,7 @@ export function ProfileSettings() {
             </div>
           </div>
 
-          {/* 3. iOS SETTINGS LAYOUT - INCOME */}
-          <div>
-            <h2 className={sectionHeaderStyles}>
-              Финансовые данные
-            </h2>
-            <div className={sectionContainerStyles}>
-              <div className={rowStyles}>
-                <label className={rowLabelStyles}>Базовый доход</label>
-                <div className="flex items-baseline gap-2 justify-end w-full md:w-1/2">
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={monthlyIncome}
-                    onChange={(e) => setMonthlyIncome(formatSum(e.target.value))}
-                    className="text-right bg-transparent outline-none w-full text-2xl md:text-3xl font-sans font-black tabular-nums tracking-tighter text-[#1C3F35] dark:text-white placeholder-[#1C3F35]/30 dark:placeholder-white/30"
-                    placeholder="0"
-                  />
-                  <span className="text-sm md:text-base font-bold text-[#1C3F35] dark:text-white opacity-40 tracking-normal shrink-0">₽</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 4. TELEGRAM SYNC BLOCK */}
+          {/* 3. TELEGRAM SYNC BLOCK */}
           <div>
             <h2 className={sectionHeaderStyles}>
               Синхронизация
@@ -214,6 +180,39 @@ export function ProfileSettings() {
             </div>
           </div>
 
+          {/* 4. PACIFIC RIDE GAME CARD */}
+          <div>
+            <h2 className={sectionHeaderStyles}>
+              Citrine Arcade
+            </h2>
+            <div className="rounded-[2.5rem] p-8 md:p-10 bg-gradient-to-br from-[#1C3F35] to-[#0A1A12] dark:from-[#050505] dark:to-[#111111] border border-black/5 dark:border-white/10 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden transition-all group hover:shadow-[0_20px_50px_rgba(255,122,0,0.15)]">
+              {/* Sunset glow inside */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-[#FF7A00]/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none transition-all group-hover:bg-[#FF7A00]/20" />
+
+              <div className="flex items-center gap-5 w-full md:w-auto relative z-10">
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 bg-[#FF7A00]/10 border border-[#FF7A00]/20 shadow-inner group-hover:scale-110 transition-transform duration-300">
+                  <Gamepad2 className="w-7 h-7 text-[#FF7A00] ml-0.5" />
+                </div>
+                <div>
+                  <p className="font-sans font-extrabold tracking-tight text-white text-xl md:text-2xl leading-none mb-1.5">
+                    Pacific Ride
+                  </p>
+                  <p className="text-[10px] md:text-[11px] font-mono font-bold uppercase tracking-[0.25em] text-[#FF7A00]">
+                    California Sunset Edition
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsGameOpen(true)}
+                className="w-full md:w-auto px-8 h-14 md:h-16 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-bold uppercase tracking-widest text-sm shadow-md transition-all flex items-center justify-center gap-3 active:scale-[0.98] shrink-0 border border-white/5 backdrop-blur-md relative z-10"
+              >
+                Запустить
+              </button>
+            </div>
+          </div>
+
           {/* 5. THE GOLDEN TRIGGER */}
           <div className="pt-4">
             <button
@@ -234,30 +233,8 @@ export function ProfileSettings() {
         </form>
       </motion.div>
 
-      {/* ─── CITRINE SIGIL (Easter Egg Trigger) ──────────────── */}
-      <div className="flex justify-center mt-16 mb-4 relative z-10">
-        <button
-          type="button"
-          onClick={() => setClickCount((c) => c + 1)}
-          className="group flex flex-col items-center gap-1 cursor-default select-none focus:outline-none"
-          aria-hidden="true"
-          tabIndex={-1}
-        >
-          <svg
-            viewBox="0 0 100 100"
-            className="w-10 h-10 opacity-25 dark:opacity-30 group-hover:opacity-60 transition-all duration-500 drop-shadow-[0_0_6px_rgba(255,122,0,0)] group-hover:drop-shadow-[0_0_8px_rgba(255,122,0,0.5)]"
-            fill="none"
-            strokeWidth="3"
-          >
-            <circle cx="50" cy="50" r="30" stroke="#FF7A00" strokeOpacity="0.8" />
-            <path d="M 50 10 L 50 90 M 10 50 L 90 50" stroke="#FF7A00" strokeOpacity="0.6" />
-            <path d="M 28 28 L 72 72 M 28 72 L 72 28" stroke="#FF7A00" strokeOpacity="0.3" />
-          </svg>
-        </button>
-      </div>
-
       {/* ─── PACIFIC RIDE OVERLAY ──────────────────────────────── */}
-      {clickCount >= 3 && <PacificRide onClose={() => setClickCount(0)} />}
+      {isGameOpen && <PacificRide onClose={() => setIsGameOpen(false)} />}
     </div>
   );
 }

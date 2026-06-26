@@ -18,6 +18,7 @@ interface PacificRideProps {
 }
 
 const COLS = 9;
+const MAX_CELLS = 1000;
 
 const LEVELS = [
   {
@@ -70,11 +71,18 @@ const CLOUDS = Array.from({ length: 6 }, (_, i) => ({
 
 const RIPPLES = [0, 1, 2, 3, 4];
 
-function canMatch(cells: Cell[], i: number, j: number): boolean {
-  if (i === j) return false;
+// 🔥 ИСПРАВЛЕНИЕ БАГА 1: Движок теперь принимает ID вместо индексов
+function canMatch(cells: Cell[], idA: string, idB: string): boolean {
+  if (idA === idB) return false;
+
+  const i = cells.findIndex(c => c.id === idA);
+  const j = cells.findIndex(c => c.id === idB);
+  if (i === -1 || j === -1) return false;
+
   const ci = cells[i];
   const cj = cells[j];
-  if (!ci || !cj || ci.crossed || cj.crossed) return false;
+
+  if (!ci || !cj || ci.crossed || cj.crossed || ci.justMatched || cj.justMatched) return false;
   if (ci.value !== cj.value && ci.value + cj.value !== 10) return false;
 
   const a = Math.min(i, j);
@@ -82,7 +90,7 @@ function canMatch(cells: Cell[], i: number, j: number): boolean {
 
   let linearClear = true;
   for (let k = a + 1; k < b; k++) {
-    if (!cells[k]?.crossed) { linearClear = false; break; }
+    if (!cells[k]?.crossed && !cells[k]?.justMatched) { linearClear = false; break; }
   }
   if (linearClear) return true;
 
@@ -93,7 +101,7 @@ function canMatch(cells: Cell[], i: number, j: number): boolean {
     let vertClear = true;
     for (let r = ra + 1; r < rb; r++) {
       const idx = r * COLS + ca;
-      if (idx < cells.length && !cells[idx]?.crossed) { vertClear = false; break; }
+      if (idx < cells.length && !cells[idx]?.crossed && !cells[idx]?.justMatched) { vertClear = false; break; }
     }
     if (vertClear) return true;
   }
@@ -107,7 +115,7 @@ function canMatch(cells: Cell[], i: number, j: number): boolean {
       const col = ca + step * colStep;
       if (col < 0 || col >= COLS) { diagClear = false; break; }
       const idx = (ra + step) * COLS + col;
-      if (!cells[idx]?.crossed) { diagClear = false; break; }
+      if (!cells[idx]?.crossed && !cells[idx]?.justMatched) { diagClear = false; break; }
     }
     if (diagClear) return true;
   }
@@ -167,7 +175,7 @@ function HelpScreen({ onClose }: { onClose: () => void }) {
         </ul>
         <motion.button
           onClick={onClose} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-          className="w-full py-3.5 bg-slate-800 text-white rounded-xl font-bold uppercase tracking-widest text-xs"
+          className="w-full py-3.5 bg-slate-800 text-white rounded-xl font-bold uppercase tracking-widest text-xs outline-none"
         >
           ПОНЯТНО
         </motion.button>
@@ -215,7 +223,7 @@ function WinScreen({ levelIdx, onNext }: { levelIdx: number; onNext: () => void 
         <motion.button
           custom={2} variants={textVariants} initial="hidden" animate="show" onClick={onNext}
           whileHover={{ scale: 1.06, boxShadow: '0 0 20px rgba(255,145,0,0.3)' }} whileTap={{ scale: 0.94 }}
-          className="relative z-10 px-8 py-3 rounded-2xl text-white font-bold uppercase tracking-widest text-xs"
+          className="relative z-10 px-8 py-3 rounded-2xl text-white font-bold uppercase tracking-widest text-xs outline-none"
           style={{ background: 'linear-gradient(135deg, #FF7A00, #FFB020)' }}
         >
           Следующий уровень →
@@ -252,7 +260,7 @@ const GameCell = React.memo(({ cell, isSelected, isBadTarget, onClick }: CellPro
         boxShadow: matchFlash ? '0 0 12px rgba(255,122,0,0.3)' : 'none',
         position: 'relative', overflow: 'hidden',
       }}
-      className="aspect-square flex items-center justify-center rounded-lg text-base font-black font-mono select-none"
+      className="aspect-square flex items-center justify-center rounded-lg text-base font-black font-mono select-none outline-none focus:outline-none"
     >
       {cell.crossed && !cell.justMatched ? null : cell.value}
       <AnimatePresence>
@@ -273,8 +281,8 @@ const MATCH_FLASH_MS = 280;
 function NumberMatchGame() {
   const [levelIdx, setLevelIdx]       = useState(0);
   const [cells, setCells]             = useState<Cell[]>(() => makeGrid(LEVELS[0].grid));
-  const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
-  const [badIdx, setBadIdx]           = useState<number | null>(null);
+  const [selectedId, setSelectedId]   = useState<string | null>(null);
+  const [badId, setBadId]             = useState<string | null>(null);
   const [panelShake, setPanelShake]   = useState(false);
   const [showHelp, setShowHelp]       = useState(false);
   const badTimeoutRef                 = useRef<NodeJS.Timeout | null>(null);
@@ -285,7 +293,33 @@ function NumberMatchGame() {
     };
   }, []);
 
-  const isWon = useMemo(() => cells.length > 0 && cells.every(c => c.crossed), [cells]);
+  // 🔥 ТВОЙ ФИКС: Очистка пустых строк!
+  useEffect(() => {
+    // Не чистим, если массив пустой (значит мы победили) или если идет анимация
+    if (cells.length === 0 || cells.some(c => c.justMatched)) return;
+
+    let hasEmptyRows = false;
+    const newCells: Cell[] = [];
+
+    // Проходимся по сетке построчно
+    for (let i = 0; i < cells.length; i += COLS) {
+      const row = cells.slice(i, i + COLS);
+      // Если в строке есть элементы и ВСЕ они зачеркнуты -> строку удаляем
+      if (row.length > 0 && row.every(c => c.crossed)) {
+        hasEmptyRows = true;
+      } else {
+        newCells.push(...row);
+      }
+    }
+
+    if (hasEmptyRows) {
+      setCells(newCells);
+    }
+  }, [cells]);
+
+  // 🔥 ИСПРАВЛЕНИЕ БАГА 2: Условие победы теперь работает, даже если массив cells схлопнулся до 0.
+  const isWon = useMemo(() => cells.length === 0 || cells.every(c => c.crossed), [cells]);
+
   const remaining = useMemo(() => cells.filter(c => !c.crossed).length, [cells]);
 
   const goNextLevel = useCallback(() => {
@@ -293,23 +327,25 @@ function NumberMatchGame() {
     if (next < LEVELS.length) {
       setLevelIdx(next);
       setCells(makeGrid(LEVELS[next]!.grid));
-      setSelectedIdx(null);
-      setBadIdx(null);
+      setSelectedId(null);
+      setBadId(null);
       setPanelShake(false);
     }
   }, [levelIdx]);
 
-  const handleCellClick = useCallback((idx: number) => {
-    if (cells[idx]?.crossed) return;
-    if (selectedIdx === null) { setSelectedIdx(idx); return; }
-    if (selectedIdx === idx) { setSelectedIdx(null); return; }
+  const handleCellClick = useCallback((id: string) => {
+    const clickedCell = cells.find(c => c.id === id);
+    if (!clickedCell || clickedCell.crossed) return;
 
-    if (canMatch(cells, selectedIdx, idx)) {
-      const idA = cells[selectedIdx]!.id;
-      const idB = cells[idx]!.id;
+    if (selectedId === null) { setSelectedId(id); return; }
+    if (selectedId === id) { setSelectedId(null); return; }
+
+    if (canMatch(cells, selectedId, id)) {
+      const idA = selectedId;
+      const idB = id;
 
       setCells(prev => prev.map(c => c.id === idA || c.id === idB ? { ...c, justMatched: true } : c));
-      setSelectedIdx(null);
+      setSelectedId(null);
 
       setTimeout(() => {
         setCells(prev => prev.map(c => c.id === idA || c.id === idB ? { ...c, crossed: true } : c));
@@ -319,27 +355,35 @@ function NumberMatchGame() {
       }, MATCH_FLASH_MS);
     } else {
       if (badTimeoutRef.current) clearTimeout(badTimeoutRef.current);
-      setBadIdx(idx);
+      setBadId(id);
       setPanelShake(true);
-      badTimeoutRef.current = setTimeout(() => { setBadIdx(null); setPanelShake(false); }, 380);
-      setSelectedIdx(idx);
+      badTimeoutRef.current = setTimeout(() => { setBadId(null); setPanelShake(false); }, 380);
+      setSelectedId(id);
     }
-  }, [cells, selectedIdx]);
+  }, [cells, selectedId]);
 
   const handleAdd = useCallback(() => {
+    if (cells.length > MAX_CELLS) return;
+
     const alive = cells.filter(c => !c.crossed);
     if (alive.length === 0) return;
     setCells(prev => [...prev, ...alive.map(c => ({ ...c, id: Math.random().toString(36).slice(2, 11), justMatched: false }))]);
-    setSelectedIdx(null);
+    setSelectedId(null);
   }, [cells]);
 
   const level = LEVELS[levelIdx] ?? LEVELS[0]!;
 
   const cellElements = useMemo(() =>
-    cells.map((cell, idx) => (
-      <GameCell key={cell.id} cell={cell} isSelected={!cell.crossed && selectedIdx === idx} isBadTarget={badIdx === idx} onClick={() => handleCellClick(idx)} />
+    cells.map((cell) => (
+      <GameCell
+        key={cell.id}
+        cell={cell}
+        isSelected={!cell.crossed && selectedId === cell.id}
+        isBadTarget={badId === cell.id}
+        onClick={() => handleCellClick(cell.id)}
+      />
     )),
-    [cells, selectedIdx, badIdx, handleCellClick],
+    [cells, selectedId, badId, handleCellClick],
   );
 
   return (
@@ -365,7 +409,7 @@ function NumberMatchGame() {
           >
             <button
               onClick={() => setShowHelp(true)}
-              className="absolute top-5 right-5 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold hover:bg-slate-200 hover:text-slate-800 transition-colors z-20"
+              className="absolute top-5 right-5 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold hover:bg-slate-200 hover:text-slate-800 transition-colors z-20 outline-none"
             >
               ?
             </button>
@@ -413,9 +457,10 @@ function NumberMatchGame() {
 
                   <motion.button
                     onClick={handleAdd}
+                    disabled={cells.length > MAX_CELLS}
                     whileHover={{ scale: 1.02, boxShadow: '0 0 20px rgba(255,130,0,0.3)' }}
                     whileTap={{ scale: 0.97 }}
-                    className="w-full py-3.5 mt-2 rounded-xl text-white font-bold uppercase tracking-widest text-xs"
+                    className="w-full py-3.5 mt-2 rounded-xl text-white font-bold uppercase tracking-widest text-xs outline-none disabled:opacity-50 disabled:grayscale"
                     style={{ background: 'linear-gradient(135deg, rgba(255,122,0,0.9), rgba(255,175,20,0.9))' }}
                   >
                     + Добавить цифры
@@ -454,6 +499,12 @@ export function PacificRide({ onClose }: PacificRideProps) {
   }, []);
 
   useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.play().catch(() => {
+        console.warn("PacificRide: Audio autoplay blocked by browser policy.");
+      });
+    }
+
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') { doFadeOut(); onClose(); }
     };
@@ -472,7 +523,7 @@ export function PacificRide({ onClose }: PacificRideProps) {
       exit={{ opacity: 0 }}
       transition={{ duration: 1.4 }}
     >
-      <audio ref={audioRef} id="pacific-audio" src="/sf-ambient.mp3" autoPlay loop />
+      <audio ref={audioRef} id="pacific-audio" src="/sf-ambient.mp3" loop />
 
       <SunsetBackground />
       <NumberMatchGame />
@@ -480,7 +531,7 @@ export function PacificRide({ onClose }: PacificRideProps) {
       <button
         onClick={() => { doFadeOut(); onClose(); }}
         className="absolute top-6 right-6 z-[1001] font-mono text-xs px-4 py-2 rounded-full
-                   transition-all duration-200 hover:bg-white/10"
+                   transition-all duration-200 hover:bg-white/10 outline-none"
         style={{
           color: 'rgba(255,255,255,0.88)',
           border: '1px solid rgba(255,255,255,0.42)',

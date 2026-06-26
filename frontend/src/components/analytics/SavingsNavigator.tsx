@@ -45,19 +45,19 @@ const HorizonTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length >= 2) {
     return (
       <div className="bg-white/95 dark:bg-[#121212]/95 backdrop-blur-3xl border border-black/10 dark:border-white/10 px-5 py-4 rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.6)] z-50">
-        <p className="text-[10px] md:text-[11px] font-mono font-bold text-[#1C3F35]/50 dark:text-white/40 mb-3 uppercase tracking-[0.25em]">
+        <p className="text-[10px] md:text-[11px] font-sans font-extrabold text-[#1C3F35]/70 dark:text-white/60 mb-3 uppercase tracking-[0.25em]">
           {label}
         </p>
         <div className="space-y-3">
           <p className="text-xl font-sans font-black text-emerald-600 dark:text-emerald-400 tabular-nums tracking-tighter leading-none">
             {Math.round(payload[0]?.value ?? 0).toLocaleString('ru-RU')}
             <span className="text-sm font-bold opacity-60 ml-1.5 tracking-normal">₽</span>
-            <span className="text-[10px] font-mono font-bold opacity-50 ml-2.5 uppercase tracking-[0.25em] text-[#1C3F35] dark:text-white">Инвестиции</span>
+            <span className="text-[10px] font-sans font-extrabold opacity-70 ml-2.5 uppercase tracking-wide text-[#1C3F35] dark:text-white">Инвестиции</span>
           </p>
-          <p className="text-xl font-sans font-black text-[#1C3F35]/70 dark:text-white/70 tabular-nums tracking-tighter leading-none">
+          <p className="text-xl font-sans font-black text-[#1C3F35]/90 dark:text-white/90 tabular-nums tracking-tighter leading-none">
             {Math.round(payload[1]?.value ?? 0).toLocaleString('ru-RU')}
             <span className="text-sm font-bold opacity-60 ml-1.5 tracking-normal">₽</span>
-            <span className="text-[10px] font-mono font-bold opacity-50 ml-2.5 uppercase tracking-[0.25em] text-[#1C3F35] dark:text-white">Копилка</span>
+            <span className="text-[10px] font-sans font-extrabold opacity-70 ml-2.5 uppercase tracking-wide text-[#1C3F35] dark:text-white">Копилка</span>
           </p>
         </div>
       </div>
@@ -159,7 +159,9 @@ export function SavingsNavigator() {
   );
 
   const inputStyles = "flex-1 w-full bg-transparent outline-none text-xl md:text-2xl font-sans font-black tabular-nums tracking-tighter text-[#1C3F35] dark:text-white placeholder-[#1C3F35]/30 dark:placeholder-white/30";
-  const premiumLabelStyle = "block mb-3 text-sm md:text-[15px] font-sans font-extrabold uppercase tracking-widest text-[#1C3F35] dark:text-emerald-500";
+
+  // 🔥 ЭТАЛОННЫЙ ШРИФТ ИЗ QUICK ENTRY
+  const premiumLabelStyle = "block mb-2 text-[14px] md:text-[15px] font-sans font-extrabold tracking-tight text-[#1C3F35] dark:text-emerald-400 dark:drop-shadow-[0_0_8px_rgba(52,211,153,0.6)]";
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: 'easeOut' }} className="flex flex-col gap-10 w-full mt-4 pb-24">
@@ -216,7 +218,7 @@ export function SavingsNavigator() {
                 {HORIZONS.map((h) => (
                   <button
                     key={h.months} onClick={() => setHorizonMonths(h.months)}
-                    className={`px-6 py-3 rounded-2xl text-[11px] md:text-[12px] font-mono font-bold uppercase tracking-[0.25em] transition-all duration-300 ${horizonMonths === h.months ? 'bg-[#FF7A00] text-white shadow-[0_10px_20px_rgba(255,122,0,0.4)]' : 'bg-black/5 dark:bg-white/5 text-[#1C3F35]/60 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/10'}`}
+                    className={`px-6 py-3 rounded-2xl text-[12px] font-sans font-extrabold uppercase tracking-wide transition-all duration-300 ${horizonMonths === h.months ? 'bg-[#FF7A00] text-white shadow-[0_10px_20px_rgba(255,122,0,0.4)] dark:drop-shadow-[0_0_8px_rgba(255,122,0,0.8)]' : 'bg-black/5 dark:bg-white/5 text-[#1C3F35]/70 dark:text-white/70 hover:bg-black/10 dark:hover:bg-white/10'}`}
                   >
                     {h.label}
                   </button>
@@ -232,7 +234,7 @@ export function SavingsNavigator() {
                 </span>
               </div>
               <input type="range" min="0" max="30" step="0.5" value={annualYield} onChange={(e) => setAnnualYield(parseFloat(e.target.value))} className="apple-slider bg-black/10 dark:bg-white/10" style={{ background: `linear-gradient(to right, #10B981 ${(annualYield / 30) * 100}%, rgba(128,128,128,0.1) ${(annualYield / 30) * 100}%)` }} />
-              <div className="text-[10px] font-mono font-bold uppercase tracking-[0.25em] text-[#1C3F35]/40 dark:text-white/30 flex justify-between">
+              <div className="text-[11px] font-sans font-extrabold uppercase tracking-wide text-[#1C3F35]/60 dark:text-white/50 flex justify-between">
                 <span>0%</span><span>Сложный процент</span><span>30%</span>
               </div>
             </div>
@@ -245,7 +247,7 @@ export function SavingsNavigator() {
                 </span>
               </div>
               <input type="range" min="0" max="20" step="0.5" value={inflation} onChange={(e) => setInflation(parseFloat(e.target.value))} className="apple-slider bg-black/10 dark:bg-white/10" style={{ background: `linear-gradient(to right, #F43F5E ${(inflation / 20) * 100}%, rgba(128,128,128,0.1) ${(inflation / 20) * 100}%)` }} />
-              <div className="text-[10px] font-mono font-bold uppercase tracking-[0.25em] text-[#1C3F35]/40 dark:text-white/30 flex justify-between">
+              <div className="text-[11px] font-sans font-extrabold uppercase tracking-wide text-[#1C3F35]/60 dark:text-white/50 flex justify-between">
                 <span>0%</span><span>Обесценивание</span><span>20%</span>
               </div>
             </div>
@@ -281,7 +283,7 @@ export function SavingsNavigator() {
           { label: 'Преимущество', val: advantage, color: 'text-[#FF7A00]' },
         ].map((m) => (
           <div key={m.label} className="bg-white/40 dark:bg-[#111111]/40 backdrop-blur-3xl border border-black/5 dark:border-white/10 rounded-[2.5rem] p-8 text-center shadow-lg">
-            <p className="text-[11px] font-mono font-bold text-[#1C3F35]/50 dark:text-white/40 uppercase tracking-[0.25em] mb-3">
+            <p className="text-[12px] font-sans font-extrabold text-[#1C3F35]/80 dark:text-white/80 uppercase tracking-wide mb-3">
               {m.label}
             </p>
             <p className={`text-2xl md:text-3xl font-sans font-black tabular-nums tracking-tighter ${m.color}`}>
@@ -294,9 +296,14 @@ export function SavingsNavigator() {
 
       {/* ═══ DUAL REALITY CHART ═══ */}
       <div className={`bg-white/40 dark:bg-[#111111]/40 backdrop-blur-3xl border border-black/5 dark:border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-2xl transition-opacity duration-300 ${isStale ? 'opacity-50' : 'opacity-100'}`}>
-        <div className="mb-8 flex flex-col gap-1.5">
-          <h2 className="text-xl md:text-2xl font-sans font-extrabold tracking-tight text-[#1C3F35] dark:text-white leading-none">Двойная Реальность</h2>
-          <p className="text-[11px] font-mono font-bold uppercase tracking-[0.25em] text-[#1C3F35]/50 dark:text-white/40">Инвестиции против Инфляции</p>
+        <div className="mb-8">
+          <h2 className="text-xl md:text-2xl font-sans font-extrabold tracking-tight text-[#1C3F35] dark:text-white">
+            Двойная Реальность
+          </h2>
+          {/* 🔥 ИСПРАВЛЕНИЕ: Эталонный стиль подзаголовка из QuickEntry */}
+          <p className="text-[11px] md:text-[12px] font-sans font-extrabold uppercase tracking-wide text-[#FF7A00] dark:drop-shadow-[0_0_8px_rgba(255,122,0,0.5)] mt-1">
+            Инвестиции против Инфляции
+          </p>
         </div>
 
         <div className="h-[400px] w-full">
@@ -309,8 +316,9 @@ export function SavingsNavigator() {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128, 128, 128, 0.1)" />
-              <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#888', fontWeight: 600, fontFamily: 'monospace' }} tickMargin={12} interval={Math.max(Math.floor(horizonMonths / 8), 1)} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#888', fontWeight: 600, fontFamily: 'monospace' }} tickFormatter={(v) => { if (Math.abs(v) >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`; if (Math.abs(v) >= 1000) return `${(v / 1000).toFixed(0)}k`; return `${v}`; }} tickMargin={8} />
+              {/* 🔥 ИСПРАВЛЕНИЕ: Красивый шрифт осей (inherit унаследует Plus Jakarta Sans) */}
+              <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#888', fontWeight: 800, fontFamily: 'inherit' }} tickMargin={12} interval={Math.max(Math.floor(horizonMonths / 8), 1)} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#888', fontWeight: 800, fontFamily: 'inherit' }} tickFormatter={(v) => { if (Math.abs(v) >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`; if (Math.abs(v) >= 1000) return `${(v / 1000).toFixed(0)}k`; return `${v}`; }} tickMargin={8} />
               <Tooltip content={<HorizonTooltip />} cursor={{ stroke: 'rgba(16, 185, 129, 0.2)', strokeWidth: 1.5, strokeDasharray: '4 4' }} isAnimationActive={false} wrapperStyle={{ outline: 'none' }} />
               <Area type="monotone" dataKey="invested" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#investFillV)" isAnimationActive={false} activeDot={{ r: 6, strokeWidth: 0, fill: '#10b981', style: { filter: 'drop-shadow(0 0 6px rgba(16,185,129,0.7))' } }} />
               <Area type="monotone" dataKey="piggybank" stroke="#94a3b8" strokeWidth={2} strokeDasharray="6 4" fillOpacity={0} fill="transparent" isAnimationActive={false} activeDot={{ r: 4, strokeWidth: 0, fill: '#94a3b8' }} />
@@ -321,11 +329,11 @@ export function SavingsNavigator() {
         <div className="flex flex-wrap items-center gap-8 mt-8 pt-6 border-t border-black/5 dark:border-white/5">
           <div className="flex items-center gap-3">
             <span className="w-5 h-1 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]" />
-            <span className="text-[10px] font-mono font-bold uppercase tracking-[0.25em] text-[#1C3F35]/70 dark:text-white/60">Инвестиции (с поправкой на инфляцию)</span>
+            <span className="text-[10px] md:text-[11px] font-sans font-extrabold uppercase tracking-wide text-[#1C3F35]/90 dark:text-white/80">Инвестиции (с поправкой на инфляцию)</span>
           </div>
           <div className="flex items-center gap-3">
             <span className="w-5 h-1 rounded-full bg-slate-400 border-t-2 border-dashed border-slate-500" style={{ background: 'none' }} />
-            <span className="text-[10px] font-mono font-bold uppercase tracking-[0.25em] text-[#1C3F35]/70 dark:text-white/60">Просто копилка</span>
+            <span className="text-[10px] md:text-[11px] font-sans font-extrabold uppercase tracking-wide text-[#1C3F35]/90 dark:text-white/80">Просто копилка</span>
           </div>
         </div>
       </div>
