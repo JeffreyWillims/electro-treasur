@@ -45,7 +45,7 @@ export function ProfileSettings() {
 
   // ─── TELEGRAM DEEP LINK ────────────────────────────────────
   const [isTgLoading, setIsTgLoading] = useState(false);
-  const TG_BOT_USERNAME = 'read_workbot';
+  const TG_BOT_USERNAME = 'citrine_vault_bot';
 
   const handleTelegramSync = async () => {
     setIsTgLoading(true);

@@ -193,7 +193,7 @@ def _parse_transactions_from_text(text: str, source_name: str) -> list[dict[str,
             # Это мгновенно поднимает реальные цены над номерами чеков (918244).
             has_decimal = bool(re.search(r"[.,]\d{1,2}$", num_str))
             if score == 0 and has_decimal:
-                score = 0.5
+                score = 0.5 # type: ignore[assignment]
 
             if (
                 score == 0

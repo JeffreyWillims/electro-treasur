@@ -237,6 +237,7 @@ async def _attempt_link(
     result = await session.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if user is None:
+        await message.answer("❌ Ошибка: пользователь не найден в базе.")
         return
 
     dup_result = await session.execute(
@@ -305,6 +306,23 @@ async def cmd_start(
             reply_markup=builder.as_markup(),
         )
 
+@router.message(Command("link"))
+async def cmd_link(
+    message: Message,
+    command: CommandObject,
+    session: AsyncSession,
+    current_user: User | None,
+    redis_client: Redis,
+) -> None:
+    if current_user is not None:
+        await message.answer("⚠️ Твой аккаунт уже привязан к Citrine Vault.", reply_markup=_get_reply_menu())
+        return
+
+    if not command.args or not re.fullmatch(r"\d{6}", command.args.strip()):
+        await message.answer("❌ Формат команды: `/link <6-значный код>`\nСгенерируй код на сайте в Настройках.", parse_mode="Markdown")
+        return
+
+    await _attempt_link(message, command.args.strip(), session, redis_client)
 
 @router.message(Command("help"))
 async def cmd_help(message: Message) -> None:
