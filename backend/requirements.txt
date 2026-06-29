@@ -152,3 +152,5 @@ openpyxl==3.1.2
 # ── Phase 2: LLM Integration (OpenAI & Instructor) ─────────────────────────
 openai>=1.14.0
 instructor>=1.2.0
+
+aiohttp-socks==0.9.0
