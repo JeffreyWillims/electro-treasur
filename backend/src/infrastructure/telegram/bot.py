@@ -23,6 +23,7 @@ import asyncio
 import logging
 
 from aiogram import Bot, Dispatcher
+from aiogram.client.session.aiohttp import AiohttpSession
 from redis.asyncio import Redis
 
 from src.config import settings
@@ -45,9 +46,15 @@ async def main() -> None:
         )
         return
 
-    bot = Bot(token=settings.telegram_bot_token)
     dp = Dispatcher()
 
+    if settings.telegram_proxy_url:
+        logger.info(f"🌐 Подключаем Telegram через прокси: {settings.telegram_proxy_url}")
+        session = AiohttpSession(proxy=settings.telegram_proxy_url)
+        bot = Bot(token=settings.telegram_bot_token, session=session)
+    else:
+        logger.info("📡 Запуск Telegram без прокси")
+        bot = Bot(token=settings.telegram_bot_token)
     # Shared Redis client — injected via dp workflow_data so handlers can
     # receive it as `redis_client` parameter via aiogram's DI system.
     redis_client = Redis.from_url(settings.redis_url, decode_responses=True)

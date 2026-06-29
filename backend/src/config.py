@@ -35,6 +35,7 @@ class Settings(BaseSettings):
 
     # ── Telegram Bot ─────────────────────────────────────────────────────
     telegram_bot_token: str = ""
+    telegram_proxy_url: str | None = None
 
     model_config = {"env_prefix": "ET_", "env_file": ".env", "extra": "ignore"}
 
