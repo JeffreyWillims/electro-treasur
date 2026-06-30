@@ -48,6 +48,16 @@ MERCHANT_TO_CATEGORY = {
 
 
 def _safe_parse_amount(raw: str) -> float | None:
+    """Parse monetary string into float, handling RU/US/EU formats.
+
+    Supports:
+      "1 500,00"  → 1500.00  (RU: space-separated, comma-decimal)
+      "1,500.00"  → 1500.00  (US: comma-separated, dot-decimal)
+      "1.500,00"  → 1500.00  (EU: dot-separated, comma-decimal)
+      "1500"      → 1500.00  (plain integer)
+
+    Returns None on any parse failure. Never raises.
+    """
     s = raw.replace(" ", "").replace("\xa0", "")
     if not s:
         return None
@@ -67,12 +77,22 @@ def _safe_parse_amount(raw: str) -> float | None:
 
 
 def _preprocess_image(image_bytes: bytes) -> Image.Image:
-    img = Image.open(io.BytesIO(image_bytes))
-    img = ImageOps.grayscale(img)
-    img = ImageOps.autocontrast(img)
-    img = img.filter(ImageFilter.SHARPEN)
-    img = img.resize((img.width * 2, img.height * 2), Image.Resampling.LANCZOS)
-    return img
+    """Подготовка изображения для лучшего распознавания OCR.
+
+    Note: Caller is responsible for closing the returned Image
+    (handled via `finally: processed_img.close()` in analyze_document_universal).
+    """
+    raw_img = Image.open(io.BytesIO(image_bytes))
+    try:
+        img = ImageOps.grayscale(raw_img)
+        img = ImageOps.autocontrast(img)
+        img = img.filter(ImageFilter.SHARPEN)
+        img = img.resize((img.width * 2, img.height * 2), Image.Resampling.LANCZOS)
+        return img
+    finally:
+        # Close the original raw image to release BytesIO buffer.
+        # The returned `img` is a new object (grayscale copy).
+        raw_img.close()
 
 
 def _extract_from_excel(file_bytes: bytes, file_name: str) -> list[dict[str, Any]]:

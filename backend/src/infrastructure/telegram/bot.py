@@ -50,6 +50,8 @@ async def main() -> None:
 
     if settings.telegram_proxy_url:
         logger.info(f"🌐 Подключаем Telegram через прокси: {settings.telegram_proxy_url}")
+
+        # Передаем прокси напрямую в сессию, без aiohttp-socks
         session = AiohttpSession(proxy=settings.telegram_proxy_url)
         bot = Bot(token=settings.telegram_bot_token, session=session)
     else:

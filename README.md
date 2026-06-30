@@ -1,91 +1,74 @@
-# Citrine Vault (Electro Treasur)
+# 🏦 Citrine Vault (Electro-Treasur)
 
-Citrine Vault (ранее Aura Wealth) — это премиальная, геймифицированная финансовая "Система Управления Будущим" и трекер капитала. Проект построен на архитектуре уровня Apple Fintech с глубокой реактивностью фронтенда, элементами геймификации и микросервисной базой с использованием FastAPI и PostgreSQL.
+**Live Production:** [https://citrinevault.ru](https://citrinevault.ru)  
+**Telegram Assistant:** [@citrine_vault_bot](https://t.me/citrine_vault_bot)
+
+Привет! Меня зовут Евгений. Как инженер, который ценит абсолютную точность и внимание к деталям, я не мог ограничиться созданием обычного трекера расходов. 
+
+**Citrine Vault** — это премиальная, геймифицированная финансовая «Система Управления Будущим». Я спроектировал этот проект с архитектурой уровня финтех-компаний: от глубокой реактивности фронтенда и физики интерфейса до микросервисного бэкенда с пулингом коннектов и защитой от состояний гонки (Race Conditions).
+
+---
 
 ## 🌟 Ключевые возможности
 
-*   **Премиальный "Glassmorphic" UI**: Погружающее React-приложение с поддержкой темной/светлой тем, использующее передовую эстетику "California Organic Luxury" (теплые градиенты Citrine, слои размытия, утонченная типографика Cormorant Garamond / Space Mono).
-*   **"Precision Lock" Layout**: Безупречные Fintech-интерфейсы в стиле Apple, созданные с помощью Tailwind CSS, Framer Motion и абсолютного внимания к геометрической точности.
-*   **Интеллектуальный Дашборд**: Детализированные метрики (Общий капитал, Доходы, Расходы), кинетические интерактивные графики и геймифицированные индикаторы роста капитализации.
-*   **AI Консультант (Savings Navigator)**: Модуль "Кабины Пилота" с физикой пружин `framer-motion` (Spring Haptics), встроенным симулятором выживаемости капитала и оптимизированными советами ИИ по сбережению средств.
-*   **Zero-G Security (Backend)**: Безопасное FastAPI-приложение на базе строгих типизированных моделей `pydantic`, изолированных контекстов пользователей, JWT-авторизации, Redis-троттлинга и детальной телеметрии.
-*   **Мгновенная Реактивность (Kinetic UX)**: Полная интеграция с `react-query`, обеспечивающая моментальные отклики интерфейса (Kinetic Abacus) и ввод транзакций без задержек.
-*   **Полная Докеризация**: Разработка и деплой оркестрируются через стандартный `docker-compose.yml`.
+* **Премиальный "Glassmorphic" UI:** Погружающее React-приложение с эстетикой "California Organic Luxury" (теплые градиенты Citrine, слои размытия, утонченная типографика Cormorant Garamond / Space Mono).
+* **"Precision Lock" Layout:** Безупречные Fintech-интерфейсы, созданные с помощью Tailwind CSS и Framer Motion с абсолютным вниманием к геометрической точности.
+* **AI Консультант & OCR (V.I.A.):** Умный Telegram-ассистент, способный читать фотографии чеков и банковских выписок, очищать Tesseract-шум и автоматически маршрутизировать расходы по категориям.
+* **Zero-G Security (Backend):** Безопасное FastAPI-приложение на базе строгих моделей `pydantic`, JWT-авторизации, Redis-троттлинга (защита от Brute Force) и паттерна **Idempotency Keys** для защиты баланса пользователя от двойных списаний.
+* **Мгновенная Реактивность (Kinetic UX):** Интеграция с `react-query` обеспечивает моментальные отклики интерфейса (Kinetic Abacus) без сетевых задержек.
 
-## 🛠 Технологический стек
+---
+
+## 🛠 Технологический стек и Архитектура
+
+Я не тренируюсь на Production, поэтому каждое решение здесь обкатано и обосновано.
 
 ### Frontend
-*   **React 18** (Vite + TypeScript)
-*   **Tailwind CSS V3**
-*   **Framer Motion** (для кинетических анимаций и физики интерфейса)
-*   **TanStack Query** (Извлечение данных и мутации)
-*   **Lucide React** (Единая система иконок)
-*   `react-phone-number-input` & `recharts`
+* **React 18** (Vite + TypeScript)
+* **Tailwind CSS V3** + **Framer Motion** (для кинетических анимаций и физики интерфейса)
+* **TanStack Query** (Кэширование, извлечение данных и мутации)
 
-### Backend
-*   **FastAPI** (Python 3.11+)
-*   **SQLAlchemy** (Асинхронные запросы)
-*   **PostgreSQL 15** 
-*   **Redis**
-*   **Alembic** (Миграции БД)
-*   **Pytest & Hypothesis** (Тестирование свойств и интеграции)
+### Backend & AI
+* **FastAPI** (Python 3.12, Strict Mypy Typing)
+* **SQLAlchemy 2.0 + asyncpg** (Полностью асинхронное взаимодействие с БД)
+* **Aiogram 3** (Telegram-бот с поддержкой HTTP Proxy для обхода блокировок)
+* **Tesseract OCR + LLM** (Распознавание документов)
+* **Pytest & Hypothesis** (Unit/Integration тестирование, вложенные транзакции `db_session`)
 
-### DevOps
-*   Docker & Docker Compose
-*   Манифесты готовности к Kubernetes (`/k8s`)
-*   Модули нагрузочного тестирования (`/load_testing`)
+### DevOps & Инфраструктура
+* **PostgreSQL 16 + PgBouncer** (Transaction Pool Mode для защиты базы от исчерпания коннектов)
+* **Redis 7** (Кэширование, Rate Limiting, Celery/RQ)
+* **Nginx** (Reverse proxy, раздача статики, SSL/TLS редиректы)
+* **Docker & Docker Compose** (Полная изоляция сервисов)
+* **GitHub Actions** (CI/CD: линтеры Ruff, Mypy, проверка CVE, автосборка)
 
-## 🚀 Начало работы
+---
 
-### Требования
+## 🚀 Локальный запуск (Development)
 
-Убедитесь, что на вашем локальном компьютере установлены Docker и Docker Compose.
+Проект полностью докеризован. Для запуска вам потребуются только Git и Docker.
 
-### Установка и Запуск
-
-1. **Клонировать репозиторий:**
+1. **Клонируйте репозиторий:**
    ```bash
    git clone https://github.com/JeffreyWillims/electro-treasur.git
    cd electro-treasur
-   ```
-
-2. **Запустить весь стек:**
+   
+2. **Настройте переменные окружения:**
+   Создайте файл `.env` на основе шаблона и укажите свои ключи (JWT Secret, Telegram Token).
+   ```bash
+   cp .env.example .env
+   
+3. **Запустите инфраструктуру:**
    ```bash
    docker-compose up -d --build
-   ```
-
-3. **Миграции Базы Данных:**
+   
+4. **Примените миграции Базы Данных:**
    ```bash
-   # Войти в контейнер бэкенда и применить миграции
-   docker-compose exec backend bash
-   alembic upgrade head
-   ```
-
-4. **Доступ к Приложению**:
-   *   **Frontend**: Перейдите на `http://localhost:4000` (по умолчанию Vite работает на 4000 или 5173).
-   *   **API Документация Backend**: Перейдите на `http://localhost:8000/docs` для просмотра полного интерфейса Swagger UI.
-
-## 🤝 Структура Проекта
-
-```text
-├── backend/
-│   ├── src/                 # Основная логика FastAPI (маршруты, схемы, модели)
-│   ├── migrations/          # Миграции Alembic для PostgreSQL
-│   ├── tests/               # Набор тестов Pytest
-│   ├── requirements.txt     # Python зависимости
-├── frontend/
-│   ├── src/
-│   │   ├── api/             # Запросы React Query 
-│   │   ├── components/      # Функциональные компоненты и модули интерфейса
-│   │   ├── context/         # AuthContext
-│   │   └── App.tsx          # Маршрутизация и Конфигурация Приложения
-│   ├── tailwind.config.js
-│   ├── package.json
-├── k8s/                     # Конфигурации для деплоя Kubernetes
-├── load_testing/            # Скрипты Artillery или Locust
-├── docker-compose.yml       # Полная конфигурация стека
-```
+   docker-compose exec backend alembic upgrade head
+   
+## Доступ к Приложению:
+- Frontend: http://localhost:5173 (Vite)
+- Backend API Docs: http://localhost:8000/docs (Swagger UI)
 
 ## ⚖️ Лицензия
-
-Все права защищены.
+Все права защищены. Разработано с вниманием к каждой детали.

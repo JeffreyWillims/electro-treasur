@@ -7,6 +7,8 @@ from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
+from sqlalchemy.exc import IntegrityError
+
 from aiogram import F, Router
 from aiogram.filters import Command, CommandObject
 from aiogram.types import (
@@ -720,8 +722,19 @@ async def handle_receipt_upload(
                 executed_at=datetime.now(UTC),
                 idempotency_key=idempotency_key,
             )
-            session.add(tx)
-            saved_count += 1
+            # 🔥 FIX: Savepoint per transaction — duplicate idempotency_key
+            # no longer kills the entire batch. Each insert is isolated:
+            # if tx #3 is a duplicate, tx #1, #2, #4, #5 still persist.
+            try:
+                async with session.begin_nested():
+                    session.add(tx)
+                    await session.flush()
+                saved_count += 1
+            except IntegrityError:
+                logger.info(
+                    "Duplicate idempotency_key '%s' — skipping (already saved)",
+                    idempotency_key,
+                )
 
     if saved_count > 0:
         await session.commit()
