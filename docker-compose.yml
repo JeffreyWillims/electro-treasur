@@ -94,9 +94,27 @@ services:
       backend:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      disable: true  # bot has no HTTP server; the image's :8000 healthcheck would false-fail
     dns:
       - 8.8.8.8
       - 1.1.1.1
+
+  arq-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: python run_arq.py
+    env_file:
+      - backend/.env
+    depends_on:
+      pgbouncer:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      disable: true  # worker has no HTTP server; the image's :8000 healthcheck would false-fail
 
 volumes:
   pg_data:
