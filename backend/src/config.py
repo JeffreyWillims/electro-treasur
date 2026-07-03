@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     telegram_bot_token: str = ""
     telegram_proxy_url: str | None = None
 
+    # ── Admin Panel (SQLAdmin) ──────────────────────────────────────────
+    # Login is disabled while admin_password is empty — set ET_ADMIN_PASSWORD to enable.
+    admin_username: str = "admin"
+    admin_password: str = ""
+
     model_config = {"env_prefix": "ET_", "env_file": ".env", "extra": "ignore"}
 
 

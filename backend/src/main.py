@@ -28,6 +28,7 @@ from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.admin import setup_admin
 from src.api.analytics.yearly import router as analytics_router
 from src.api.v1.router import router as v1_router
 from src.core.exceptions import setup_exception_handlers
@@ -94,6 +95,9 @@ setup_exception_handlers(app)
 # ── Routers ─────────────────────────────────────────────────────────────
 app.include_router(v1_router)
 app.include_router(analytics_router, prefix="/api")
+
+# ── Admin Back-office (SQLAdmin, mounted at /admin) ──────────────────────
+setup_admin(app)
 
 
 @app.get("/health", tags=["System"])

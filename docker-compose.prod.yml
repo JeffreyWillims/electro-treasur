@@ -1,0 +1,7 @@
+# Production overlay — swaps the frontend nginx config to the SSL variant.
+# Local:  docker compose up -d
+# Prod:   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+services:
+  frontend:
+    volumes:
+      - ./frontend/nginx.prod.conf:/etc/nginx/conf.d/default.conf:ro
