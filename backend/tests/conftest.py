@@ -1,38 +1,52 @@
 """
-tests/conftest.py — Citrine Vault Test Infrastructure Core.
+tests/conftest.py — Основная тестовая инфраструктура Citrine Vault.
 
-Architecture: Transaction Rollback Isolation Pattern
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Тесты, которые работают с базой данных, не должны влиять друг на друга.
 
-PROBLEM: Tests that commit to the DB pollute each other.
-         CREATE/DROP ALL per test is O(N × schema_size) — unacceptable.
+Перед каждым тестом можно полностью удалять и заново создавать схему базы,
+но по мере роста проекта это становится слишком медленно. Вместо этого мы
+оставляем одно соединение с открытой транзакцией на всю тестовую сессию, а
+каждый отдельный тест выполняем внутри собственного SAVEPOINT.
 
-SOLUTION: Nested Savepoint Strategy (2-tier transaction isolation):
+Внутри теста можно свободно создавать, изменять и удалять данные, а также
+вызывать commit(), если это требуется логикой приложения. После завершения
+теста выполняется откат к SAVEPOINT, и база данных мгновенно возвращается в
+исходное состояние.
 
-  ┌──────────────────────────────────────────────┐
-  │  CONNECTION TRANSACTION (never committed)     │ ← db_connection fixture
-  │  ┌──────────────────────────────────────────┐ │
-  │  │  SAVEPOINT (rolled back after each test) │ │ ← db_session fixture
-  │  │  ┌────────────────────────────────────┐  │ │
-  │  │  │ test_create_user()                 │  │ │
-  │  │  │ session.add(User(...))             │  │ │
-  │  │  │ await session.flush()  ← visible   │  │ │
-  │  │  └────────────────────────────────────┘  │ │
-  │  │  ROLLBACK TO SAVEPOINT ← erases all      │ │
-  │  └──────────────────────────────────────────┘ │
-  │  ROLLBACK ← connection returns clean          │
-  └──────────────────────────────────────────────┘
+Схема изоляции
+--------------
 
-Guarantees:
-  • Zero inter-test contamination (Hermetic Tests)
-  • O(1) cleanup per test (ROLLBACK vs DROP ALL)
-  • Real PostgreSQL dialect (no SQLite fakes)
-  • FastAPI dependency injection correctly overridden
+    Транзакция соединения
+    ┌──────────────────────────────────────────────┐
+    │                                              │
+    │  SAVEPOINT (для каждого теста)               │
+    │  ┌────────────────────────────────────────┐  │
+    │  │ test_create_user()                     │  │
+    │  │ session.add(User(...))                 │  │
+    │  │ await session.flush()                  │  │
+    │  └────────────────────────────────────────┘  │
+    │                                              │
+    │  ROLLBACK TO SAVEPOINT                       │
+    │                                              │
+    └──────────────────────────────────────────────┘
 
-Environment:
-  • pytest-env injects ET_DATABASE_URL pointing to `_test` DB
-  • ET_SECRET_KEY set to a stable test value
-  • See [tool.pytest_env] in pyproject.toml
+Что это дает
+------------
+• Каждый тест начинается с чистой базы данных.
+• Данные одного теста никогда не попадают в другой.
+• Очистка выполняется за O(1) благодаря откату транзакции.
+• Тесты работают с настоящим PostgreSQL, а не с SQLite.
+• Зависимости FastAPI автоматически подменяются тестовыми.
+
+Тестовое окружение
+------------------
+Плагин pytest-env автоматически задает:
+
+- ET_DATABASE_URL — адрес отдельной тестовой базы данных (*_test).
+- ET_SECRET_KEY — фиксированный секретный ключ для тестов.
+
+Подробная конфигурация находится в pyproject.toml.
+
 """
 
 from __future__ import annotations
@@ -64,6 +78,8 @@ assert settings.database_url.endswith("_test"), (
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 2. TEST ENGINE — isolated from production engine in src/database.py
+#    Lazy-safe: if PostgreSQL is unreachable, unit tests still work.
+#    Integration fixtures that depend on test_engine will auto-skip.
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 test_engine = create_async_engine(
     settings.database_url,
