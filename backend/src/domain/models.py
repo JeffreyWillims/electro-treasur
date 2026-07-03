@@ -15,21 +15,25 @@ Complexity:
 from __future__ import annotations
 
 import enum
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import (
     BigInteger,
+    Date,
     DateTime,
     Enum,
     ForeignKey,
     Index,
     Numeric,
     String,
+    Text,
     UniqueConstraint,
     func,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -161,3 +165,30 @@ class Transaction(Base):
     # ── Relationships ───────────────────────────────────────────────────
     user: Mapped[User] = relationship(back_populates="transactions")
     category: Mapped[Category] = relationship(back_populates="transactions")
+
+
+class Insight(Base):
+    """
+    Persisted LLM financial insight for one user over one period.
+
+    One row per (user, period). Re-running an analysis upserts on the unique
+    constraint, so a month is never duplicated.
+    """
+
+    __tablename__ = "insights"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "period_start", "period_end", name="uq_insight_user_period"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    period_start: Mapped[date] = mapped_column(Date, nullable=False)
+    period_end: Mapped[date] = mapped_column(Date, nullable=False)
+    advice: Mapped[str] = mapped_column(Text, nullable=False)
+    summary: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    model_used: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )

@@ -25,6 +25,7 @@ async def _run() -> None:
     """
     worker = Worker(
         functions=WorkerSettings.functions,
+        cron_jobs=WorkerSettings.cron_jobs,
         on_startup=WorkerSettings.on_startup,
         on_shutdown=WorkerSettings.on_shutdown,
         redis_settings=WorkerSettings.redis_settings,
