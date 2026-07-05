@@ -105,7 +105,7 @@ async def login_for_access_token(
         )
 
     access_token = create_access_token(
-        data={"sub": user.email},
+        data={"sub": user.email, "role": user.role.value},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
     )
     refresh_token = await create_refresh_token(redis, user.id)

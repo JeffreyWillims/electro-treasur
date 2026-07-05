@@ -17,7 +17,7 @@ from decimal import Decimal
 from io import BytesIO
 
 import pytest
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.models import Category, CategoryType, Transaction, User

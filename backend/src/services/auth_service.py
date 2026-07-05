@@ -31,6 +31,7 @@ ph = PasswordHasher()
 class InvalidRefreshToken(Exception):
     """Refresh-токен отсутствует, истёк, отозван или имеет неверный формат."""
 
+
 # Валидный Argon2-хэш случайной строки. Используется для «холостой» проверки пароля,
 # когда пользователь не найден, чтобы время ответа не выдавало его существование
 # (защита от Timing Attack). Вычисляется один раз и всегда соответствует параметрам ph.
@@ -138,7 +139,7 @@ async def refresh_access_token(
         raise InvalidRefreshToken("User no longer exists")
 
     access_token = create_access_token(
-        data={"sub": user.email},
+        data={"sub": user.email, "role": user.role.value},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
     )
     new_refresh_token = await create_refresh_token(redis, user_id)

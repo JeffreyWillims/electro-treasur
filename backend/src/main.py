@@ -31,6 +31,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.admin import setup_admin
 from src.api.analytics.yearly import router as analytics_router
 from src.api.v1.router import router as v1_router
+from src.api.v2.public import router as public_v2_router
 from src.core.exceptions import setup_exception_handlers
 from src.core.rate_limit import limiter
 from src.database import get_session
@@ -94,6 +95,7 @@ setup_exception_handlers(app)
 
 # ── Routers ─────────────────────────────────────────────────────────────
 app.include_router(v1_router)
+app.include_router(public_v2_router)
 app.include_router(analytics_router, prefix="/api")
 
 # ── Admin Back-office (SQLAdmin, mounted at /admin) ──────────────────────

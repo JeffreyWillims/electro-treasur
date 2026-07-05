@@ -9,8 +9,6 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-import pytest
-
 from src.schemas.analytics import (
     Adjustment,
     CategoryAvg,

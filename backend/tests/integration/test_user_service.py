@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 

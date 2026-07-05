@@ -57,7 +57,5 @@ def list_files(root: Path, pattern: str = "**/*.py") -> SkillResult:
     """Список файлов по glob-паттерну относительно root (отсортирован)."""
     if Path(pattern).is_absolute():
         return SkillResult(ok=False, output=f"Absolute patterns are not allowed: {pattern}")
-    matches = sorted(
-        str(p.relative_to(root)) for p in root.glob(pattern) if p.is_file()
-    )
+    matches = sorted(str(p.relative_to(root)) for p in root.glob(pattern) if p.is_file())
     return SkillResult(ok=True, output="\n".join(matches))

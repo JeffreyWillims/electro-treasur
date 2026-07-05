@@ -7,8 +7,6 @@ from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from sqlalchemy.exc import IntegrityError
-
 from aiogram import F, Router
 from aiogram.filters import Command, CommandObject
 from aiogram.types import (
@@ -24,6 +22,7 @@ from aiogram.types.web_app_info import WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from redis.asyncio import Redis
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.models import Category, Transaction, User
@@ -222,6 +221,11 @@ async def check_auth(event: Message | CallbackQuery, current_user: User | None) 
     return False
 
 
+def _cb_msg(callback: CallbackQuery) -> Message | None:
+    """Сообщение callback-а, если оно ещё доступно (не удалено/не устарело)."""
+    return callback.message if isinstance(callback.message, Message) else None
+
+
 # ─── Link Helper ──────────────────────────────────────────────────────────────
 
 
@@ -308,6 +312,7 @@ async def cmd_start(
             reply_markup=builder.as_markup(),
         )
 
+
 @router.message(Command("link"))
 async def cmd_link(
     message: Message,
@@ -317,14 +322,20 @@ async def cmd_link(
     redis_client: Redis,
 ) -> None:
     if current_user is not None:
-        await message.answer("⚠️ Твой аккаунт уже привязан к Citrine Vault.", reply_markup=_get_reply_menu())
+        await message.answer(
+            "⚠️ Твой аккаунт уже привязан к Citrine Vault.", reply_markup=_get_reply_menu()
+        )
         return
 
     if not command.args or not re.fullmatch(r"\d{6}", command.args.strip()):
-        await message.answer("❌ Формат команды: `/link <6-значный код>`\nСгенерируй код на сайте в Настройках.", parse_mode="Markdown")
+        await message.answer(
+            "❌ Формат команды: `/link <6-значный код>`\nСгенерируй код на сайте в Настройках.",
+            parse_mode="Markdown",
+        )
         return
 
     await _attempt_link(message, command.args.strip(), session, redis_client)
+
 
 @router.message(Command("help"))
 async def cmd_help(message: Message) -> None:
@@ -366,7 +377,9 @@ async def cmd_unlink(message: Message, session: AsyncSession, current_user: User
 async def cb_menu_balance(
     callback: CallbackQuery, session: AsyncSession, current_user: User | None
 ) -> None:
-    await cmd_balance(callback.message, session, current_user)
+    msg = _cb_msg(callback)
+    if msg is not None:
+        await cmd_balance(msg, session, current_user)
     await callback.answer()
 
 
@@ -374,13 +387,19 @@ async def cb_menu_balance(
 async def cb_menu_categories(
     callback: CallbackQuery, session: AsyncSession, current_user: User | None
 ) -> None:
-    await cmd_categories(callback.message, session, current_user)
+    msg = _cb_msg(callback)
+    if msg is not None:
+        await cmd_categories(msg, session, current_user)
     await callback.answer()
 
 
 @router.callback_query(F.data == "menu_add")
 async def cb_menu_add(callback: CallbackQuery) -> None:
-    await callback.message.answer(
+    msg = _cb_msg(callback)
+    if msg is None:
+        await callback.answer()
+        return
+    await msg.answer(
         "✍️ Просто отправь мне сумму и категорию:\n"
         "`500 Кофе`\n"
         "`150000 Зарплата`\n\n"
@@ -393,7 +412,11 @@ async def cb_menu_add(callback: CallbackQuery) -> None:
 
 @router.callback_query(F.data == "menu_settings")
 async def cb_menu_settings(callback: CallbackQuery) -> None:
-    await callback.message.answer(
+    msg = _cb_msg(callback)
+    if msg is None:
+        await callback.answer()
+        return
+    await msg.answer(
         "⚙️ *Настройки профиля*\n\n"
         "Для смены аккаунта отправь команду: `/unlink`\n"
         "После этого ты сможешь привязать новый код.",
@@ -404,7 +427,11 @@ async def cb_menu_settings(callback: CallbackQuery) -> None:
 
 @router.callback_query(F.data == "welcome_about")
 async def cb_welcome_about(callback: CallbackQuery) -> None:
-    await callback.message.answer(
+    msg = _cb_msg(callback)
+    if msg is None:
+        await callback.answer()
+        return
+    await msg.answer(
         "🧠 *V.I.A. (Value Insight Aggregator)*\n\n"
         "Я — твой личный ИИ-банкир.\n"
         "🔹 Читаю чеки и банковские выписки.\n"
@@ -418,7 +445,11 @@ async def cb_welcome_about(callback: CallbackQuery) -> None:
 
 @router.callback_query(F.data == "welcome_auth")
 async def cb_welcome_auth(callback: CallbackQuery) -> None:
-    await callback.message.answer(
+    msg = _cb_msg(callback)
+    if msg is None:
+        await callback.answer()
+        return
+    await msg.answer(
         "🔐 *Синхронизация профиля*\n\n"
         "1️⃣ Войди в личный кабинет на сайте.\n"
         "2️⃣ Перейди в *Профиль → Telegram*.\n"
@@ -525,7 +556,7 @@ async def process_category_selection(
         return
     assert current_user is not None
     try:
-        _, cat_id_str, amount_str = callback_query.data.split(":", maxsplit=2)
+        _, cat_id_str, amount_str = (callback_query.data or "").split(":", maxsplit=2)
         category_id = int(cat_id_str)
         amount = Decimal(amount_str)
     except (ValueError, InvalidOperation):
@@ -537,10 +568,9 @@ async def process_category_selection(
     )
     category = result.scalar_one_or_none()
 
-    if category is not None and callback_query.message is not None:
-        await _create_bot_transaction(
-            session, callback_query.message, current_user.id, category, amount
-        )
+    msg = _cb_msg(callback_query)
+    if category is not None and msg is not None:
+        await _create_bot_transaction(session, msg, current_user.id, category, amount)
     await callback_query.answer()
 
 
@@ -635,6 +665,7 @@ async def handle_receipt_upload(
     # ─── 2. ИСПРАВЛЕННЫЙ ИМПОРТ И ВЫЗОВ (Surgical Change) ───────────
     from src.services.ai_vision_service import analyze_document_universal
 
+    assert message.bot is not None  # long-polling всегда даёт bot в апдейте
     ai_results = await analyze_document_universal(
         bot=message.bot,
         file_id=file_id,
@@ -820,7 +851,7 @@ async def handle_smart_parsing(
         return
     assert current_user is not None
 
-    text = message.text.strip().replace(",", ".")
+    text = (message.text or "").strip().replace(",", ".")
 
     if text in ["📊 Баланс", "📁 Конверты", "💎 Внести", "📸 Скан чека"]:
         return

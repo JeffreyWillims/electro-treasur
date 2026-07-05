@@ -8,6 +8,10 @@ arq Worker — Static Insight Pre-calculation (Rule-Based, без LLM).
 Фронтенд читает уже готовую строку через GET /api/v1/insights/latest —
 0 мс генерации в момент открытия плашки, нулевая LLM-нагрузка на сервер.
 
+Cron `schedule_weekly_push` (воскресенье 18:00 UTC) раз в неделю пересчитывает
+инсайт за текущий месяц и с notify=True пушит его прямо в Telegram юзера —
+Zero-Friction: советы приходят сами, без захода в приложение.
+
 Регистрируется в общем WorkerSettings (см. llm_worker.py) — отдельный
 процесс не нужен.
 """
@@ -18,10 +22,14 @@ import logging
 from datetime import date
 from typing import Any
 
+from aiogram import Bot
+from aiogram.client.session.aiohttp import AiohttpSession
+from arq.connections import ArqRedis
 from sqlalchemy import func, select
 
-from src.domain.models import Budget, Category, Transaction
-from src.services.cashflow_prep import upsert_insight
+from src.config import settings
+from src.domain.models import Budget, Category, Transaction, User
+from src.services.cashflow_prep import get_active_user_ids, upsert_insight
 from src.services.insight_engine import (
     BudgetData,
     RuleBasedInsightEngine,
@@ -33,11 +41,35 @@ logger = logging.getLogger(__name__)
 MODEL_NAME = "rule-based-v1"
 
 
+async def _send_telegram_insight(chat_id: int, advice: str) -> bool:
+    """Пуш готового инсайта в Telegram. Ошибка доставки не роняет джобу."""
+    if not settings.telegram_bot_token:
+        logger.info("Telegram push skipped: bot token not configured")
+        return False
+
+    if settings.telegram_proxy_url:
+        bot = Bot(
+            token=settings.telegram_bot_token,
+            session=AiohttpSession(proxy=settings.telegram_proxy_url),
+        )
+    else:
+        bot = Bot(token=settings.telegram_bot_token)
+    try:
+        await bot.send_message(chat_id, f"📬 Ваш еженедельный финансовый пульс:\n\n{advice}")
+        return True
+    except Exception as exc:  # noqa: BLE001 — юзер мог заблокировать бота
+        logger.warning("Telegram push failed for chat_id=%d: %s", chat_id, exc)
+        return False
+    finally:
+        await bot.session.close()
+
+
 async def calculate_static_insights(
     ctx: dict[str, Any],
     user_id: int,
     start_date_str: str | None = None,
     end_date_str: str | None = None,
+    notify: bool = False,
 ) -> dict[str, Any]:
     """
     arq task: пересчитать статический инсайт пользователя за период.
@@ -46,6 +78,7 @@ async def calculate_static_insights(
     месячный cron-фан-аут передаёт прошлый полный месяц. Данные →
     RuleBasedInsightEngine → upsert в `insights` (идемпотентно по
     (user, period), повторный запуск просто перезаписывает текст).
+    С notify=True готовый текст дополнительно пушится в Telegram юзера.
     """
     today = date.today()
     period_start = date.fromisoformat(start_date_str) if start_date_str else today.replace(day=1)
@@ -112,6 +145,17 @@ async def calculate_static_insights(
         )
         await session.commit()
 
+        telegram_chat_id: int | None = None
+        if notify:
+            telegram_chat_id = (
+                await session.execute(select(User.telegram_chat_id).where(User.id == user_id))
+            ).scalar_one_or_none()
+
+    # Пуш после commit: инсайт в БД уже сохранён, даже если доставка упадёт.
+    notified = False
+    if notify and telegram_chat_id is not None:
+        notified = await _send_telegram_insight(telegram_chat_id, advice)
+
     logger.info(
         "Static insight persisted user=%d %s..%s",
         user_id,
@@ -123,4 +167,39 @@ async def calculate_static_insights(
         "period": [period_start.isoformat(), period_end.isoformat()],
         "advice": advice,
         "model_used": MODEL_NAME,
+        "notified": notified,
+    }
+
+
+async def schedule_weekly_push(ctx: dict[str, Any]) -> dict[str, Any]:
+    """
+    Cron (воскресенье 18:00 UTC): фан-аут инсайта за текущий месяц по всем
+    активным юзерам с notify=True — итоги недели приходят прямо в Telegram.
+    """
+    today = date.today()
+    period_start = today.replace(day=1)
+
+    SessionLocal = ctx["SessionLocal"]
+    async with SessionLocal() as session:
+        user_ids = await get_active_user_ids(session, period_start, today)
+
+    pool: ArqRedis = ctx["arq_pool"]
+    for user_id in user_ids:
+        await pool.enqueue_job(
+            "calculate_static_insights",
+            user_id,
+            period_start.isoformat(),
+            today.isoformat(),
+            True,
+        )
+
+    logger.info(
+        "Weekly Telegram push scheduled for %d users (%s..%s)",
+        len(user_ids),
+        period_start.isoformat(),
+        today.isoformat(),
+    )
+    return {
+        "scheduled": len(user_ids),
+        "period": [period_start.isoformat(), today.isoformat()],
     }

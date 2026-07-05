@@ -52,6 +52,7 @@ class UserAdmin(ModelView, model=User):
         User.id,
         User.email,
         User.full_name,
+        User.role,
         User.monthly_income,
         User.telegram_chat_id,
         User.created_at,

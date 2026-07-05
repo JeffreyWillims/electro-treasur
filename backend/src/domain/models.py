@@ -49,6 +49,13 @@ class CategoryType(enum.StrEnum):
     expense = "expense"
 
 
+class UserRole(enum.StrEnum):
+    """RBAC role. CONSULTANT gets read-only access to granting clients' data."""
+
+    user = "user"
+    consultant = "consultant"
+
+
 class User(Base):
     """Application user — authentication handled externally (JWT / OAuth2)."""
 
@@ -57,6 +64,12 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+    role: Mapped[UserRole] = mapped_column(
+        Enum(UserRole, name="user_role_enum"),
+        nullable=False,
+        server_default="user",
+        default=UserRole.user,
+    )
     full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
     monthly_income: Mapped[Decimal] = mapped_column(
@@ -101,9 +114,7 @@ class Category(Base):
     user: Mapped[User] = relationship(back_populates="categories")
     parent: Mapped[Category] = relationship(back_populates="subcategories", remote_side=[id])
     subcategories: Mapped[list[Category]] = relationship(back_populates="parent")
-    budgets: Mapped[list[Budget]] = relationship(
-        back_populates="category", passive_deletes=True
-    )
+    budgets: Mapped[list[Budget]] = relationship(back_populates="category", passive_deletes=True)
     transactions: Mapped[list[Transaction]] = relationship(
         back_populates="category", passive_deletes=True
     )
@@ -215,6 +226,50 @@ class Feedback(Base):
     )
 
 
+class ConsultantAccess(Base):
+    """
+    Read-only grant: consultant может ЧИТАТЬ транзакции клиента.
+
+    Грант создаёт сам клиент (по email консультанта) — консультант не может
+    выдать себе доступ к чужим данным. Одна пара (consultant, client) — одна строка.
+    """
+
+    __tablename__ = "consultant_access"
+    __table_args__ = (UniqueConstraint("consultant_id", "client_id", name="uq_consultant_client"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    consultant_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    client_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class ApiKey(Base):
+    """
+    API-ключ для публичного /api/v2/public (сторонние сервисы).
+
+    Секрет хранится ТОЛЬКО как Argon2-хэш (как пароли); полный ключ показывается
+    один раз при создании. `prefix` — открытая часть ключа для O(1) поиска по
+    UNIQUE-индексу без перебора хэшей.
+    """
+
+    __tablename__ = "api_keys"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(64), nullable=False)
+    prefix: Mapped[str] = mapped_column(String(16), unique=True, nullable=False)
+    key_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    is_active: Mapped[bool] = mapped_column(nullable=False, server_default=text("true"))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class Insight(Base):
     """
     Persisted LLM financial insight for one user over one period.
@@ -225,9 +280,7 @@ class Insight(Base):
 
     __tablename__ = "insights"
     __table_args__ = (
-        UniqueConstraint(
-            "user_id", "period_start", "period_end", name="uq_insight_user_period"
-        ),
+        UniqueConstraint("user_id", "period_start", "period_end", name="uq_insight_user_period"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)

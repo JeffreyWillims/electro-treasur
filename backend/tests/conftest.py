@@ -121,6 +121,7 @@ async def async_client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, 
     сессию с SAVEPOINT, а реальный Redis заменяет на AsyncMock-заглушку.
     """
     from unittest.mock import AsyncMock
+
     from src.database import get_session
     from src.dependencies import get_db, get_redis_client
     from src.main import app
@@ -151,6 +152,7 @@ async def async_client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, 
 async def test_user(db_session: AsyncSession) -> User:
     """Создает эталонного пользователя в БД для каждого теста."""
     from argon2 import PasswordHasher
+
     from src.domain.models import User
 
     ph = PasswordHasher()

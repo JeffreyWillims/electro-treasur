@@ -15,7 +15,7 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import async_session_factory
-from src.domain.models import User
+from src.domain.models import User, UserRole
 from src.infrastructure.redis_client import get_redis
 from src.services.auth_service import decode_access_token
 from src.services.user_service import get_user_by_email
@@ -34,9 +34,7 @@ async def get_redis_client() -> Redis:
     return await get_redis()
 
 
-async def get_current_user(
-    request: Request, db: AsyncSession = Depends(get_db)
-) -> User:
+async def get_current_user(request: Request, db: AsyncSession = Depends(get_db)) -> User:
     """
     Retrieve the current user from the httpOnly access_token cookie.
     Throws 401 if the cookie is missing/invalid or the user is not found.
@@ -60,3 +58,17 @@ async def get_current_user(
     if user is None:
         raise credentials_exception
     return user
+
+
+async def require_consultant(current_user: User = Depends(get_current_user)) -> User:
+    """RBAC-гейт: пропускает только пользователей с ролью CONSULTANT (403 иначе).
+
+    Роль проверяется по БД (source of truth), а не по JWT-клейму: смена роли
+    действует сразу, не дожидаясь истечения access-токена.
+    """
+    if current_user.role != UserRole.consultant:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Consultant role required",
+        )
+    return current_user

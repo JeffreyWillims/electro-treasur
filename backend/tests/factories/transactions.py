@@ -13,6 +13,7 @@ from decimal import Decimal
 import factory
 from factory import fuzzy
 
+
 class TransactionCreateFactory(factory.Factory):
     """
     Генерирует словари, соответствующие схеме src.schemas.transaction.TransactionCreate.

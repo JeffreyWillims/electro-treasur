@@ -25,7 +25,10 @@ from arq.connections import ArqRedis, RedisSettings, create_pool
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from src.config import settings
-from src.infrastructure.workers.insight_worker import calculate_static_insights
+from src.infrastructure.workers.insight_worker import (
+    calculate_static_insights,
+    schedule_weekly_push,
+)
 from src.services.cashflow_prep import (
     build_insight_prompt,
     get_active_user_ids,
@@ -217,7 +220,11 @@ class WorkerSettings:
     """arq worker configuration — importable as module path."""
 
     functions = [generate_annual_llm_insight, generate_llm_insight, calculate_static_insights]
-    cron_jobs = [cron(schedule_monthly_analysis, day=1, hour=3, minute=0)]
+    cron_jobs = [
+        cron(schedule_monthly_analysis, day=1, hour=3, minute=0),
+        # Воскресенье (weekday=6, как в datetime.weekday()), 18:00 UTC = 21:00 МСК.
+        cron(schedule_weekly_push, weekday=6, hour=18, minute=0),
+    ]
     on_startup = startup
     on_shutdown = shutdown
     redis_settings = RedisSettings.from_dsn(settings.arq_redis_url)
