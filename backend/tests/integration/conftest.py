@@ -48,9 +48,7 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
     if _PG_AVAILABLE:
         return
 
-    skip_marker = pytest.mark.skip(
-        reason="PostgreSQL not reachable — integration tests skipped"
-    )
+    skip_marker = pytest.mark.skip(reason="PostgreSQL not reachable — integration tests skipped")
     for item in items:
         if "integration" in str(item.fspath):
             item.add_marker(skip_marker)

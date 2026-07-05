@@ -75,9 +75,7 @@ class TestTransactionCreate:
 
     def test_custom_currency(self) -> None:
         """Currency can be overridden."""
-        schema = TransactionCreate(
-            category_id=1, amount=Decimal("50.00"), currency="USD"
-        )
+        schema = TransactionCreate(category_id=1, amount=Decimal("50.00"), currency="USD")
         assert schema.currency == "USD"
 
     def test_executed_at_auto_populated(self) -> None:

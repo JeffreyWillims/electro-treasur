@@ -121,9 +121,7 @@ async def test_no_cookie_rejected(client: AsyncClient, test_user: User) -> None:
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 3. Refresh rotation по cookie: новая пара, старый refresh невалиден
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-async def test_refresh_rotates_and_invalidates_old(
-    client: AsyncClient, test_user: User
-) -> None:
+async def test_refresh_rotates_and_invalidates_old(client: AsyncClient, test_user: User) -> None:
     login = await client.post("/v1/auth/login", data=LOGIN_FORM)
     old_refresh = login.cookies.get("refresh_token")
     assert old_refresh is not None
@@ -136,9 +134,7 @@ async def test_refresh_rotates_and_invalidates_old(
     client.cookies.clear()
 
     # Rotation: старый refresh больше не работает.
-    reused = await client.post(
-        "/v1/auth/refresh", headers=_cookie("refresh_token", old_refresh)
-    )
+    reused = await client.post("/v1/auth/refresh", headers=_cookie("refresh_token", old_refresh))
     assert reused.status_code == 401
     client.cookies.clear()
 
@@ -180,7 +176,5 @@ async def test_logout_clears_cookies_and_revokes_refresh(
 
     # Refresh отозван в Redis — обмен больше невозможен.
     client.cookies.clear()
-    after = await client.post(
-        "/v1/auth/refresh", headers=_cookie("refresh_token", old_refresh)
-    )
+    after = await client.post("/v1/auth/refresh", headers=_cookie("refresh_token", old_refresh))
     assert after.status_code == 401

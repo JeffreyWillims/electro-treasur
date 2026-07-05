@@ -70,10 +70,12 @@ class TestImportTransactions:
     async def test_basic_import_creates_transactions(
         self, db_session: AsyncSession, import_user: User
     ) -> None:
-        csv_bytes = _make_csv([
-            ["2026-06-01", "1500.00", "Продукты", "Пятёрочка"],
-            ["2026-06-02", "2300.50", "Продукты", "Перекрёсток"],
-        ])
+        csv_bytes = _make_csv(
+            [
+                ["2026-06-01", "1500.00", "Продукты", "Пятёрочка"],
+                ["2026-06-02", "2300.50", "Продукты", "Перекрёсток"],
+            ]
+        )
         result = await import_transactions(db_session, import_user.id, csv_bytes, "test.csv")
 
         assert isinstance(result, ImportResult)
@@ -85,9 +87,11 @@ class TestImportTransactions:
         self, db_session: AsyncSession, import_user: User
     ) -> None:
         """Category not in DB should be auto-created."""
-        csv_bytes = _make_csv([
-            ["2026-06-15", "5000.00", "Развлечения", "Кино"],
-        ])
+        csv_bytes = _make_csv(
+            [
+                ["2026-06-15", "5000.00", "Развлечения", "Кино"],
+            ]
+        )
         result = await import_transactions(db_session, import_user.id, csv_bytes, "test.csv")
         assert result.created == 1
 
@@ -105,9 +109,11 @@ class TestImportTransactions:
         self, db_session: AsyncSession, import_user: User
     ) -> None:
         """Importing the same CSV twice should not create duplicates."""
-        csv_bytes = _make_csv([
-            ["2026-06-01", "1500.00", "Продукты", "Пятёрочка"],
-        ])
+        csv_bytes = _make_csv(
+            [
+                ["2026-06-01", "1500.00", "Продукты", "Пятёрочка"],
+            ]
+        )
 
         result1 = await import_transactions(db_session, import_user.id, csv_bytes, "test.csv")
         assert result1.created == 1
@@ -141,9 +147,7 @@ class TestImportTransactions:
         assert len(result.errors) > 0
         assert "формат" in result.errors[0].lower() or "json" in result.errors[0].lower()
 
-    async def test_russian_column_names(
-        self, db_session: AsyncSession, import_user: User
-    ) -> None:
+    async def test_russian_column_names(self, db_session: AsyncSession, import_user: User) -> None:
         """Russian column names (Дата, Сумма) should be recognized."""
         csv_bytes = _make_csv(
             [["2026-06-01", "999.99", "Продукты", "Тест"]],
@@ -152,13 +156,13 @@ class TestImportTransactions:
         result = await import_transactions(db_session, import_user.id, csv_bytes, "ru.csv")
         assert result.created == 1
 
-    async def test_zero_amount_skipped(
-        self, db_session: AsyncSession, import_user: User
-    ) -> None:
+    async def test_zero_amount_skipped(self, db_session: AsyncSession, import_user: User) -> None:
         """Rows with zero amount should be skipped."""
-        csv_bytes = _make_csv([
-            ["2026-06-01", "0", "Продукты", "Нулевой"],
-        ])
+        csv_bytes = _make_csv(
+            [
+                ["2026-06-01", "0", "Продукты", "Нулевой"],
+            ]
+        )
         result = await import_transactions(db_session, import_user.id, csv_bytes, "zero.csv")
         assert result.created == 0
         assert result.skipped == 1
@@ -170,9 +174,7 @@ class TestImportTransactions:
 class TestExportTransactionsCsv:
     """DB → CSV export pipeline."""
 
-    async def test_export_empty_user(
-        self, db_session: AsyncSession, import_user: User
-    ) -> None:
+    async def test_export_empty_user(self, db_session: AsyncSession, import_user: User) -> None:
         """User with no transactions should export header-only CSV."""
         buffer = await export_transactions_csv(db_session, import_user.id)
         content = buffer.read().decode("utf-8-sig")

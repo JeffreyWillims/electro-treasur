@@ -13,11 +13,12 @@ from __future__ import annotations
 import contextlib
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.rate_limit import limiter
 from src.dependencies import get_db
 from src.domain.models import Category, Transaction, User
 from src.schemas.api_key import PublicCategoryInfo, PublicTransactionCreate
@@ -41,7 +42,9 @@ async def get_api_user(
 
 
 @router.get("/categories", response_model=list[PublicCategoryInfo])
+@limiter.limit("60/minute")
 async def list_categories(
+    request: Request,
     db: AsyncSession = Depends(get_db),
     api_user: User = Depends(get_api_user),
 ) -> list[PublicCategoryInfo]:
@@ -53,7 +56,9 @@ async def list_categories(
 
 
 @router.post("/transactions", status_code=status.HTTP_201_CREATED)
+@limiter.limit("30/minute")
 async def submit_transaction(
+    request: Request,
     body: PublicTransactionCreate,
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     db: AsyncSession = Depends(get_db),

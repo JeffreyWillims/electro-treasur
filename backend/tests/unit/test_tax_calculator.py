@@ -47,25 +47,19 @@ def test_income_based_regimes(regime: TaxRegime, income: str, expected: str) -> 
 
 def test_usn_dr_regular_tax() -> None:
     # (500000 − 300000) × 15% = 30000 > min 1% (5000)
-    tax = calculate_tax(
-        TaxRegime.usn_income_minus_expense, Decimal("500000"), Decimal("300000")
-    )
+    tax = calculate_tax(TaxRegime.usn_income_minus_expense, Decimal("500000"), Decimal("300000"))
     assert tax == Decimal("30000.00")
 
 
 def test_usn_dr_min_tax_wins() -> None:
     # (500000 − 490000) × 15% = 1500 < min 1% от доходов (5000) → платим 5000
-    tax = calculate_tax(
-        TaxRegime.usn_income_minus_expense, Decimal("500000"), Decimal("490000")
-    )
+    tax = calculate_tax(TaxRegime.usn_income_minus_expense, Decimal("500000"), Decimal("490000"))
     assert tax == Decimal("5000.00")
 
 
 def test_usn_dr_loss_pays_min_tax() -> None:
     # Убыток: база 0, но минимальный налог 1% от доходов остаётся
-    tax = calculate_tax(
-        TaxRegime.usn_income_minus_expense, Decimal("200000"), Decimal("350000")
-    )
+    tax = calculate_tax(TaxRegime.usn_income_minus_expense, Decimal("200000"), Decimal("350000"))
     assert tax == Decimal("2000.00")
 
 

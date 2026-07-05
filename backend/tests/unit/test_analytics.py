@@ -33,8 +33,7 @@ def _make_request(
         for cid, name, amt in (expenses or [(1, "Продукты", "30000"), (2, "Транспорт", "5000")])
     ]
     adj_list = [
-        Adjustment(category_id=cid, new_amount=Decimal(amt))
-        for cid, amt in (adjustments or [])
+        Adjustment(category_id=cid, new_amount=Decimal(amt)) for cid, amt in (adjustments or [])
     ]
     return SimulateRequest(
         target_amount=Decimal(target),
@@ -147,10 +146,7 @@ class TestSimulateSavings:
         result = await simulate_savings(req)
         # Optimized gets extra 10k/month → should be faster
         if len(result.chart_data) > 2:
-            assert (
-                result.chart_data[2].optimized_savings
-                > result.chart_data[2].base_savings
-            )
+            assert result.chart_data[2].optimized_savings > result.chart_data[2].base_savings
 
     async def test_max_120_months_simulation(self) -> None:
         """Simulation should not exceed 120 months (10 years)."""

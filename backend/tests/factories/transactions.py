@@ -72,12 +72,13 @@ class CategoryFactory(factory.Factory):
         model = dict
 
     name = factory.Faker("word", locale="ru_RU")
-    type = fuzzy.FuzzyChoice(["income", "expense"]) # Случайный выбор из списка
+    type = fuzzy.FuzzyChoice(["income", "expense"])  # Случайный выбор из списка
 
     # Генерируем случайный Hex-цвет (например, #FF5733)
     icon = factory.LazyFunction(
         lambda: f"#{factory.Faker('hex_color').evaluate(None, None, {'locale': None}).lstrip('#')}"
     )
+
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # ПРИМЕР ИСПОЛЬЗОВАНИЯ В ТЕСТЕ

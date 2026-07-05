@@ -32,7 +32,6 @@ class Settings(BaseSettings):
 
     # ── Redis ───────────────────────────────────────────────────────────
     redis_url: str = "redis://localhost:6379/0"
-    redis_insight_ttl: int = 86400  # 24 h
     redis_idempotency_ttl: int = 86400  # 24 h
 
     # ── arq Worker ──────────────────────────────────────────────────────

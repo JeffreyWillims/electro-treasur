@@ -20,12 +20,14 @@ from __future__ import annotations
 
 import logging
 from datetime import date
+from decimal import Decimal
 from typing import Any
 
 from aiogram import Bot
 from aiogram.client.session.aiohttp import AiohttpSession
 from arq.connections import ArqRedis
 from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
 from src.domain.models import Budget, Category, Transaction, User
@@ -39,6 +41,59 @@ from src.services.insight_engine import (
 logger = logging.getLogger(__name__)
 
 MODEL_NAME = "rule-based-v1"
+
+
+async def build_insight_for_period(
+    session: AsyncSession, user_id: int, period_start: date, period_end: date
+) -> tuple[str, Decimal, Decimal]:
+    """
+    (advice, income, expense) за период: транзакции + бюджеты месяца периода
+    → RuleBasedInsightEngine. Общий строитель для cron-задач и кнопки «AI Анализ».
+    """
+    tx_stmt = (
+        select(
+            Transaction.amount,
+            Transaction.category_id,
+            Category.type,
+            Transaction.executed_at,
+        )
+        .join(Category, Transaction.category_id == Category.id)
+        .where(
+            Transaction.user_id == user_id,
+            func.date(Transaction.executed_at) >= period_start,
+            func.date(Transaction.executed_at) <= period_end,
+        )
+    )
+    transactions = [
+        TransactionData(
+            amount=amount,
+            category_id=category_id,
+            category_type=category_type,
+            executed_at=executed_at,
+        )
+        for amount, category_id, category_type, executed_at in (
+            await session.execute(tx_stmt)
+        ).all()
+    ]
+
+    budget_stmt = (
+        select(Budget.category_id, Category.name, Budget.amount_limit)
+        .join(Category, Budget.category_id == Category.id)
+        .where(
+            Budget.user_id == user_id,
+            Budget.month == period_start.month,
+            Budget.year == period_start.year,
+        )
+    )
+    budgets = [
+        BudgetData(category_id=category_id, category_name=name, amount_limit=limit)
+        for category_id, name, limit in (await session.execute(budget_stmt)).all()
+    ]
+
+    engine = RuleBasedInsightEngine()
+    advice = engine.generate(transactions, budgets)
+    income, expense = engine.cashflow_totals(transactions)
+    return advice, income, expense
 
 
 async def _send_telegram_insight(chat_id: int, advice: str) -> bool:
@@ -86,49 +141,9 @@ async def calculate_static_insights(
 
     SessionLocal = ctx["SessionLocal"]
     async with SessionLocal() as session:
-        tx_stmt = (
-            select(
-                Transaction.amount,
-                Transaction.category_id,
-                Category.type,
-                Transaction.executed_at,
-            )
-            .join(Category, Transaction.category_id == Category.id)
-            .where(
-                Transaction.user_id == user_id,
-                func.date(Transaction.executed_at) >= period_start,
-                func.date(Transaction.executed_at) <= period_end,
-            )
+        advice, income, expense = await build_insight_for_period(
+            session, user_id, period_start, period_end
         )
-        transactions = [
-            TransactionData(
-                amount=amount,
-                category_id=category_id,
-                category_type=category_type,
-                executed_at=executed_at,
-            )
-            for amount, category_id, category_type, executed_at in (
-                await session.execute(tx_stmt)
-            ).all()
-        ]
-
-        budget_stmt = (
-            select(Budget.category_id, Category.name, Budget.amount_limit)
-            .join(Category, Budget.category_id == Category.id)
-            .where(
-                Budget.user_id == user_id,
-                Budget.month == period_start.month,
-                Budget.year == period_start.year,
-            )
-        )
-        budgets = [
-            BudgetData(category_id=category_id, category_name=name, amount_limit=limit)
-            for category_id, name, limit in (await session.execute(budget_stmt)).all()
-        ]
-
-        engine = RuleBasedInsightEngine()
-        advice = engine.generate(transactions, budgets)
-        income, expense = engine.cashflow_totals(transactions)
 
         await upsert_insight(
             session,

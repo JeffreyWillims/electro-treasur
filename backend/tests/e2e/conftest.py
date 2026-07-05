@@ -161,4 +161,3 @@ if _PLAYWRIGHT_AVAILABLE:
         yield page
         await page.close()
         await context.close()
-

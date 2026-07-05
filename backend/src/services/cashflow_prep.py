@@ -1,7 +1,7 @@
 """
-Cashflow analysis preparation — helpers for the monthly LLM insight pipeline.
+Cashflow analysis preparation — helpers for the monthly insight pipeline.
 
-Pure helpers (period math, prompt building) are unit-testable without a DB.
+Pure helpers (period math) are unit-testable without a DB.
 The two async helpers wrap the DB access the fan-out worker needs:
   • which users to analyse for a period,
   • how to persist the final insight idempotently.
@@ -18,12 +18,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.models import Insight, Transaction
 
-INSIGHT_PROMPT = (
-    "Ты финансовый советник. Проанализируй период с {start} по {end}. "
-    "Поступления: {income:.2f}, Списания: {expense:.2f}. "
-    "Дай 3 коротких совета по оптимизации бюджета (строго по делу, без воды)."
-)
-
 
 def previous_month_range(today: date) -> tuple[date, date]:
     """First and last calendar day of the month preceding `today` (both inclusive)."""
@@ -31,18 +25,6 @@ def previous_month_range(today: date) -> tuple[date, date]:
     last_prev = first_of_this_month - timedelta(days=1)
     first_prev = last_prev.replace(day=1)
     return first_prev, last_prev
-
-
-def build_insight_prompt(
-    period_start: date, period_end: date, income: float, expense: float
-) -> str:
-    """Render the LLM prompt in memory (no I/O). Real LLM call plugs in later."""
-    return INSIGHT_PROMPT.format(
-        start=period_start.isoformat(),
-        end=period_end.isoformat(),
-        income=income,
-        expense=expense,
-    )
 
 
 async def get_active_user_ids(session: AsyncSession, start: date, end: date) -> list[int]:

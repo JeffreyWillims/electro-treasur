@@ -179,12 +179,7 @@ class TestParseReceipts:
         a single expense transaction for 1500.00.
         """
         text = (
-            "ООО Пятерочка\n"
-            "ИНН 1234567890\n"
-            "Молоко 89.90\n"
-            "Хлеб 45.00\n"
-            "ИТОГО: 1500.00 ₽\n"
-            "НАЛИЧНЫЕ\n"
+            "ООО Пятерочка\nИНН 1234567890\nМолоко 89.90\nХлеб 45.00\nИТОГО: 1500.00 ₽\nНАЛИЧНЫЕ\n"
         )
         result = _parse_transactions_from_text(text, "receipt.jpg")
         assert len(result) >= 1
@@ -517,12 +512,7 @@ class TestOCRNoiseResilience:
 
     def test_multiline_ocr_garbage_doesnt_crash(self) -> None:
         """OCR sometimes produces absolute garbage. Parser must not crash."""
-        text = (
-            "Ш$#@!& 3п83н вв\n"
-            "||||| ////\n"
-            "ИТОГО ₽₽₽ ???\n"
-            "~~~~ 0000\n"
-        )
+        text = "Ш$#@!& 3п83н вв\n||||| ////\nИТОГО ₽₽₽ ???\n~~~~ 0000\n"
         # Should not raise — may return empty or minimal results
         result = _parse_transactions_from_text(text, "garbage.jpg")
         assert isinstance(result, list)

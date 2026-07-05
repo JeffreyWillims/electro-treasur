@@ -12,8 +12,9 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.models import Category, Insight, Transaction, User
+from src.infrastructure.workers.insight_worker import calculate_static_insights
 from src.infrastructure.workers.llm_worker import (
-    generate_llm_insight,
+    generate_annual_llm_insight,
     schedule_monthly_analysis,
 )
 from src.services.cashflow_prep import (
@@ -106,17 +107,32 @@ async def test_upsert_insight_is_idempotent(db_session: AsyncSession, _seeded_ju
     assert row is not None and row.advice == "second"
 
 
-async def test_generate_llm_insight_persists_row(
+async def test_calculate_static_insights_persists_row(
     db_session: AsyncSession, _seeded_june: User
 ) -> None:
     ctx = {"SessionLocal": _session_local(db_session)}
-    await generate_llm_insight(ctx, _seeded_june.id, "2026-06-01", "2026-06-30")
+    await calculate_static_insights(ctx, _seeded_june.id, "2026-06-01", "2026-06-30")
 
     row = await db_session.scalar(select(Insight).where(Insight.user_id == _seeded_june.id))
     assert row is not None
-    assert row.model_used == "mock"
+    assert row.model_used == "rule-based-v1"
     assert row.period_start == date(2026, 6, 1)
-    assert "savings_rate" in row.summary
+    assert row.summary["total_income"] == "10000.00"
+    assert row.summary["total_expense"] == "3500.00"
+    assert "📊" in row.advice or "⚠️" in row.advice or "🕵️" in row.advice
+
+
+async def test_generate_annual_llm_insight_returns_real_numbers(
+    db_session: AsyncSession, _seeded_june: User
+) -> None:
+    """Кнопка «AI Анализ»: честный движок вместо мока — реальные суммы, без sleep(3)."""
+    ctx = {"SessionLocal": _session_local(db_session)}
+    result = await generate_annual_llm_insight(ctx, _seeded_june.id, "2026-06-01", "2026-06-30")
+
+    assert result["summary"]["total_income"] == "10000.00"
+    assert result["summary"]["total_expense"] == "3500.00"
+    assert result["summary"]["savings_rate"] == "65.0%"
+    assert result["insight"]  # непустой готовый текст
 
 
 async def test_schedule_monthly_analysis_fans_out(db_session: AsyncSession) -> None:

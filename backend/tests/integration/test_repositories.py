@@ -158,9 +158,7 @@ class TestUserConstraints:
         with pytest.raises(IntegrityError):
             await db_session.flush()
 
-    async def test_duplicate_telegram_chat_id_raises_error(
-        self, db_session: AsyncSession
-    ) -> None:
+    async def test_duplicate_telegram_chat_id_raises_error(self, db_session: AsyncSession) -> None:
         """UNIQUE constraint on telegram_chat_id prevents multi-bind."""
         user1 = User(
             email="tg-user-1@test.com",
@@ -226,9 +224,7 @@ class TestBudgetConstraints:
             db_session.add(budget)
 
         await db_session.flush()
-        result = await db_session.execute(
-            select(Budget).where(Budget.user_id == repo_user.id)
-        )
+        result = await db_session.execute(select(Budget).where(Budget.user_id == repo_user.id))
         assert len(result.scalars().all()) == 3
 
 
@@ -305,9 +301,7 @@ class TestNumericPrecision:
         db_session.add(tx)
         await db_session.flush()
 
-        result = await db_session.execute(
-            select(Transaction).where(Transaction.id == tx.id)
-        )
+        result = await db_session.execute(select(Transaction).where(Transaction.id == tx.id))
         loaded = result.scalar_one()
         assert loaded.amount == Decimal("1234.56")
 
@@ -318,8 +312,6 @@ class TestNumericPrecision:
         repo_user.monthly_income = Decimal("150000.75")
         await db_session.flush()
 
-        result = await db_session.execute(
-            select(User).where(User.id == repo_user.id)
-        )
+        result = await db_session.execute(select(User).where(User.id == repo_user.id))
         loaded = result.scalar_one()
         assert loaded.monthly_income == Decimal("150000.75")

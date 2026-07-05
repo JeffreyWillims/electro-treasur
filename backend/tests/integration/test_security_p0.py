@@ -100,7 +100,5 @@ class TestPollOwnership:
         monkeypatch.setattr(yearly_module, "_get_arq_pool", _fake_pool)
         monkeypatch.setattr(yearly_module, "Job", _fake_job_class(owner_id=test_user.id + 1))
 
-        resp = await async_client.get(
-            f"/api/analytics/tasks/{FAKE_TASK_ID}", headers=auth_headers
-        )
+        resp = await async_client.get(f"/api/analytics/tasks/{FAKE_TASK_ID}", headers=auth_headers)
         assert resp.status_code == 404

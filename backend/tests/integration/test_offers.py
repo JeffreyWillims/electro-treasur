@@ -19,8 +19,11 @@ async def seeded_offers(db_session: AsyncSession) -> list[BankOffer]:
         BankOffer(name="TestBank A", rate=Decimal("17.50"), color="#111111", sort_order=1),
         BankOffer(name="TestBank B", rate=Decimal("15.00"), color="#222222", sort_order=2),
         BankOffer(
-            name="Hidden Bank", rate=Decimal("20.00"), color="#333333",
-            sort_order=0, is_active=False,
+            name="Hidden Bank",
+            rate=Decimal("20.00"),
+            color="#333333",
+            sort_order=0,
+            is_active=False,
         ),
     ]
     db_session.add_all(offers)
@@ -49,9 +52,7 @@ async def test_click_increments_counter(
         resp = await async_client.post(f"/v1/offers/{offer.id}/click", headers=auth_headers)
         assert resp.status_code == 204
 
-    clicks = await db_session.scalar(
-        select(BankOffer.clicks).where(BankOffer.id == offer.id)
-    )
+    clicks = await db_session.scalar(select(BankOffer.clicks).where(BankOffer.id == offer.id))
     assert clicks == 2
 
 
@@ -72,16 +73,26 @@ async def test_latest_insight_none_then_value(
     assert resp.status_code == 200
     assert resp.json() is None  # no insights yet
 
-    db_session.add_all([
-        Insight(
-            user_id=test_user.id, period_start=date(2026, 5, 1), period_end=date(2026, 5, 31),
-            advice="old advice", summary={"m": 5}, model_used="mock",
-        ),
-        Insight(
-            user_id=test_user.id, period_start=date(2026, 6, 1), period_end=date(2026, 6, 30),
-            advice="fresh advice", summary={"m": 6}, model_used="mock",
-        ),
-    ])
+    db_session.add_all(
+        [
+            Insight(
+                user_id=test_user.id,
+                period_start=date(2026, 5, 1),
+                period_end=date(2026, 5, 31),
+                advice="old advice",
+                summary={"m": 5},
+                model_used="mock",
+            ),
+            Insight(
+                user_id=test_user.id,
+                period_start=date(2026, 6, 1),
+                period_end=date(2026, 6, 30),
+                advice="fresh advice",
+                summary={"m": 6},
+                model_used="mock",
+            ),
+        ]
+    )
     await db_session.flush()
 
     resp = await async_client.get("/v1/insights/latest", headers=auth_headers)

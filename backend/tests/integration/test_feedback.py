@@ -40,21 +40,15 @@ async def test_submit_feedback_requires_auth(async_client: AsyncClient) -> None:
 async def test_empty_message_rejected(
     async_client: AsyncClient, auth_headers: dict[str, str], test_user: User
 ) -> None:
-    resp = await async_client.post(
-        "/v1/feedback/", json={"message": ""}, headers=auth_headers
-    )
+    resp = await async_client.post("/v1/feedback/", json={"message": ""}, headers=auth_headers)
     assert resp.status_code == 422
 
 
-async def test_save_feedback_persists_row(
-    db_session: AsyncSession, test_user: User
-) -> None:
+async def test_save_feedback_persists_row(db_session: AsyncSession, test_user: User) -> None:
     await save_feedback(db_session, user_id=test_user.id, message="сохрани меня")
     await db_session.flush()
 
-    row = await db_session.scalar(
-        select(Feedback).where(Feedback.user_id == test_user.id)
-    )
+    row = await db_session.scalar(select(Feedback).where(Feedback.user_id == test_user.id))
     assert row is not None
     assert row.message == "сохрани меня"
 

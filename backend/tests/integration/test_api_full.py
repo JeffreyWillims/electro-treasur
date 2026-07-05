@@ -67,7 +67,9 @@ async def created_tx_id(
         amount="777.77",
     )
     resp = await async_client.post(
-        "/v1/transactions/", json=payload, headers=auth_headers,
+        "/v1/transactions/",
+        json=payload,
+        headers=auth_headers,
     )
     assert resp.status_code == 201
     return resp.json()["id"]
@@ -92,11 +94,14 @@ class TestTransactionGet:
     """GET /v1/transactions/ — list with filtering."""
 
     async def test_empty_list(
-        self, async_client: AsyncClient, auth_headers: dict[str, str],
+        self,
+        async_client: AsyncClient,
+        auth_headers: dict[str, str],
         api_category: Category,
     ) -> None:
         resp = await async_client.get(
-            "/v1/transactions/", headers=auth_headers,
+            "/v1/transactions/",
+            headers=auth_headers,
         )
         assert resp.status_code == 200
         body = resp.json()
@@ -104,11 +109,14 @@ class TestTransactionGet:
         assert body["items"] == []
 
     async def test_list_after_create(
-        self, async_client: AsyncClient, auth_headers: dict[str, str],
+        self,
+        async_client: AsyncClient,
+        auth_headers: dict[str, str],
         created_tx_id: int,
     ) -> None:
         resp = await async_client.get(
-            "/v1/transactions/", headers=auth_headers,
+            "/v1/transactions/",
+            headers=auth_headers,
         )
         assert resp.status_code == 200
         body = resp.json()
@@ -117,20 +125,26 @@ class TestTransactionGet:
         assert created_tx_id in tx_ids
 
     async def test_pagination_limit(
-        self, async_client: AsyncClient, auth_headers: dict[str, str],
+        self,
+        async_client: AsyncClient,
+        auth_headers: dict[str, str],
         api_category: Category,
     ) -> None:
         """Create 3 transactions, request limit=2."""
         for i in range(3):
             payload = TransactionCreateFactory.build_json(
-                category_id=api_category.id, amount=str(100 + i),
+                category_id=api_category.id,
+                amount=str(100 + i),
             )
             await async_client.post(
-                "/v1/transactions/", json=payload, headers=auth_headers,
+                "/v1/transactions/",
+                json=payload,
+                headers=auth_headers,
             )
 
         resp = await async_client.get(
-            "/v1/transactions/?limit=2", headers=auth_headers,
+            "/v1/transactions/?limit=2",
+            headers=auth_headers,
         )
         assert resp.status_code == 200
         body = resp.json()
@@ -138,20 +152,26 @@ class TestTransactionGet:
         assert body["total"] == 3
 
     async def test_filter_by_min_amount(
-        self, async_client: AsyncClient, auth_headers: dict[str, str],
+        self,
+        async_client: AsyncClient,
+        auth_headers: dict[str, str],
         api_category: Category,
     ) -> None:
         """Filter by min_amount should only return matching transactions."""
         for amt in ["50.00", "150.00", "500.00"]:
             payload = TransactionCreateFactory.build_json(
-                category_id=api_category.id, amount=amt,
+                category_id=api_category.id,
+                amount=amt,
             )
             await async_client.post(
-                "/v1/transactions/", json=payload, headers=auth_headers,
+                "/v1/transactions/",
+                json=payload,
+                headers=auth_headers,
             )
 
         resp = await async_client.get(
-            "/v1/transactions/?min_amount=100", headers=auth_headers,
+            "/v1/transactions/?min_amount=100",
+            headers=auth_headers,
         )
         assert resp.status_code == 200
         body = resp.json()
@@ -159,7 +179,8 @@ class TestTransactionGet:
             assert Decimal(str(item["amount"])) >= Decimal("100")
 
     async def test_unauthenticated_returns_401(
-        self, async_client: AsyncClient,
+        self,
+        async_client: AsyncClient,
     ) -> None:
         resp = await async_client.get("/v1/transactions/")
         assert resp.status_code == 401
@@ -169,7 +190,9 @@ class TestTransactionPatch:
     """PATCH /v1/transactions/{id} — partial update."""
 
     async def test_update_amount(
-        self, async_client: AsyncClient, auth_headers: dict[str, str],
+        self,
+        async_client: AsyncClient,
+        auth_headers: dict[str, str],
         created_tx_id: int,
     ) -> None:
         resp = await async_client.patch(
@@ -181,7 +204,9 @@ class TestTransactionPatch:
         assert Decimal(str(resp.json()["amount"])) == Decimal("999.99")
 
     async def test_update_comment(
-        self, async_client: AsyncClient, auth_headers: dict[str, str],
+        self,
+        async_client: AsyncClient,
+        auth_headers: dict[str, str],
         created_tx_id: int,
     ) -> None:
         resp = await async_client.patch(
@@ -193,7 +218,9 @@ class TestTransactionPatch:
         assert resp.json()["comment"] == "Обновлённый комментарий"
 
     async def test_update_nonexistent_returns_404(
-        self, async_client: AsyncClient, auth_headers: dict[str, str],
+        self,
+        async_client: AsyncClient,
+        auth_headers: dict[str, str],
     ) -> None:
         resp = await async_client.patch(
             "/v1/transactions/999999",
@@ -207,7 +234,9 @@ class TestTransactionDelete:
     """DELETE /v1/transactions/{id}."""
 
     async def test_delete_returns_204(
-        self, async_client: AsyncClient, auth_headers: dict[str, str],
+        self,
+        async_client: AsyncClient,
+        auth_headers: dict[str, str],
         created_tx_id: int,
     ) -> None:
         resp = await async_client.delete(
@@ -217,7 +246,9 @@ class TestTransactionDelete:
         assert resp.status_code == 204
 
     async def test_delete_nonexistent_returns_404(
-        self, async_client: AsyncClient, auth_headers: dict[str, str],
+        self,
+        async_client: AsyncClient,
+        auth_headers: dict[str, str],
     ) -> None:
         resp = await async_client.delete(
             "/v1/transactions/999999",
@@ -226,15 +257,19 @@ class TestTransactionDelete:
         assert resp.status_code == 404
 
     async def test_double_delete_returns_404(
-        self, async_client: AsyncClient, auth_headers: dict[str, str],
+        self,
+        async_client: AsyncClient,
+        auth_headers: dict[str, str],
         created_tx_id: int,
     ) -> None:
         """Delete twice → second should 404."""
         await async_client.delete(
-            f"/v1/transactions/{created_tx_id}", headers=auth_headers,
+            f"/v1/transactions/{created_tx_id}",
+            headers=auth_headers,
         )
         resp = await async_client.delete(
-            f"/v1/transactions/{created_tx_id}", headers=auth_headers,
+            f"/v1/transactions/{created_tx_id}",
+            headers=auth_headers,
         )
         assert resp.status_code == 404
 
@@ -246,7 +281,9 @@ class TestBudgetEndpoints:
     """PUT/DELETE /v1/budgets/."""
 
     async def test_upsert_budget(
-        self, async_client: AsyncClient, auth_headers: dict[str, str],
+        self,
+        async_client: AsyncClient,
+        auth_headers: dict[str, str],
         api_category: Category,
     ) -> None:
         payload = {
@@ -256,14 +293,18 @@ class TestBudgetEndpoints:
             "year": 2026,
         }
         resp = await async_client.put(
-            "/v1/budgets/", json=payload, headers=auth_headers,
+            "/v1/budgets/",
+            json=payload,
+            headers=auth_headers,
         )
         assert resp.status_code == 200
         assert resp.json()["status"] == "success"
         assert resp.json()["amount_limit"] == "30000.00"
 
     async def test_upsert_updates_existing(
-        self, async_client: AsyncClient, auth_headers: dict[str, str],
+        self,
+        async_client: AsyncClient,
+        auth_headers: dict[str, str],
         api_category: Category,
     ) -> None:
         """PUT same month/category twice should update the amount."""
@@ -286,7 +327,9 @@ class TestBudgetEndpoints:
         assert resp.json()["amount_limit"] == "35000.00"
 
     async def test_delete_budget(
-        self, async_client: AsyncClient, auth_headers: dict[str, str],
+        self,
+        async_client: AsyncClient,
+        auth_headers: dict[str, str],
         api_category: Category,
     ) -> None:
         # Create first
@@ -308,7 +351,9 @@ class TestBudgetEndpoints:
         assert resp.status_code == 204
 
     async def test_delete_nonexistent_budget_404(
-        self, async_client: AsyncClient, auth_headers: dict[str, str],
+        self,
+        async_client: AsyncClient,
+        auth_headers: dict[str, str],
     ) -> None:
         resp = await async_client.delete(
             "/v1/budgets/999999?month=1&year=2026",
@@ -324,7 +369,9 @@ class TestUserProfile:
     """GET/PATCH /v1/users/me."""
 
     async def test_get_me(
-        self, async_client: AsyncClient, auth_headers: dict[str, str],
+        self,
+        async_client: AsyncClient,
+        auth_headers: dict[str, str],
         test_user: User,
     ) -> None:
         resp = await async_client.get("/v1/users/me", headers=auth_headers)
@@ -332,7 +379,9 @@ class TestUserProfile:
         assert resp.json()["email"] == test_user.email
 
     async def test_patch_me(
-        self, async_client: AsyncClient, auth_headers: dict[str, str],
+        self,
+        async_client: AsyncClient,
+        auth_headers: dict[str, str],
     ) -> None:
         resp = await async_client.patch(
             "/v1/users/me",
@@ -343,7 +392,8 @@ class TestUserProfile:
         assert resp.json()["full_name"] == "Обновлённое Имя"
 
     async def test_get_me_unauthenticated(
-        self, async_client: AsyncClient,
+        self,
+        async_client: AsyncClient,
     ) -> None:
         resp = await async_client.get("/v1/users/me")
         assert resp.status_code == 401
@@ -353,18 +403,23 @@ class TestUserCategories:
     """POST/GET/PATCH/DELETE /v1/users/categories."""
 
     async def test_get_categories(
-        self, async_client: AsyncClient, auth_headers: dict[str, str],
+        self,
+        async_client: AsyncClient,
+        auth_headers: dict[str, str],
         api_category: Category,
     ) -> None:
         resp = await async_client.get(
-            "/v1/users/categories", headers=auth_headers,
+            "/v1/users/categories",
+            headers=auth_headers,
         )
         assert resp.status_code == 200
         names = [c["name"] for c in resp.json()]
         assert "API Test Category" in names
 
     async def test_create_category(
-        self, async_client: AsyncClient, auth_headers: dict[str, str],
+        self,
+        async_client: AsyncClient,
+        auth_headers: dict[str, str],
     ) -> None:
         resp = await async_client.post(
             "/v1/users/categories",
@@ -375,7 +430,9 @@ class TestUserCategories:
         assert resp.json()["name"] == "Путешествия"
 
     async def test_patch_category(
-        self, async_client: AsyncClient, auth_headers: dict[str, str],
+        self,
+        async_client: AsyncClient,
+        auth_headers: dict[str, str],
         api_category: Category,
     ) -> None:
         resp = await async_client.patch(
@@ -387,7 +444,9 @@ class TestUserCategories:
         assert resp.json()["name"] == "Переименованная"
 
     async def test_patch_nonexistent_category_404(
-        self, async_client: AsyncClient, auth_headers: dict[str, str],
+        self,
+        async_client: AsyncClient,
+        auth_headers: dict[str, str],
     ) -> None:
         resp = await async_client.patch(
             "/v1/users/categories/999999",
@@ -397,7 +456,9 @@ class TestUserCategories:
         assert resp.status_code == 404
 
     async def test_delete_category(
-        self, async_client: AsyncClient, auth_headers: dict[str, str],
+        self,
+        async_client: AsyncClient,
+        auth_headers: dict[str, str],
         api_category: Category,
     ) -> None:
         resp = await async_client.delete(
@@ -407,7 +468,9 @@ class TestUserCategories:
         assert resp.status_code == 204
 
     async def test_transaction_count_endpoint(
-        self, async_client: AsyncClient, auth_headers: dict[str, str],
+        self,
+        async_client: AsyncClient,
+        auth_headers: dict[str, str],
         api_category: Category,
     ) -> None:
         resp = await async_client.get(
@@ -425,7 +488,8 @@ class TestAuthFlow:
     """POST /v1/auth/register + POST /v1/auth/login."""
 
     async def test_register_new_user(
-        self, async_client: AsyncClient,
+        self,
+        async_client: AsyncClient,
     ) -> None:
         resp = await async_client.post(
             "/v1/auth/register",
@@ -441,7 +505,9 @@ class TestAuthFlow:
         assert "id" in body
 
     async def test_register_duplicate_email_400(
-        self, async_client: AsyncClient, test_user: User,
+        self,
+        async_client: AsyncClient,
+        test_user: User,
     ) -> None:
         resp = await async_client.post(
             "/v1/auth/register",
@@ -453,7 +519,9 @@ class TestAuthFlow:
         assert resp.status_code == 400
 
     async def test_login_success(
-        self, async_client: AsyncClient, test_user: User,
+        self,
+        async_client: AsyncClient,
+        test_user: User,
     ) -> None:
         resp = await async_client.post(
             "/v1/auth/login",
@@ -471,7 +539,9 @@ class TestAuthFlow:
         assert all("httponly" in c.lower() for c in set_cookie)
 
     async def test_login_wrong_password_401(
-        self, async_client: AsyncClient, test_user: User,
+        self,
+        async_client: AsyncClient,
+        test_user: User,
     ) -> None:
         resp = await async_client.post(
             "/v1/auth/login",
@@ -483,7 +553,8 @@ class TestAuthFlow:
         assert resp.status_code == 401
 
     async def test_login_nonexistent_user_401(
-        self, async_client: AsyncClient,
+        self,
+        async_client: AsyncClient,
     ) -> None:
         resp = await async_client.post(
             "/v1/auth/login",
@@ -502,10 +573,13 @@ class TestExportEndpoint:
     """GET /v1/transactions/export."""
 
     async def test_export_returns_csv(
-        self, async_client: AsyncClient, auth_headers: dict[str, str],
+        self,
+        async_client: AsyncClient,
+        auth_headers: dict[str, str],
     ) -> None:
         resp = await async_client.get(
-            "/v1/transactions/export", headers=auth_headers,
+            "/v1/transactions/export",
+            headers=auth_headers,
         )
         assert resp.status_code == 200
         assert "text/csv" in resp.headers.get("content-type", "")

@@ -32,30 +32,30 @@ from src.services.user_service import (
 class TestCreateUser:
     """User creation with default category seeding."""
 
-    async def test_creates_user_with_hashed_password(
-        self, db_session: AsyncSession
-    ) -> None:
-        user = await create_user(db_session, {
-            "email": "new-user@citrine.dev",
-            "password": "SecurePass123!",
-            "full_name": "Test User",
-        })
+    async def test_creates_user_with_hashed_password(self, db_session: AsyncSession) -> None:
+        user = await create_user(
+            db_session,
+            {
+                "email": "new-user@citrine.dev",
+                "password": "SecurePass123!",
+                "full_name": "Test User",
+            },
+        )
         assert user.id is not None
         assert user.email == "new-user@citrine.dev"
         assert user.hashed_password.startswith("$argon2")
         assert user.full_name == "Test User"
 
-    async def test_seeds_6_default_categories(
-        self, db_session: AsyncSession
-    ) -> None:
+    async def test_seeds_6_default_categories(self, db_session: AsyncSession) -> None:
         """New user should get 6 default Elite categories."""
-        user = await create_user(db_session, {
-            "email": "seed-test@citrine.dev",
-            "password": "SeedTest123!",
-        })
-        result = await db_session.execute(
-            select(Category).where(Category.user_id == user.id)
+        user = await create_user(
+            db_session,
+            {
+                "email": "seed-test@citrine.dev",
+                "password": "SeedTest123!",
+            },
         )
+        result = await db_session.execute(select(Category).where(Category.user_id == user.id))
         cats = result.scalars().all()
         assert len(cats) == 6
 
@@ -64,13 +64,14 @@ class TestCreateUser:
         assert CategoryType.income in types
         assert CategoryType.expense in types
 
-    async def test_default_monthly_income_is_zero(
-        self, db_session: AsyncSession
-    ) -> None:
-        user = await create_user(db_session, {
-            "email": "zero-income@citrine.dev",
-            "password": "ZeroIncome123!",
-        })
+    async def test_default_monthly_income_is_zero(self, db_session: AsyncSession) -> None:
+        user = await create_user(
+            db_session,
+            {
+                "email": "zero-income@citrine.dev",
+                "password": "ZeroIncome123!",
+            },
+        )
         assert user.monthly_income == Decimal("0")
 
 
@@ -80,16 +81,12 @@ class TestCreateUser:
 class TestGetUserByEmail:
     """User lookup by email."""
 
-    async def test_existing_user_found(
-        self, db_session: AsyncSession, test_user: User
-    ) -> None:
+    async def test_existing_user_found(self, db_session: AsyncSession, test_user: User) -> None:
         found = await get_user_by_email(db_session, test_user.email)
         assert found is not None
         assert found.id == test_user.id
 
-    async def test_nonexistent_email_returns_none(
-        self, db_session: AsyncSession
-    ) -> None:
+    async def test_nonexistent_email_returns_none(self, db_session: AsyncSession) -> None:
         found = await get_user_by_email(db_session, "ghost@void.space")
         assert found is None
 
@@ -100,28 +97,20 @@ class TestGetUserByEmail:
 class TestUpdateUserProfile:
     """Partial user profile updates."""
 
-    async def test_update_full_name(
-        self, db_session: AsyncSession, test_user: User
-    ) -> None:
+    async def test_update_full_name(self, db_session: AsyncSession, test_user: User) -> None:
         updated = await update_user_profile(
             db_session, test_user, {"full_name": "Евгений Обновлённый"}
         )
         assert updated.full_name == "Евгений Обновлённый"
 
-    async def test_update_monthly_income(
-        self, db_session: AsyncSession, test_user: User
-    ) -> None:
+    async def test_update_monthly_income(self, db_session: AsyncSession, test_user: User) -> None:
         updated = await update_user_profile(
             db_session, test_user, {"monthly_income": Decimal("200000.00")}
         )
         assert updated.monthly_income == Decimal("200000.00")
 
-    async def test_update_phone(
-        self, db_session: AsyncSession, test_user: User
-    ) -> None:
-        updated = await update_user_profile(
-            db_session, test_user, {"phone": "+79991234567"}
-        )
+    async def test_update_phone(self, db_session: AsyncSession, test_user: User) -> None:
+        updated = await update_user_profile(db_session, test_user, {"phone": "+79991234567"})
         assert updated.phone == "+79991234567"
 
 
@@ -131,9 +120,7 @@ class TestUpdateUserProfile:
 class TestCategoryCrud:
     """Category create, update, count_transactions, delete."""
 
-    async def test_create_custom_category(
-        self, db_session: AsyncSession, test_user: User
-    ) -> None:
+    async def test_create_custom_category(self, db_session: AsyncSession, test_user: User) -> None:
         cat = await create_user_category(
             db_session,
             test_user.id,
@@ -143,9 +130,7 @@ class TestCategoryCrud:
         assert cat.name == "Хобби"
         assert cat.icon == "#9333EA"
 
-    async def test_update_category_name(
-        self, db_session: AsyncSession, test_user: User
-    ) -> None:
+    async def test_update_category_name(self, db_session: AsyncSession, test_user: User) -> None:
         cat = await create_user_category(
             db_session,
             test_user.id,

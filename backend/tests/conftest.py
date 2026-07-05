@@ -50,6 +50,7 @@ test_engine = create_async_engine(
     poolclass=NullPool,
 )
 
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # ЖИЗНЕННЫЙ ЦИКЛ СХЕМЫ — создаем таблицы 1 раз за сессию
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -79,6 +80,7 @@ def _disable_rate_limiter() -> None:
 
     limiter.enabled = False
 
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # ПОДКЛЮЧЕНИЕ + SAVEPOINT — ядро механизма изоляции
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -92,6 +94,7 @@ async def db_connection(_create_tables: None) -> AsyncGenerator[AsyncConnection,
         finally:
             await transaction.rollback()
 
+
 @pytest_asyncio.fixture
 async def db_session(db_connection: AsyncConnection) -> AsyncGenerator[AsyncSession, None]:
     """
@@ -100,16 +103,19 @@ async def db_session(db_connection: AsyncConnection) -> AsyncGenerator[AsyncSess
     данные не утекут в основную транзакцию. После теста мы откатываем всё назад.
     """
     testing_session_factory = async_sessionmaker(
-        bind=db_connection, class_=AsyncSession, expire_on_commit=False,
+        bind=db_connection,
+        class_=AsyncSession,
+        expire_on_commit=False,
     )
     async with testing_session_factory() as session:
-        nested = await session.begin_nested() # Создаем SAVEPOINT в PostgreSQL
+        nested = await session.begin_nested()  # Создаем SAVEPOINT в PostgreSQL
         try:
             yield session
         finally:
             # Откат SAVEPOINT — база снова чистая!
             if nested.is_active:
                 await nested.rollback()
+
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # FASTAPI ТЕСТОВЫЙ КЛИЕНТ — с переопределением зависимостей (DI)
@@ -140,10 +146,13 @@ async def async_client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, 
     app.dependency_overrides[get_session] = _override_session
     app.dependency_overrides[get_redis_client] = lambda: fake_redis
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://testserver"
+    ) as client:
         yield client
 
-    app.dependency_overrides.clear() # Очистка после теста
+    app.dependency_overrides.clear()  # Очистка после теста
+
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # AUTH ПОМОЩНИКИ — фикстуры для тестирования закрытых роутов
@@ -165,6 +174,7 @@ async def test_user(db_session: AsyncSession) -> User:
     await db_session.flush()
     return user
 
+
 @pytest_asyncio.fixture
 async def auth_headers(test_user: User) -> dict[str, str]:
     """
@@ -175,5 +185,6 @@ async def auth_headers(test_user: User) -> dict[str, str]:
     продолжали работать без изменений на каждом сайте вызова.
     """
     from src.services.auth_service import create_access_token
+
     token = create_access_token(data={"sub": test_user.email})
     return {"Cookie": f"access_token={token}"}

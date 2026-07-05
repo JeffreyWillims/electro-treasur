@@ -198,9 +198,7 @@ class TestBackendAgent:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         for name in ("run_ruff", "run_mypy", "run_pytest"):
-            monkeypatch.setattr(
-                test_skills, name, lambda cwd: SkillResult(ok=True, output="")
-            )
+            monkeypatch.setattr(test_skills, name, lambda cwd: SkillResult(ok=True, output=""))
         results = BackendAgent().verify(tmp_path)
         assert len(results) == 3
         assert all(r.ok for r in results)
@@ -233,9 +231,7 @@ class TestOrchestrator:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         for name in ("run_ruff", "run_mypy", "run_pytest"):
-            monkeypatch.setattr(
-                test_skills, name, lambda cwd: SkillResult(ok=True, output="")
-            )
+            monkeypatch.setattr(test_skills, name, lambda cwd: SkillResult(ok=True, output=""))
         orch = Orchestrator()
         orch.register(BackendAgent())
         results = orch.verify("backend", tmp_path)
