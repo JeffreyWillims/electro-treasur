@@ -463,9 +463,12 @@ class TestAuthFlow:
             },
         )
         assert resp.status_code == 200
+        # Токены уходят в httpOnly-cookie, а НЕ в тело ответа.
         body = resp.json()
-        assert "access_token" in body
-        assert body["token_type"] == "bearer"
+        assert "access_token" not in body
+        set_cookie = resp.headers.get_list("set-cookie")
+        assert any(c.startswith("access_token=") for c in set_cookie)
+        assert all("httponly" in c.lower() for c in set_cookie)
 
     async def test_login_wrong_password_401(
         self, async_client: AsyncClient, test_user: User,

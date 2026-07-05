@@ -1,9 +1,7 @@
 from pydantic import BaseModel
 
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str
+# Токены больше не возвращаются в теле ответа — они уходят в httpOnly-cookie
+# (см. src/api/v1/auth.py). Поэтому Token/RefreshRequest-схемы удалены.
 
 
 class TokenData(BaseModel):

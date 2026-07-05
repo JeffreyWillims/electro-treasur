@@ -1,16 +1,8 @@
 """
-tests/factories/transactions.py — Transaction Data Factories.
+tests/factories/transactions.py — Фабрики Данных Транзакций.
 
-Generates test data for TransactionCreate Pydantic schema
-and raw Transaction ORM model dicts.
-
-Usage:
-    # Generate a valid TransactionCreate payload dict:
-    payload = TransactionCreateFactory.build()
-    # → {"category_id": 1, "amount": "1523.45", "currency": "RUB", ...}
-
-    # Send to API:
-    resp = await client.post("/v1/transactions/", json=payload)
+Генерирует тестовые данные для Pydantic-схемы TransactionCreate
+и сырые словари для ORM-модели Transaction.
 """
 
 from __future__ import annotations
@@ -21,38 +13,49 @@ from decimal import Decimal
 import factory
 from factory import fuzzy
 
-
 class TransactionCreateFactory(factory.Factory):
     """
-    Generates dicts matching src.schemas.transaction.TransactionCreate.
+    Генерирует словари, соответствующие схеме src.schemas.transaction.TransactionCreate.
 
-    All fields respect Pydantic V2 Field constraints:
+    Все поля соблюдают ограничения (constraints) Pydantic V2 Field:
       • amount: Decimal, max_digits=12, decimal_places=2
-      • currency: ISO 4217 code (defaults to RUB)
-      • executed_at: timezone-aware datetime
+      • currency: Код стандарта ISO 4217 (по умолчанию RUB)
+      • executed_at: datetime с учетом часового пояса (timezone-aware)
     """
 
     class Meta:
+        # Указываем, что фабрика будет производить обычные словари (dict)
         model = dict
 
-    category_id = factory.LazyAttribute(lambda _: 1)  # Overridden in tests
-    amount = fuzzy.FuzzyDecimal(low=Decimal("10.00"), high=Decimal("99999.99"), precision=2)
+    # LazyAttribute позволяет вычислять значение на лету.
+    # В реальных тестах category_id будет переопределяться (override)
+    category_id = factory.LazyAttribute(lambda _: 1)
+
+    # FuzzyDecimal требует float-границы (под капотом работает random.uniform).
+    amount = fuzzy.FuzzyDecimal(low=10.00, high=99999.99, precision=2)
     currency = "RUB"
     is_recurring = False
     entry_type = "manual"
+
+    # Выполняем datetime.now() в момент сборки объекта, а не импорта файла!
     executed_at = factory.LazyFunction(lambda: datetime.now(UTC).isoformat())
+
+    # Faker генерирует случайный осмысленный текст на русском языке (4 слова)
     comment = factory.Faker("sentence", nb_words=4, locale="ru_RU")
 
     @classmethod
     def build_json(cls, **kwargs: object) -> dict:
         """
-        Build a dict safe for JSON serialization (Decimal → str).
+        Собирает словарь, полностью безопасный для JSON-сериализации.
 
-        httpx serializes Decimal as-is, but JSON requires string representation
-        for exact decimal precision. This method ensures clean API payloads.
+        Клиент httpx не умеет сериализовать тип Decimal "из коробки"
+        (стандарт JSON не поддерживает Decimal). Этот метод-обертка гарантирует,
+        что Decimal превратится в строку без потери финансовой точности.
         """
+        # Сначала генерируем базовый словарь со случайными данными и переопределениями (kwargs)
         data = cls.build(**kwargs)
-        # Convert Decimal to string for JSON serialization
+
+        # Защита от потери точности: конвертируем Decimal в str
         if isinstance(data.get("amount"), Decimal):
             data["amount"] = str(data["amount"])
         return data
@@ -60,16 +63,27 @@ class TransactionCreateFactory(factory.Factory):
 
 class CategoryFactory(factory.Factory):
     """
-    Generates dicts matching src.domain.models.Category constructor.
-
-    Used in integration tests to seed prerequisite FK data.
+    Генерирует словари для конструктора доменной модели Category.
+    Используется в интеграционных тестах для подготовки (Seed) внешних ключей (FK).
     """
 
     class Meta:
         model = dict
 
     name = factory.Faker("word", locale="ru_RU")
-    type = fuzzy.FuzzyChoice(["income", "expense"])
+    type = fuzzy.FuzzyChoice(["income", "expense"]) # Случайный выбор из списка
+
+    # Генерируем случайный Hex-цвет (например, #FF5733)
     icon = factory.LazyFunction(
         lambda: f"#{factory.Faker('hex_color').evaluate(None, None, {'locale': None}).lstrip('#')}"
     )
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ПРИМЕР ИСПОЛЬЗОВАНИЯ В ТЕСТЕ
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# async def test_create_transaction(async_client):
+#     # Генерируем данные, но жестко переопределяем (override) сумму на негативную
+#     bad_payload = TransactionCreateFactory.build_json(amount="-500.00")
+#
+#     response = await async_client.post("/transactions", json=bad_payload)
+#     assert response.status_code == 422 # Pydantic отклонит негативную сумму

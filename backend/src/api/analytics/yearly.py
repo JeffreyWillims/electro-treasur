@@ -6,7 +6,7 @@ from typing import Any
 
 from arq.connections import ArqRedis, RedisSettings, create_pool
 from arq.jobs import Job, JobResult
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 from src.config import settings
@@ -74,18 +74,25 @@ async def enqueue_yearly_analytics(
     response_model=YearlyTaskStatusResponse,
     summary="Poll yearly analytics task status",
 )
-async def poll_yearly_task(task_id: str) -> YearlyTaskStatusResponse:
+async def poll_yearly_task(
+    task_id: str,
+    current_user: User = Depends(get_current_user),
+) -> YearlyTaskStatusResponse:
 
     pool = await _get_arq_pool()
     job = Job(task_id, pool)
 
     try:
         info = await job.info()
-        if isinstance(info, JobResult) and info.success and info.result is not None:
-            return YearlyTaskStatusResponse(task_id=task_id, status="complete", result=info.result)
     except Exception:
-        # Глушим ошибки (например, если задача еще не появилась в Redis),
-        # чтобы всегда возвращать статус "pending" по умолчанию.
-        pass
+        info = None
+
+    # Задача не найдена (истекла/не существует) или принадлежит другому пользователю —
+    # 404 без раскрытия деталей. Ownership: первый аргумент задачи — user_id (см. enqueue).
+    if info is None or not info.args or info.args[0] != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+
+    if isinstance(info, JobResult) and info.success and info.result is not None:
+        return YearlyTaskStatusResponse(task_id=task_id, status="complete", result=info.result)
 
     return YearlyTaskStatusResponse(task_id=task_id, status="pending")

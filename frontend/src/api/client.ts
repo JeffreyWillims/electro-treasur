@@ -2,7 +2,9 @@
  * API Client — typed fetch wrappers for the Citrine Vault backend.
  * All responses validated against contract types. Zero `any` types in public API.
  *
- * Authorization: JWT Bearer tokens from localStorage('aura_token').
+ * Auth: httpOnly cookies, выставляемые бэкендом. Каждый запрос шлёт cookie
+ * (credentials: 'include'); на 401 прозрачно делаем один refresh и повторяем
+ * запрос, иначе — редирект на /login. Bearer-токенов и localStorage больше нет.
  */
 
 import type {
@@ -37,26 +39,66 @@ class ApiError extends Error {
   }
 }
 
-async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  // ── Authorization Interceptor ───────────────────────────────────────
-  const token = localStorage.getItem('aura_token');
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
+function isAuthEndpoint(url: string): boolean {
+  // На эти эндпоинты не запускаем авто-refresh, чтобы не зациклиться.
+  return url.includes('/auth/login') || url.includes('/auth/refresh');
+}
 
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+// Единственный in-flight refresh: параллельные 401 не плодят рефреши.
+let refreshPromise: Promise<boolean> | null = null;
+function refreshSession(): Promise<boolean> {
+  if (!refreshPromise) {
+    refreshPromise = fetch(`${API_BASE}/v1/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+    })
+      .then((res) => res.ok)
+      .catch(() => false)
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+  return refreshPromise;
+}
+
+function redirectToLogin(): void {
+  if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+    window.location.href = '/login';
+  }
+}
+
+/**
+ * Низкоуровневый fetch: всегда шлёт cookie (credentials: 'include'). На 401
+ * (кроме /auth/login и /auth/refresh) один раз пытается refresh и повторяет
+ * запрос; если refresh не удался — редирект на /login. Возвращает сырой Response.
+ */
+async function apiFetch(
+  url: string,
+  options: RequestInit = {},
+  retry = false,
+): Promise<Response> {
+  const response = await fetch(`${API_BASE}${url}`, {
+    ...options,
+    credentials: 'include',
+  });
+
+  if (response.status === 401 && !retry && !isAuthEndpoint(url)) {
+    const refreshed = await refreshSession();
+    if (refreshed) return apiFetch(url, options, true);
+    redirectToLogin();
   }
 
-  const mergedOptions = {
+  return response;
+}
+
+async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
+  const response = await apiFetch(url, {
     ...options,
     headers: {
-      ...headers,
-      ...(options?.headers as Record<string, string>),
+      'Content-Type': 'application/json',
+      ...(options.headers as Record<string, string>),
     },
-  };
-
-  const response = await fetch(`${API_BASE}${url}`, mergedOptions);
+  });
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({ detail: response.statusText }));
@@ -135,15 +177,7 @@ export function updateTransaction(
 }
 
 export async function deleteTransaction(id: number): Promise<void> {
-  const token = localStorage.getItem('aura_token');
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-
-  const response = await fetch(`${API_BASE}/v1/transactions/${id}`, {
-    method: 'DELETE',
-    headers,
-  });
-
+  const response = await apiFetch(`/v1/transactions/${id}`, { method: 'DELETE' });
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({ detail: response.statusText }));
     throw new ApiError(response.status, errorBody.detail || `API error: ${response.status}`);
@@ -181,22 +215,28 @@ export function simulateSavings(body: SimulateRequest): Promise<SimulateResponse
 }
 
 // ── Authentication ────────────────────────────────────────────────────
-export function login(username: string, password: string): Promise<{ access_token: string; token_type: string }> {
+// Бэкенд ставит httpOnly-cookie и НЕ возвращает токены в теле — поэтому login
+// возвращает void: успех определяется отсутствием ошибки.
+export async function login(username: string, password: string): Promise<void> {
   const formData = new URLSearchParams();
   formData.append('username', username);
   formData.append('password', password);
 
-  return fetch('/api/v1/auth/login', {
+  const response = await apiFetch('/v1/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: formData,
-  }).then(async (res) => {
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: res.statusText }));
-      throw new ApiError(res.status, err.detail || 'Ошибка аутентификации');
-    }
-    return res.json();
   });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new ApiError(response.status, err.detail || 'Ошибка аутентификации');
+  }
+}
+
+export async function logout(): Promise<void> {
+  // Бэкенд отзывает refresh в Redis и чистит cookie; тело не нужно.
+  await apiFetch('/v1/auth/logout', { method: 'POST' });
 }
 
 export function register(payload: { email: string; password: string; full_name?: string; phone?: string }): Promise<UserRead> {
@@ -249,15 +289,7 @@ export function updateCategory(
 }
 
 export async function deleteCategory(categoryId: number): Promise<void> {
-  const token = localStorage.getItem('aura_token');
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-
-  const response = await fetch(`${API_BASE}/v1/users/categories/${categoryId}`, {
-    method: 'DELETE',
-    headers,
-  });
-
+  const response = await apiFetch(`/v1/users/categories/${categoryId}`, { method: 'DELETE' });
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({ detail: response.statusText }));
     throw new ApiError(response.status, errorBody.detail || `API error: ${response.status}`);
@@ -279,20 +311,15 @@ export function upsertBudget(payload: BudgetUpsert): Promise<{ status: string; a
   });
 }
 
-export function deleteBudget(categoryId: number, month: number, year: number): Promise<void> {
-  const token = localStorage.getItem('aura_token');
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-
-  return fetch(`${API_BASE}/v1/budgets/${categoryId}?month=${month}&year=${year}`, {
-    method: 'DELETE',
-    headers,
-  }).then(async (response) => {
-    if (!response.ok) {
-      const errorBody = await response.json().catch(() => ({ detail: response.statusText }));
-      throw new ApiError(response.status, errorBody.detail || `API error: ${response.status}`);
-    }
-  });
+export async function deleteBudget(categoryId: number, month: number, year: number): Promise<void> {
+  const response = await apiFetch(
+    `/v1/budgets/${categoryId}?month=${month}&year=${year}`,
+    { method: 'DELETE' },
+  );
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new ApiError(response.status, errorBody.detail || `API error: ${response.status}`);
+  }
 }
 
 // ── Data Vault: Import / Export ────────────────────────────────────────────
@@ -302,11 +329,7 @@ export function deleteBudget(categoryId: number, month: number, year: number): P
  * Creates a hidden <a> element, triggers click, then cleans up.
  */
 export async function exportTransactions(): Promise<void> {
-  const token = localStorage.getItem('aura_token');
-  const headers: Record<string, string> = {};
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-
-  const response = await fetch(`${API_BASE}/v1/transactions/export`, { headers });
+  const response = await apiFetch('/v1/transactions/export');
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({ detail: response.statusText }));
@@ -329,17 +352,12 @@ export async function exportTransactions(): Promise<void> {
  * Uses FormData — browser auto-sets multipart Content-Type with boundary.
  */
 export async function importTransactions(file: File): Promise<ImportResult> {
-  const token = localStorage.getItem('aura_token');
-  const headers: Record<string, string> = {};
-  if (token) headers['Authorization'] = `Bearer ${token}`;
   // NOTE: Do NOT set Content-Type here — browser must set multipart boundary
-
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await fetch(`${API_BASE}/v1/transactions/import`, {
+  const response = await apiFetch('/v1/transactions/import', {
     method: 'POST',
-    headers,
     body: formData,
   });
 
@@ -351,3 +369,43 @@ export async function importTransactions(file: File): Promise<ImportResult> {
   return response.json() as Promise<ImportResult>;
 }
 
+
+// ── Bank Offers (Savings Navigator CPA) ────────────────────────────────
+export interface BankOfferDto {
+  id: number;
+  name: string;
+  rate: string;
+  color: string;
+  partner_url: string | null;
+}
+
+export function fetchBankOffers(): Promise<BankOfferDto[]> {
+  return request<BankOfferDto[]>('/v1/offers/');
+}
+
+/** Fire-and-forget funnel counter; 204 has no body so we ignore the response. */
+export function clickBankOffer(offerId: number): Promise<void> {
+  return apiFetch(`/v1/offers/${offerId}/click`, { method: 'POST' }).then(() => undefined);
+}
+
+// ── Latest persisted monthly insight (Cashflow Prophet) ────────────────
+export interface LatestInsightDto {
+  period_start: string;
+  period_end: string;
+  advice: string;
+  summary: Record<string, unknown>;
+  model_used: string;
+  created_at: string;
+}
+
+export function fetchLatestInsight(): Promise<LatestInsightDto | null> {
+  return request<LatestInsightDto | null>('/v1/insights/latest');
+}
+
+// ── Feedback ───────────────────────────────────────────────────────────
+export function submitFeedback(message: string): Promise<{ status: string }> {
+  return request<{ status: string }>('/v1/feedback/', {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  });
+}

@@ -17,7 +17,7 @@ from starlette.requests import Request
 
 from src.config import settings
 from src.database import engine
-from src.domain.models import Budget, Category, Transaction, User
+from src.domain.models import BankOffer, Budget, Category, Insight, Transaction, User
 
 
 class AdminAuth(AuthenticationBackend):
@@ -109,6 +109,40 @@ class TransactionAdmin(ModelView, model=Transaction):
     column_sortable_list = [Transaction.id, Transaction.amount, Transaction.executed_at]
 
 
+class BankOfferAdmin(ModelView, model=BankOffer):
+    name = "Bank Offer"
+    name_plural = "Bank Offers"
+    icon = "fa-solid fa-percent"
+    column_list = [
+        BankOffer.id,
+        BankOffer.name,
+        BankOffer.rate,
+        BankOffer.is_active,
+        BankOffer.partner_url,
+        BankOffer.clicks,
+        BankOffer.sort_order,
+    ]
+    column_sortable_list = [BankOffer.id, BankOffer.rate, BankOffer.clicks, BankOffer.sort_order]
+    form_excluded_columns = [BankOffer.clicks, BankOffer.created_at]  # counter is API-owned
+
+
+class InsightAdmin(ModelView, model=Insight):
+    name = "Insight"
+    name_plural = "Insights"
+    icon = "fa-solid fa-brain"
+    column_list = [
+        Insight.id,
+        Insight.user_id,
+        Insight.period_start,
+        Insight.period_end,
+        Insight.model_used,
+        Insight.created_at,
+    ]
+    column_sortable_list = [Insight.id, Insight.created_at]
+    can_create = False  # insights are produced by the ARQ pipeline only
+    can_edit = False
+
+
 def setup_admin(app: FastAPI) -> None:
     """Mount the SQLAdmin panel and register all model views."""
     authentication_backend = AdminAuth(secret_key=settings.secret_key)
@@ -122,3 +156,5 @@ def setup_admin(app: FastAPI) -> None:
     admin.add_view(CategoryAdmin)
     admin.add_view(BudgetAdmin)
     admin.add_view(TransactionAdmin)
+    admin.add_view(BankOfferAdmin)
+    admin.add_view(InsightAdmin)

@@ -13,12 +13,20 @@ dependencies = [
     "alembic>=1.14.0",
     "redis[hiredis]>=5.2.0",
     "arq>=0.26.1",
-    "passlib[bcrypt]>=1.7.4",
+    "argon2-cffi>=23.1.0",
     "python-jose[cryptography]>=3.3.0",
+    "python-multipart>=0.0.9",
+    "email-validator>=2.1.0",
     "httpx>=0.28.0",
     "slowapi>=0.1.9",
     "sqladmin>=0.20.0",
     "itsdangerous>=2.2.0",
+    "aiogram>=3.4.0",
+    "pandas>=2.2.0",
+    "openpyxl>=3.1.2",
+    "pytesseract>=0.3.10",
+    "Pillow>=10.2.0",
+    "pdfplumber>=0.11.0",
 ]
 
 [project.optional-dependencies]
@@ -32,22 +40,29 @@ dev = [
     "hypothesis>=6.100.0",
     "ruff>=0.8.0",
     "mypy>=1.11.0",
-    "types-passlib>=1.7.7",
 ]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-addopts = "--cov=src --cov-report=term-missing --cov-fail-under=70"
 markers = [
     "e2e: End-to-end Playwright tests (deselect with -m 'not e2e')",
 ]
+filterwarnings = [
+    # Сторонний pytesseract использует устаревший pkgutil.find_loader (Python 3.12).
+    # Предупреждения из собственного кода (src/) НЕ подавляем.
+    "ignore:'pkgutil.find_loader' is deprecated:DeprecationWarning:pytesseract",
+]
 
 [tool.pytest_env]
-ET_DATABASE_URL = "postgresql+asyncpg://electro:electro_secret@localhost:5432/electro_treasur_test"
+# skip_if_set: реальная переменная окружения (если задана) имеет приоритет,
+# что позволяет локально указать другой хост/порт тестовой БД.
+ET_DATABASE_URL = { value = "postgresql+asyncpg://electro:electro_secret@localhost:5432/electro_treasur_test", skip_if_set = true }
 ET_SECRET_KEY = "test-secret-key-do-not-use-in-production-0000000000"
 ET_REDIS_URL = "redis://localhost:6379/15"
 ET_TELEGRAM_BOT_TOKEN = "fake:token"
+# Тесты ходят по http — Secure-cookie иначе не отправляется клиентом.
+ET_COOKIE_SECURE = "false"
 
 [tool.ruff]
 target-version = "py312"

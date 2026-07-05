@@ -48,7 +48,36 @@ const LEVELS = [
       4, 6, 5, 5, 8, 2, 7, 3, 9,
     ],
   },
+  {
+    label: 'УРОВЕНЬ 4 · ЭКСПЕРТ',
+    hint: 'Добавления ограничены — трать с умом',
+    grid: [
+      7, 2, 9, 4, 6, 3, 8, 5, 1,
+      3, 8, 1, 6, 2, 7, 4, 9, 5,
+      6, 4, 7, 3, 9, 2, 5, 8, 1,
+      9, 1, 5, 8, 4, 6, 2, 7, 3,
+      2, 7, 4, 9, 1, 5, 8, 3, 6,
+    ],
+  },
+  {
+    label: 'УРОВЕНЬ 5 · ЛЕГЕНДА',
+    hint: 'Финал: серия комбо решает всё',
+    grid: [
+      4, 9, 2, 7, 5, 3, 8, 6, 1,
+      8, 3, 6, 1, 9, 4, 2, 7, 5,
+      1, 5, 8, 4, 2, 9, 6, 3, 7,
+      7, 2, 4, 9, 6, 1, 5, 8, 3,
+      5, 8, 3, 6, 7, 2, 9, 1, 4,
+    ],
+  },
 ] as const;
+
+// Игровая экономика: очки за пару растут с комбо, окно серии тает за 5 секунд.
+const MATCH_POINTS = 10;
+const LEVEL_BONUS = 100;
+const COMBO_WINDOW_MS = 5000;
+// Лимит "+Добавить цифры" на уровень — чем дальше, тем жёстче.
+const ADDS_PER_LEVEL = [3, 3, 2, 2, 1] as const;
 
 type Cell = {
   id: string;
@@ -135,6 +164,9 @@ function SunsetBackground() {
     <div className="absolute inset-0 overflow-hidden pointer-events-none select-none">
       <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, #080118 0%, #130428 12%, #2a0e44 24%, #56206a 38%, #8b3578 50%, #c45540 62%, #e47c36 74%, #f3a040 84%, #ffd078 92%, #ffeaa5 100%)' }} />
       {STARS.map(s => <motion.div key={s.id} className="absolute rounded-full bg-white" style={{ width: s.size, height: s.size, top: `${s.top}%`, left: `${s.left}%` }} animate={{ opacity: [s.opacity * 0.35, s.opacity, s.opacity * 0.35] }} transition={{ duration: s.dur, repeat: Infinity, delay: s.delay, ease: 'easeInOut' }} />)}
+      {[{ top: 8, left: 62, delay: 3, dur: 1.4 }, { top: 16, left: 18, delay: 11, dur: 1.7 }].map((m, i) => (
+        <motion.div key={`meteor-${i}`} className="absolute" style={{ top: `${m.top}%`, left: `${m.left}%`, width: 90, height: 1.5, background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.9))', transform: 'rotate(-32deg)', transformOrigin: 'right center' }} initial={{ x: -140, opacity: 0 }} animate={{ x: 180, opacity: [0, 1, 0] }} transition={{ duration: m.dur, repeat: Infinity, repeatDelay: 13, delay: m.delay, ease: 'easeIn' }} />
+      ))}
       {CLOUDS.map(c => <motion.div key={c.id} className="absolute rounded-full" style={{ top: `${c.top}%`, width: c.width, height: c.width * 0.28, background: 'rgba(255,220,200,1)', opacity: c.opacity, filter: 'blur(22px)', left: `${c.startX}%` }} animate={{ x: ['0%', '130vw'] }} transition={{ duration: c.dur, repeat: Infinity, ease: 'linear', delay: c.id * 9 }} />)}
       <motion.div className="absolute rounded-full" style={{ width: 380, height: 380, bottom: 'calc(27% - 90px)', left: '50%', transform: 'translateX(-50%)', background: 'radial-gradient(circle, rgba(255,200,80,0.2) 0%, rgba(255,120,20,0.1) 45%, transparent 70%)', filter: 'blur(38px)' }} animate={{ scale: [1, 1.09, 1] }} transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }} />
       <div className="absolute" style={{ bottom: '27%', left: '50%', transform: 'translateX(-50%)' }}>
@@ -184,7 +216,7 @@ function HelpScreen({ onClose }: { onClose: () => void }) {
   );
 }
 
-function WinScreen({ levelIdx, onNext }: { levelIdx: number; onNext: () => void }) {
+function WinScreen({ levelIdx, score, onNext }: { levelIdx: number; score: number; onNext: () => void }) {
   const isLast = levelIdx >= LEVELS.length - 1;
   const textVariants = {
     hidden: { opacity: 0, y: 18 },
@@ -218,10 +250,13 @@ function WinScreen({ levelIdx, onNext }: { levelIdx: number; onNext: () => void 
         <motion.p custom={1} variants={textVariants} initial="hidden" animate="show" className="text-[10px] font-mono text-slate-400 mt-2 uppercase tracking-widest">
           {isLast ? 'Вы — хранитель калифорнийского заката' : `Готов к уровню ${levelIdx + 2}?`}
         </motion.p>
+        <motion.p custom={2} variants={textVariants} initial="hidden" animate="show" className="text-2xl font-black text-orange-500 mt-3 font-mono">
+          {score} <span className="text-[10px] text-slate-400 tracking-widest">ОЧКОВ</span>
+        </motion.p>
       </div>
       {!isLast && (
         <motion.button
-          custom={2} variants={textVariants} initial="hidden" animate="show" onClick={onNext}
+          custom={3} variants={textVariants} initial="hidden" animate="show" onClick={onNext}
           whileHover={{ scale: 1.06, boxShadow: '0 0 20px rgba(255,145,0,0.3)' }} whileTap={{ scale: 0.94 }}
           className="relative z-10 px-8 py-3 rounded-2xl text-white font-bold uppercase tracking-widest text-xs outline-none"
           style={{ background: 'linear-gradient(135deg, #FF7A00, #FFB020)' }}
@@ -285,11 +320,18 @@ function NumberMatchGame() {
   const [badId, setBadId]             = useState<string | null>(null);
   const [panelShake, setPanelShake]   = useState(false);
   const [showHelp, setShowHelp]       = useState(false);
+  const [score, setScore]             = useState(0);
+  const [combo, setCombo]             = useState(0);
+  const [lastGain, setLastGain]       = useState<{ amount: number; key: number } | null>(null);
+  const [addsLeft, setAddsLeft]       = useState<number>(ADDS_PER_LEVEL[0]);
   const badTimeoutRef                 = useRef<NodeJS.Timeout | null>(null);
+  const comboTimeoutRef               = useRef<NodeJS.Timeout | null>(null);
+  const bonusAwardedRef               = useRef(false);
 
   useEffect(() => {
     return () => {
       if (badTimeoutRef.current) clearTimeout(badTimeoutRef.current);
+      if (comboTimeoutRef.current) clearTimeout(comboTimeoutRef.current);
     };
   }, []);
 
@@ -322,6 +364,20 @@ function NumberMatchGame() {
 
   const remaining = useMemo(() => cells.filter(c => !c.crossed).length, [cells]);
 
+  // Бонус за прохождение уровня — один раз на уровень
+  useEffect(() => {
+    if (isWon && !bonusAwardedRef.current) {
+      bonusAwardedRef.current = true;
+      setScore(s => s + LEVEL_BONUS * (levelIdx + 1));
+    }
+  }, [isWon, levelIdx]);
+
+  const resetCombo = useCallback(() => {
+    if (comboTimeoutRef.current) clearTimeout(comboTimeoutRef.current);
+    comboTimeoutRef.current = null;
+    setCombo(0);
+  }, []);
+
   const goNextLevel = useCallback(() => {
     const next = levelIdx + 1;
     if (next < LEVELS.length) {
@@ -330,8 +386,20 @@ function NumberMatchGame() {
       setSelectedId(null);
       setBadId(null);
       setPanelShake(false);
+      setAddsLeft(ADDS_PER_LEVEL[next] ?? 1);
+      bonusAwardedRef.current = false;
+      resetCombo();
     }
-  }, [levelIdx]);
+  }, [levelIdx, resetCombo]);
+
+  const restartLevel = useCallback(() => {
+    setCells(makeGrid((LEVELS[levelIdx] ?? LEVELS[0]).grid));
+    setSelectedId(null);
+    setBadId(null);
+    setPanelShake(false);
+    setAddsLeft(ADDS_PER_LEVEL[levelIdx] ?? 1);
+    resetCombo();
+  }, [levelIdx, resetCombo]);
 
   const handleCellClick = useCallback((id: string) => {
     const clickedCell = cells.find(c => c.id === id);
@@ -343,6 +411,18 @@ function NumberMatchGame() {
     if (canMatch(cells, selectedId, id)) {
       const idA = selectedId;
       const idB = id;
+
+      // Комбо: успел в окно — множитель растёт, очки летят вверх
+      const nextCombo = combo + 1;
+      const gained = MATCH_POINTS * nextCombo;
+      setCombo(nextCombo);
+      setScore(s => s + gained);
+      setLastGain({ amount: gained, key: Date.now() });
+      if (comboTimeoutRef.current) clearTimeout(comboTimeoutRef.current);
+      comboTimeoutRef.current = setTimeout(() => {
+        comboTimeoutRef.current = null;
+        setCombo(0);
+      }, COMBO_WINDOW_MS);
 
       setCells(prev => prev.map(c => c.id === idA || c.id === idB ? { ...c, justMatched: true } : c));
       setSelectedId(null);
@@ -360,16 +440,17 @@ function NumberMatchGame() {
       badTimeoutRef.current = setTimeout(() => { setBadId(null); setPanelShake(false); }, 380);
       setSelectedId(id);
     }
-  }, [cells, selectedId]);
+  }, [cells, selectedId, combo]);
 
   const handleAdd = useCallback(() => {
-    if (cells.length > MAX_CELLS) return;
+    if (addsLeft <= 0 || cells.length > MAX_CELLS) return;
 
     const alive = cells.filter(c => !c.crossed);
     if (alive.length === 0) return;
     setCells(prev => [...prev, ...alive.map(c => ({ ...c, id: Math.random().toString(36).slice(2, 11), justMatched: false }))]);
+    setAddsLeft(a => a - 1);
     setSelectedId(null);
-  }, [cells]);
+  }, [cells, addsLeft]);
 
   const level = LEVELS[levelIdx] ?? LEVELS[0]!;
 
@@ -404,7 +485,10 @@ function NumberMatchGame() {
               background: 'rgba(255, 255, 255, 0.95)',
               backdropFilter: 'blur(28px)',
               WebkitBackdropFilter: 'blur(28px)',
-              boxShadow: '0 32px 72px rgba(0,0,0,0.25), inset 0 2px 0 rgba(255,255,255,1)',
+              boxShadow: combo >= 2
+                ? '0 32px 72px rgba(0,0,0,0.25), 0 0 46px rgba(255,122,0,0.4), inset 0 2px 0 rgba(255,255,255,1)'
+                : '0 32px 72px rgba(0,0,0,0.25), inset 0 2px 0 rgba(255,255,255,1)',
+              transition: 'box-shadow 0.4s ease',
             }}
           >
             <button
@@ -412,6 +496,13 @@ function NumberMatchGame() {
               className="absolute top-5 right-5 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold hover:bg-slate-200 hover:text-slate-800 transition-colors z-20 outline-none"
             >
               ?
+            </button>
+            <button
+              onClick={restartLevel}
+              title="Начать уровень заново"
+              className="absolute top-5 right-14 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold hover:bg-slate-200 hover:text-slate-800 transition-colors z-20 outline-none"
+            >
+              ↺
             </button>
 
             <div className="text-center mt-2">
@@ -423,10 +514,34 @@ function NumberMatchGame() {
               </p>
             </div>
 
-            <div className="flex items-center gap-6 mt-1 mb-2">
+            <div className="flex items-center gap-6 mt-1 mb-1">
               <div className="text-center">
                 <p className="text-[9px] font-mono uppercase tracking-wider text-slate-400">Осталось</p>
                 <p className="text-lg font-black text-slate-800 leading-none">{remaining}</p>
+              </div>
+              <div className="w-px h-6 bg-slate-200" />
+              <div className="text-center relative">
+                <p className="text-[9px] font-mono uppercase tracking-wider text-slate-400">Очки</p>
+                <motion.p
+                  key={score}
+                  initial={{ scale: 1.35, color: '#FF7A00' }}
+                  animate={{ scale: 1, color: '#1e293b' }}
+                  transition={{ duration: 0.35 }}
+                  className="text-lg font-black leading-none"
+                >
+                  {score}
+                </motion.p>
+                {lastGain && (
+                  <motion.span
+                    key={lastGain.key}
+                    initial={{ opacity: 1, y: 0 }}
+                    animate={{ opacity: 0, y: -18 }}
+                    transition={{ duration: 0.9, ease: 'easeOut' }}
+                    className="absolute -top-2 left-1/2 -translate-x-1/2 text-[10px] font-black text-orange-500 pointer-events-none"
+                  >
+                    +{lastGain.amount}
+                  </motion.span>
+                )}
               </div>
               <div className="w-px h-6 bg-slate-200" />
               <div className="text-center">
@@ -437,9 +552,35 @@ function NumberMatchGame() {
               </div>
             </div>
 
+            <AnimatePresence>
+              {combo >= 2 && !isWon && (
+                <motion.div
+                  key="combo-bar"
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="w-full flex items-center gap-2 px-2"
+                >
+                  <span className="text-[9px] font-mono font-black text-orange-500 tracking-widest whitespace-nowrap">
+                    СЕРИЯ ×{combo}
+                  </span>
+                  <div className="flex-1 h-1 rounded-full bg-orange-100 overflow-hidden">
+                    <motion.div
+                      key={combo}
+                      className="h-full rounded-full"
+                      style={{ background: 'linear-gradient(to right, #FF7A00, #FFB020)' }}
+                      initial={{ width: '100%' }}
+                      animate={{ width: '0%' }}
+                      transition={{ duration: COMBO_WINDOW_MS / 1000, ease: 'linear' }}
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             <AnimatePresence mode="wait">
               {isWon ? (
-                <WinScreen key="win" levelIdx={levelIdx} onNext={goNextLevel} />
+                <WinScreen key="win" levelIdx={levelIdx} score={score} onNext={goNextLevel} />
               ) : (
                 <motion.div
                   key={`board-${levelIdx}`}
@@ -457,13 +598,13 @@ function NumberMatchGame() {
 
                   <motion.button
                     onClick={handleAdd}
-                    disabled={cells.length > MAX_CELLS}
+                    disabled={addsLeft <= 0 || cells.length > MAX_CELLS}
                     whileHover={{ scale: 1.02, boxShadow: '0 0 20px rgba(255,130,0,0.3)' }}
                     whileTap={{ scale: 0.97 }}
                     className="w-full py-3.5 mt-2 rounded-xl text-white font-bold uppercase tracking-widest text-xs outline-none disabled:opacity-50 disabled:grayscale"
                     style={{ background: 'linear-gradient(135deg, rgba(255,122,0,0.9), rgba(255,175,20,0.9))' }}
                   >
-                    + Добавить цифры
+                    {addsLeft > 0 ? `+ Добавить цифры · осталось ${addsLeft}` : 'Добавления исчерпаны'}
                   </motion.button>
                 </motion.div>
               )}

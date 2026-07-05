@@ -36,3 +36,29 @@ async def close_redis() -> None:
     if _pool is not None:
         await _pool.disconnect()
         _pool = None
+
+
+# ── Refresh Token Store ──────────────────────────────────────────────────────
+# Refresh-токены живут ТОЛЬКО в Redis (не в JWT) — это даёт мгновенный отзыв
+# (logout, rotation). Ключ на пару (user_id, token_id) — так у пользователя может
+# быть несколько активных сессий, каждая отзывается независимо.
+_REFRESH_TOKEN_PREFIX = "refresh_token"
+
+
+def _refresh_key(user_id: int, token_id: str) -> str:
+    return f"{_REFRESH_TOKEN_PREFIX}:{user_id}:{token_id}"
+
+
+async def store_refresh_token(redis: Redis, user_id: int, token_id: str, ttl: int) -> None:
+    """Сохраняет refresh-токен с TTL (секунды)."""
+    await redis.set(_refresh_key(user_id, token_id), "1", ex=ttl)
+
+
+async def is_refresh_token_valid(redis: Redis, user_id: int, token_id: str) -> bool:
+    """True, если refresh-токен ещё существует (не истёк и не отозван)."""
+    return bool(await redis.exists(_refresh_key(user_id, token_id)))
+
+
+async def delete_refresh_token(redis: Redis, user_id: int, token_id: str) -> None:
+    """Отзывает refresh-токен (rotation / logout)."""
+    await redis.delete(_refresh_key(user_id, token_id))

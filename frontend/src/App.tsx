@@ -8,7 +8,7 @@ import { TransactionList } from '@/components/dashboard/TransactionList';
 import { Sparkles } from 'lucide-react';
 import { FeedbackWidget } from '@/components/layout/FeedbackWidget';
 import { InsightModal } from '@/components/insights/InsightModal';
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { getLocalDateString, getMoscowDate } from '@/lib/dateUtils';
 import { motion } from 'framer-motion';
@@ -31,7 +31,9 @@ function DashboardLayout() {
 
       {/* Main Content Area — accounts for floating sidebar margins */}
       <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
-        <Outlet />
+        <Suspense fallback={<div className="flex items-center justify-center min-h-[50vh] font-sans font-bold text-[#FF7A00] animate-pulse text-xl">Загрузка...</div>}>
+          <Outlet />
+        </Suspense>
       </main>
     </div>
   );
@@ -126,8 +128,13 @@ function Overview() {
   );
 }
 
-import { MainAnalytics } from '@/components/analytics/MainAnalytics';
-import { SavingsNavigator } from '@/components/analytics/SavingsNavigator';
+// Lazy: обе страницы тянут recharts (~самый тяжёлый чанк) — не грузим его при старте.
+const MainAnalytics = lazy(() =>
+  import('@/components/analytics/MainAnalytics').then((m) => ({ default: m.MainAnalytics }))
+);
+const SavingsNavigator = lazy(() =>
+  import('@/components/analytics/SavingsNavigator').then((m) => ({ default: m.SavingsNavigator }))
+);
 import { BudgetList } from '@/components/budgets/BudgetList';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { LoginForm } from '@/components/auth/LoginForm';
@@ -136,16 +143,16 @@ import { ProfileSettings } from '@/components/profile/ProfileSettings';
 import { Navigate } from 'react-router-dom';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { token, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
   if (isLoading) return <div className="flex items-center justify-center min-h-screen font-sans font-bold text-[#FF7A00] animate-pulse text-xl">Инициализация Citrine Vault...</div>;
-  if (!token) return <Navigate to="/login" />;
+  if (!user) return <Navigate to="/login" />;
   return <>{children}</>;
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { token, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
   if (isLoading) return <div className="flex items-center justify-center min-h-screen font-sans font-bold text-[#FF7A00] animate-pulse text-xl">Инициализация Citrine Vault...</div>;
-  if (token) return <Navigate to="/" />;
+  if (user) return <Navigate to="/" />;
   return <>{children}</>;
 }
 

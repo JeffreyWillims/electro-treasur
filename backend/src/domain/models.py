@@ -68,9 +68,17 @@ class User(Base):
     )
 
     # ── Relationships ───────────────────────────────────────────────────
-    categories: Mapped[list[Category]] = relationship(back_populates="user", lazy="selectin")
-    budgets: Mapped[list[Budget]] = relationship(back_populates="user", lazy="selectin")
-    transactions: Mapped[list[Transaction]] = relationship(back_populates="user", lazy="selectin")
+    # passive_deletes=True: полагаемся на ON DELETE CASCADE в БД, а не на попытку
+    # ORM обнулить NOT NULL внешние ключи детей (иначе NotNullViolationError).
+    categories: Mapped[list[Category]] = relationship(
+        back_populates="user", lazy="selectin", passive_deletes=True
+    )
+    budgets: Mapped[list[Budget]] = relationship(
+        back_populates="user", lazy="selectin", passive_deletes=True
+    )
+    transactions: Mapped[list[Transaction]] = relationship(
+        back_populates="user", lazy="selectin", passive_deletes=True
+    )
 
 
 class Category(Base):
@@ -93,8 +101,12 @@ class Category(Base):
     user: Mapped[User] = relationship(back_populates="categories")
     parent: Mapped[Category] = relationship(back_populates="subcategories", remote_side=[id])
     subcategories: Mapped[list[Category]] = relationship(back_populates="parent")
-    budgets: Mapped[list[Budget]] = relationship(back_populates="category")
-    transactions: Mapped[list[Transaction]] = relationship(back_populates="category")
+    budgets: Mapped[list[Budget]] = relationship(
+        back_populates="category", passive_deletes=True
+    )
+    transactions: Mapped[list[Transaction]] = relationship(
+        back_populates="category", passive_deletes=True
+    )
 
 
 class Budget(Base):
@@ -165,6 +177,42 @@ class Transaction(Base):
     # ── Relationships ───────────────────────────────────────────────────
     user: Mapped[User] = relationship(back_populates="transactions")
     category: Mapped[Category] = relationship(back_populates="transactions")
+
+
+class BankOffer(Base):
+    """
+    Partner deposit offer shown in Savings Navigator (CPA monetization).
+
+    Rates are editable via SQLAdmin; `clicks` is a raw funnel counter for
+    partner negotiations. `partner_url` is the CPA tracking link.
+    """
+
+    __tablename__ = "bank_offers"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    rate: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
+    color: Mapped[str] = mapped_column(String(16), nullable=False, server_default="#888888")
+    partner_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    is_active: Mapped[bool] = mapped_column(nullable=False, server_default=text("true"))
+    sort_order: Mapped[int] = mapped_column(nullable=False, server_default=text("0"))
+    clicks: Mapped[int] = mapped_column(BigInteger, nullable=False, server_default=text("0"))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class Feedback(Base):
+    """User feedback message. Persisted for audit; email delivery via EmailService."""
+
+    __tablename__ = "feedback"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
 
 class Insight(Base):

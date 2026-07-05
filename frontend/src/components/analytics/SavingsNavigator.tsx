@@ -9,7 +9,11 @@ import {
   ResponsiveContainer, CartesianGrid,
 } from 'recharts';
 import { motion } from 'framer-motion';
-import { fetchDashboard, fetchAnalyticsProfile } from '@/api/client';
+import { toast } from 'sonner';
+import {
+  fetchDashboard, fetchAnalyticsProfile,
+  fetchBankOffers, clickBankOffer, fetchLatestInsight,
+} from '@/api/client';
 import { cn } from '@/lib/utils';
 
 const INFINITY_PATH = "M50,50 C50,32 28,32 28,50 C28,68 50,68 50,50 C50,32 72,32 72,50 C72,68 50,68 50,50";
@@ -27,12 +31,21 @@ function ChronosCore() {
   );
 }
 
-const BANK_PRESETS = [
-  { name: 'Альфа-Банк', rate: 16, color: '#EF3124' },
-  { name: 'Т-Банк', rate: 15, color: '#FFDD2D' },
-  { name: 'Сбер', rate: 14, color: '#21A038' },
-  { name: 'ВТБ', rate: 13, color: '#002882' },
-  { name: 'Газпромбанк', rate: 12, color: '#0071CE' },
+type BankCard = {
+  id: number | null;
+  name: string;
+  rate: number;
+  color: string;
+  partnerUrl: string | null;
+};
+
+// Фолбэк, если API офферов недоступен — актуальные ставки живут в БД (SQLAdmin).
+const BANK_FALLBACK: BankCard[] = [
+  { id: null, name: 'Альфа-Банк', rate: 16, color: '#EF3124', partnerUrl: null },
+  { id: null, name: 'Т-Банк', rate: 15, color: '#FFDD2D', partnerUrl: null },
+  { id: null, name: 'Сбер', rate: 14, color: '#21A038', partnerUrl: null },
+  { id: null, name: 'ВТБ', rate: 13, color: '#002882', partnerUrl: null },
+  { id: null, name: 'Газпромбанк', rate: 12, color: '#0071CE', partnerUrl: null },
 ];
 
 const HORIZONS = [
@@ -85,6 +98,28 @@ export function SavingsNavigator() {
     queryKey: ['analyticsProfile'],
     queryFn: fetchAnalyticsProfile,
   });
+  const { data: offersData } = useQuery({
+    queryKey: ['bankOffers'],
+    queryFn: fetchBankOffers,
+    staleTime: 5 * 60_000,
+    retry: 1,
+  });
+  const { data: aiInsight } = useQuery({
+    queryKey: ['latestInsight'],
+    queryFn: fetchLatestInsight,
+    staleTime: 60_000,
+    retry: 1,
+  });
+
+  const banks: BankCard[] = useMemo(
+    () => offersData && offersData.length > 0
+      ? offersData.map(o => ({
+          id: o.id, name: o.name, rate: parseFloat(o.rate),
+          color: o.color, partnerUrl: o.partner_url,
+        }))
+      : BANK_FALLBACK,
+    [offersData],
+  );
 
   const dbBalance = parseFloat(dashboard?.total_balance_all_time || '0');
   const dbExpense = parseFloat(dashboard?.period_expense || '0');
@@ -96,14 +131,55 @@ export function SavingsNavigator() {
   const [horizonMonths, setHorizonMonths] = useState(120);
   const [annualYield, setAnnualYield] = useState(16);
   const [inflation, setInflation] = useState(8);
+  const [goalSum, setGoalSum] = useState<string>('');
 
   const effCapital = startCapital !== '' ? parseSum(startCapital) : dbBalance;
   const effIncome = monthlyIncome !== '' ? parseSum(monthlyIncome) : dbIncome;
   const effExpense = monthlyExpense !== '' ? parseSum(monthlyExpense) : dbExpense;
 
+  const monthlySaving = Math.max(effIncome - effExpense, 0);
+  const cashflowNegative = effIncome > 0 && effExpense > effIncome;
+
+  // Режим «Цель-Мечта»: обратный расчёт — сколько откладывать в месяц (номинально)
+  const goalTarget = parseSum(goalSum);
+  const requiredMonthly = useMemo(() => {
+    if (goalTarget <= 0) return null;
+    const n = horizonMonths;
+    const r = annualYield / 100 / 12;
+    const growth = Math.pow(1 + r, n);
+    const req = r === 0
+      ? (goalTarget - effCapital) / n
+      : ((goalTarget - effCapital * growth) * r) / (growth - 1);
+    return Math.max(Math.ceil(req), 0);
+  }, [goalTarget, horizonMonths, annualYield, effCapital]);
+
+  // Сценарии: пессимист / база / оптимист (±4 п.п. к доходности), в реальных деньгах
+  const scenarios = useMemo(() => {
+    const n = horizonMonths;
+    const deflator = Math.pow(1 + inflation / 100 / 12, n);
+    return [
+      { label: 'Пессимист', delta: -4 },
+      { label: 'База', delta: 0 },
+      { label: 'Оптимист', delta: 4 },
+    ].map(({ label, delta }) => {
+      const y = Math.max(annualYield + delta, 0);
+      const r = y / 100 / 12;
+      const growth = Math.pow(1 + r, n);
+      const fv = r === 0
+        ? effCapital + monthlySaving * n
+        : effCapital * growth + (monthlySaving * (growth - 1)) / r;
+      return { label, yieldPct: y, real: Math.round(fv / deflator) };
+    });
+  }, [effCapital, monthlySaving, horizonMonths, annualYield, inflation]);
+
+  const openOffer = (bank: BankCard) => {
+    if (!bank.partnerUrl) return;
+    if (bank.id !== null) clickBankOffer(bank.id).catch(() => {});
+    window.open(bank.partnerUrl, '_blank', 'noopener');
+  };
+
   const chartData = useMemo(() => {
     const data: { label: string; invested: number; piggybank: number }[] = [];
-    const monthlySaving = Math.max(effIncome - effExpense, 0);
     const monthlyRate = annualYield / 100 / 12;
     const monthlyInflation = inflation / 100 / 12;
 
@@ -129,7 +205,7 @@ export function SavingsNavigator() {
       });
     }
     return data;
-  }, [effCapital, effIncome, effExpense, horizonMonths, annualYield, inflation]);
+  }, [effCapital, monthlySaving, horizonMonths, annualYield, inflation]);
 
   const deferredData = useDeferredValue(chartData);
   const isStale = deferredData !== chartData;
@@ -210,6 +286,40 @@ export function SavingsNavigator() {
           </div>
         </div>
 
+        {/* ═══ ЦЕЛЬ-МЕЧТА: обратный расчёт ═══ */}
+        <div className="mb-12">
+          <label className={premiumLabelStyle}>Цель-Мечта · сколько хочу накопить</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+            <div className={inputWrapperStyle}>
+              <input
+                type="text" inputMode="numeric" value={formatSum(goalSum)}
+                onChange={(e) => setGoalSum(e.target.value.replace(/\D/g, ''))}
+                className={inputStyles} placeholder="12 000 000"
+              />
+              <span className="text-lg font-bold opacity-40 text-[#1C3F35] dark:text-white tracking-normal ml-2">₽</span>
+            </div>
+            {requiredMonthly !== null && (
+              <div className="px-5">
+                <p className="text-[11px] font-sans font-extrabold uppercase tracking-wide text-[#1C3F35]/60 dark:text-white/50 mb-1">
+                  Нужно откладывать
+                </p>
+                <p className={cn(
+                  'text-2xl md:text-3xl font-sans font-black tabular-nums tracking-tighter leading-none',
+                  requiredMonthly <= monthlySaving ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-500',
+                )}>
+                  {requiredMonthly.toLocaleString('ru-RU')}
+                  <span className="text-sm font-bold opacity-60 tracking-normal ml-1">₽/мес</span>
+                </p>
+                <p className="text-[11px] font-sans font-extrabold text-[#1C3F35]/50 dark:text-white/40 mt-1">
+                  {requiredMonthly <= monthlySaving
+                    ? `Вы уже откладываете ${monthlySaving.toLocaleString('ru-RU')} ₽ — цель достижима ✓`
+                    : `Сейчас откладываете ${monthlySaving.toLocaleString('ru-RU')} ₽ — не хватает ${(requiredMonthly - monthlySaving).toLocaleString('ru-RU')} ₽/мес`}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           <div className="space-y-10">
             <div>
@@ -254,26 +364,65 @@ export function SavingsNavigator() {
           </div>
 
           <div>
-            <label className={premiumLabelStyle}>Банковские Пресеты</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {BANK_PRESETS.map((bank) => (
-                <motion.button
-                  key={bank.name} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setAnnualYield(bank.rate)}
-                  className={`flex items-center gap-4 px-5 py-4 rounded-2xl border transition-all duration-300 text-left ${annualYield === bank.rate ? 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_10px_20px_rgba(16,185,129,0.1)]' : 'bg-black/5 dark:bg-white/5 border-transparent hover:bg-black/10 dark:hover:bg-white/10'}`}
+            <label className={premiumLabelStyle}>Вклады партнёров · подставить ставку</label>
+            <div className="grid grid-cols-1 gap-3">
+              {banks.map((bank) => (
+                <div
+                  key={bank.name}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all duration-300 ${annualYield === bank.rate ? 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_10px_20px_rgba(16,185,129,0.1)]' : 'bg-black/5 dark:bg-white/5 border-transparent'}`}
                 >
-                  <div className="w-4 h-4 rounded-full flex-shrink-0 shadow-inner" style={{ backgroundColor: bank.color }} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm md:text-base font-sans font-extrabold tracking-tight text-[#1C3F35] dark:text-white truncate">{bank.name}</p>
-                  </div>
-                  <span className={`text-xl font-sans font-black tabular-nums flex-shrink-0 tracking-tighter ${annualYield === bank.rate ? 'text-emerald-600 dark:text-emerald-400' : 'text-[#1C3F35]/50 dark:text-white/50'}`}>
-                    {bank.rate}<span className="text-sm font-bold opacity-60 tracking-normal ml-0.5">%</span>
-                  </span>
-                </motion.button>
+                  <button onClick={() => setAnnualYield(bank.rate)} className="flex items-center gap-3 flex-1 min-w-0 text-left outline-none">
+                    <div className="w-4 h-4 rounded-full flex-shrink-0 shadow-inner" style={{ backgroundColor: bank.color }} />
+                    <p className="text-sm md:text-base font-sans font-extrabold tracking-tight text-[#1C3F35] dark:text-white truncate flex-1">{bank.name}</p>
+                    <span className={`text-xl font-sans font-black tabular-nums flex-shrink-0 tracking-tighter ${annualYield === bank.rate ? 'text-emerald-600 dark:text-emerald-400' : 'text-[#1C3F35]/50 dark:text-white/50'}`}>
+                      {bank.rate}<span className="text-sm font-bold opacity-60 tracking-normal ml-0.5">%</span>
+                    </span>
+                  </button>
+                  {bank.partnerUrl ? (
+                    <motion.button
+                      whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+                      onClick={() => openOffer(bank)}
+                      className="flex-shrink-0 px-4 py-2 rounded-xl text-white text-[11px] font-sans font-extrabold uppercase tracking-wide outline-none"
+                      style={{ background: 'linear-gradient(135deg, #FF7A00, #FFB020)' }}
+                    >
+                      Открыть →
+                    </motion.button>
+                  ) : (
+                    <span className="flex-shrink-0 px-3 py-2 text-[10px] font-sans font-bold uppercase tracking-wide text-[#1C3F35]/30 dark:text-white/25">
+                      скоро
+                    </span>
+                  )}
+                </div>
               ))}
             </div>
           </div>
         </div>
       </div>
+
+      {/* ═══ CASHFLOW-ОТРИЦАТЕЛЬНЫЙ АЛЕРТ ═══ */}
+      {cashflowNegative && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col sm:flex-row sm:items-center gap-4 bg-rose-500/10 border border-rose-500/30 rounded-[2rem] p-6 md:p-8"
+        >
+          <div className="flex-1">
+            <p className="text-base md:text-lg font-sans font-black text-rose-600 dark:text-rose-400 tracking-tight">
+              Вы тратите больше, чем зарабатываете
+            </p>
+            <p className="text-[12px] font-sans font-extrabold text-[#1C3F35]/60 dark:text-white/50 mt-1">
+              Расходы {effExpense.toLocaleString('ru-RU')} ₽ &gt; доход {effIncome.toLocaleString('ru-RU')} ₽. Капитал не растёт — сначала закройте кассовый разрыв.
+            </p>
+          </div>
+          <motion.button
+            whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+            onClick={() => toast.info('ИИ-план спасения появится, как только отработает ночная аналитика.')}
+            className="flex-shrink-0 px-6 py-3 rounded-2xl text-white text-xs font-sans font-extrabold uppercase tracking-wide outline-none"
+            style={{ background: 'linear-gradient(135deg, #F43F5E, #FB7185)' }}
+          >
+            План спасения от ИИ →
+          </motion.button>
+        </motion.div>
+      )}
 
       {/* ═══ RESULT BANNER ═══ */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -336,6 +485,81 @@ export function SavingsNavigator() {
             <span className="text-[10px] md:text-[11px] font-sans font-extrabold uppercase tracking-wide text-[#1C3F35]/90 dark:text-white/80">Просто копилка</span>
           </div>
         </div>
+      </div>
+
+      {/* ═══ СЦЕНАРИИ: пессимист / база / оптимист ═══ */}
+      <div>
+        <p className="text-[11px] md:text-[12px] font-sans font-extrabold uppercase tracking-wide text-[#1C3F35]/60 dark:text-white/50 mb-4 px-2">
+          Три сценария на {HORIZONS.find(h => h.months === horizonMonths)?.label ?? ''} · реальные деньги
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {scenarios.map((s, i) => (
+            <div
+              key={s.label}
+              className={cn(
+                'rounded-[2rem] p-6 text-center border shadow-lg backdrop-blur-3xl',
+                i === 1
+                  ? 'bg-emerald-500/10 border-emerald-500/30'
+                  : 'bg-white/40 dark:bg-[#111111]/40 border-black/5 dark:border-white/10',
+              )}
+            >
+              <p className="text-[11px] font-sans font-extrabold uppercase tracking-wide text-[#1C3F35]/70 dark:text-white/60">
+                {s.label}
+              </p>
+              <p className="text-[10px] font-sans font-bold text-[#1C3F35]/40 dark:text-white/30 mb-2">
+                {s.yieldPct}% годовых
+              </p>
+              <p className={cn(
+                'text-xl md:text-2xl font-sans font-black tabular-nums tracking-tighter',
+                i === 1 ? 'text-emerald-600 dark:text-emerald-400' : 'text-[#1C3F35] dark:text-white',
+              )}>
+                {s.real.toLocaleString('ru-RU')}
+                <span className="text-sm font-bold opacity-60 tracking-normal ml-1">₽</span>
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ═══ ИИ-ПЛАН (Cashflow Prophet) ═══ */}
+      {aiInsight && (
+        <div className="bg-gradient-to-br from-[#FF7A00]/10 to-[#FFB020]/5 border border-[#FF7A00]/20 rounded-[2.5rem] p-8 md:p-10 shadow-lg">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-2xl">🤖</span>
+            <div>
+              <h2 className="text-lg md:text-xl font-sans font-extrabold tracking-tight text-[#1C3F35] dark:text-white">
+                Персональный план от ИИ
+              </h2>
+              <p className="text-[10px] font-sans font-extrabold uppercase tracking-wide text-[#FF7A00]">
+                На основе ваших транзакций · {aiInsight.period_start} — {aiInsight.period_end}
+              </p>
+            </div>
+          </div>
+          <p className="text-sm md:text-base font-sans font-medium text-[#1C3F35]/90 dark:text-white/85 leading-relaxed whitespace-pre-line">
+            {aiInsight.advice}
+          </p>
+        </div>
+      )}
+
+      {/* ═══ SHARE ═══ */}
+      <div className="flex justify-center">
+        <motion.button
+          whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+          onClick={() => {
+            const year = getMoscowDate().getFullYear() + Math.round(horizonMonths / 12);
+            const text = `К ${year} у меня будет ${finalInvested.toLocaleString('ru-RU')} ₽ 🚀 — рассчитано в Citrine Vault`;
+            if (navigator.share) {
+              navigator.share({ text }).catch(() => {});
+            } else {
+              navigator.clipboard?.writeText(text);
+              toast.success('Скопировано — делитесь!');
+            }
+          }}
+          className="px-8 py-3.5 rounded-2xl text-white text-xs font-sans font-extrabold uppercase tracking-widest outline-none shadow-lg"
+          style={{ background: 'linear-gradient(135deg, #1C3F35, #2d5f4f)' }}
+        >
+          Поделиться результатом
+        </motion.button>
       </div>
     </motion.div>
   );

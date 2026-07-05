@@ -2,57 +2,20 @@
 tests/conftest.py — Основная тестовая инфраструктура Citrine Vault.
 
 Тесты, которые работают с базой данных, не должны влиять друг на друга.
-
-Перед каждым тестом можно полностью удалять и заново создавать схему базы,
-но по мере роста проекта это становится слишком медленно. Вместо этого мы
+Вместо медленного удаления/создания таблиц перед каждым тестом, мы
 оставляем одно соединение с открытой транзакцией на всю тестовую сессию, а
-каждый отдельный тест выполняем внутри собственного SAVEPOINT.
+каждый отдельный тест выполняем внутри собственного SAVEPOINT (Точки сохранения).
 
-Внутри теста можно свободно создавать, изменять и удалять данные, а также
-вызывать commit(), если это требуется логикой приложения. После завершения
-теста выполняется откат к SAVEPOINT, и база данных мгновенно возвращается в
-исходное состояние.
-
-Схема изоляции
---------------
-
-    Транзакция соединения
-    ┌──────────────────────────────────────────────┐
-    │                                              │
-    │  SAVEPOINT (для каждого теста)               │
-    │  ┌────────────────────────────────────────┐  │
-    │  │ test_create_user()                     │  │
-    │  │ session.add(User(...))                 │  │
-    │  │ await session.flush()                  │  │
-    │  └────────────────────────────────────────┘  │
-    │                                              │
-    │  ROLLBACK TO SAVEPOINT                       │
-    │                                              │
-    └──────────────────────────────────────────────┘
-
-Что это дает
-------------
-• Каждый тест начинается с чистой базы данных.
-• Данные одного теста никогда не попадают в другой.
-• Очистка выполняется за O(1) благодаря откату транзакции.
-• Тесты работают с настоящим PostgreSQL, а не с SQLite.
-• Зависимости FastAPI автоматически подменяются тестовыми.
-
-Тестовое окружение
-------------------
-Плагин pytest-env автоматически задает:
-
-- ET_DATABASE_URL — адрес отдельной тестовой базы данных (*_test).
-- ET_SECRET_KEY — фиксированный секретный ключ для тестов.
-
-Подробная конфигурация находится в pyproject.toml.
-
+Внутри теста можно свободно создавать и удалять данные, а также
+вызывать commit(). После завершения теста выполняется откат к SAVEPOINT,
+и база данных мгновенно возвращается в исходное состояние.
 """
 
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 
+import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import (
@@ -61,73 +24,67 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.pool import NullPool
 
 from src.config import settings
 from src.domain.models import Base, User
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 1. SAFETY GUARD — abort if someone accidentally points at production DB
+# SAFETY GUARD — защита продакшен-базы от случайного удаления
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 assert settings.database_url.endswith("_test"), (
-    f"🔴 ABORT: DATABASE_URL does not end with '_test'!\n"
-    f"   Got: {settings.database_url}\n"
-    f"   Refusing to run tests against a non-test database.\n"
-    f"   Check [tool.pytest_env] in pyproject.toml."
+    f"🔴 ОСТАНОВКА: DATABASE_URL не заканчивается на '_test'!\n"
+    f"   Текущий URL: {settings.database_url}\n"
+    f"   Запуск тестов на не-тестовой базе данных запрещен.\n"
+    f"   Проверьте секцию [tool.pytest_env] в pyproject.toml."
 )
 
-
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 2. TEST ENGINE — isolated from production engine in src/database.py
-#    Lazy-safe: if PostgreSQL is unreachable, unit tests still work.
-#    Integration fixtures that depend on test_engine will auto-skip.
+# ТЕСТОВЫЙ ДВИЖОК БД — изолирован от основного движка приложения
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 test_engine = create_async_engine(
     settings.database_url,
     echo=False,
-    pool_pre_ping=True,
-    # Minimal pool for tests — we never need parallelism here
-    pool_size=5,
-    max_overflow=0,
+    # NullPool: каждое обращение к БД создает новое соединение в текущем event loop.
+    # Это спасает от ошибки "Future attached to a different loop" в pytest-asyncio.
+    poolclass=NullPool,
 )
 
-
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 3. SCHEMA LIFECYCLE — create tables once per session, drop after
+# ЖИЗНЕННЫЙ ЦИКЛ СХЕМЫ — создаем таблицы 1 раз за сессию
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 @pytest_asyncio.fixture(scope="session")
 async def _create_tables() -> AsyncGenerator[None, None]:
     """
-    Session-scoped: CREATE ALL before first test, DROP ALL after last test.
-
-    This runs once per `pytest` invocation. Individual tests use savepoints
-    (see db_session) so they never see each other's data.
+    Выполняется ОДИН РАЗ за весь запуск pytest.
+    Создает все таблицы (CREATE ALL) перед первым тестом и удаляет (DROP ALL) после последнего.
     """
-    # Force-import all models so Base.metadata knows about them
-
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-
     yield
-
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
-
     await test_engine.dispose()
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 4. CONNECTION + SAVEPOINT — the core isolation mechanism
+# RATE LIMITER — отключаем в тестах
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# SlowAPI-лимитер держит счётчики в памяти по IP; все тесты ходят с одного
+# testserver-адреса, поэтому состояние копится за весь прогон и ложно роняет
+# тесты, делающие несколько login/refresh. 429-поведение здесь не проверяется.
+@pytest.fixture(autouse=True)
+def _disable_rate_limiter() -> None:
+    from src.core.rate_limit import limiter
+
+    limiter.enabled = False
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ПОДКЛЮЧЕНИЕ + SAVEPOINT — ядро механизма изоляции
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 @pytest_asyncio.fixture
-async def db_connection(
-    _create_tables: None,
-) -> AsyncGenerator[AsyncConnection, None]:
-    """
-    Per-test raw connection with an uncommitted transaction.
-
-    The outer transaction is NEVER committed — after the test completes,
-    we ROLLBACK, restoring the DB to the pre-test state in O(1).
-    """
+async def db_connection(_create_tables: None) -> AsyncGenerator[AsyncConnection, None]:
+    """Глобальная транзакция соединения для теста. Никогда не коммитится."""
     async with test_engine.connect() as conn:
         transaction = await conn.begin()
         try:
@@ -135,107 +92,65 @@ async def db_connection(
         finally:
             await transaction.rollback()
 
-
 @pytest_asyncio.fixture
-async def db_session(
-    db_connection: AsyncConnection,
-) -> AsyncGenerator[AsyncSession, None]:
+async def db_session(db_connection: AsyncConnection) -> AsyncGenerator[AsyncSession, None]:
     """
-    Per-test AsyncSession bound to a SAVEPOINT inside the connection transaction.
-
-    Key mechanics:
-      • Session.begin_nested() creates a PostgreSQL SAVEPOINT.
-      • All ORM operations (add/flush/query) happen inside this savepoint.
-      • If the application code calls session.commit(), SQLAlchemy commits
-        the SAVEPOINT (not the outer transaction) — data is visible within
-        the same connection but not to other tests.
-      • After yield, we rollback the savepoint explicitly.
-      • The outer connection transaction (db_connection) also rolls back,
-        providing a second safety net.
-
-    Why not just session.rollback()?
-      Because application code may call session.commit() internally
-      (e.g., inside a service function). The savepoint absorbs the commit
-      without leaking data to the connection-level transaction.
+    Сессия БД для каждого теста, привязанная к SAVEPOINT (Точке сохранения).
+    Если код приложения вызовет session.commit(), закоммитится только SAVEPOINT,
+    данные не утекут в основную транзакцию. После теста мы откатываем всё назад.
     """
-    # Bind a session factory to this specific connection
     testing_session_factory = async_sessionmaker(
-        bind=db_connection,
-        class_=AsyncSession,
-        expire_on_commit=False,
+        bind=db_connection, class_=AsyncSession, expire_on_commit=False,
     )
-
     async with testing_session_factory() as session:
-        # Start a nested savepoint
-        nested = await session.begin_nested()
+        nested = await session.begin_nested() # Создаем SAVEPOINT в PostgreSQL
         try:
             yield session
         finally:
-            # Rollback the savepoint — even if tests called session.commit()
+            # Откат SAVEPOINT — база снова чистая!
             if nested.is_active:
                 await nested.rollback()
 
-
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 5. FASTAPI TEST CLIENT — with dependency override
+# FASTAPI ТЕСТОВЫЙ КЛИЕНТ — с переопределением зависимостей (DI)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 @pytest_asyncio.fixture
-async def async_client(
-    db_session: AsyncSession,
-) -> AsyncGenerator[AsyncClient, None]:
+async def async_client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     """
-    httpx.AsyncClient wired to the FastAPI app with DB dependency overridden.
-
-    The app's `get_db()` / `get_session()` dependencies are replaced so that
-    all route handlers receive the SAME db_session that the test controls.
-    This means route-level commits are absorbed by the savepoint.
-
-    Redis is replaced with a FakeRedis-like AsyncMock to avoid requiring
-    a running Redis instance for integration tests.
+    HTTPX клиент. Подменяет реальную базу данных в FastAPI на нашу тестовую
+    сессию с SAVEPOINT, а реальный Redis заменяет на AsyncMock-заглушку.
     """
     from unittest.mock import AsyncMock
-
     from src.database import get_session
     from src.dependencies import get_db, get_redis_client
     from src.main import app
 
-    # Override both DB dependency variants
     async def _override_session() -> AsyncGenerator[AsyncSession, None]:
         yield db_session
 
-    # Fake Redis — returns None for GET, OK for SET/PING
+    # Фейковый Redis — мгновенные ответы в памяти
     fake_redis = AsyncMock()
     fake_redis.get.return_value = None
     fake_redis.set.return_value = True
     fake_redis.ping.return_value = True
 
+    # Dependency Override: FastAPI будет использовать наши заглушки
     app.dependency_overrides[get_db] = _override_session
     app.dependency_overrides[get_session] = _override_session
     app.dependency_overrides[get_redis_client] = lambda: fake_redis
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://testserver",
-    ) as client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
         yield client
 
-    # Clean up overrides so they don't leak between test modules
-    app.dependency_overrides.clear()
-
+    app.dependency_overrides.clear() # Очистка после теста
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 6. AUTH HELPERS — convenience fixtures for authenticated requests
+# AUTH ПОМОЩНИКИ — фикстуры для тестирования закрытых роутов
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 @pytest_asyncio.fixture
 async def test_user(db_session: AsyncSession) -> User:
-    """
-    Create a canonical test user in the DB.
-
-    Returns the ORM User instance with a known password ('TestPass123!').
-    Uses argon2-cffi PasswordHasher — same as production auth_service.py.
-    """
+    """Создает эталонного пользователя в БД для каждого теста."""
     from argon2 import PasswordHasher
-
     from src.domain.models import User
 
     ph = PasswordHasher()
@@ -248,13 +163,15 @@ async def test_user(db_session: AsyncSession) -> User:
     await db_session.flush()
     return user
 
-
 @pytest_asyncio.fixture
 async def auth_headers(test_user: User) -> dict[str, str]:
     """
-    Return Authorization headers with a valid JWT for `test_user`.
+    Аутентификация тестового пользователя через access-token cookie.
+
+    Auth переехал на httpOnly-cookie (Cookie-заголовок), а не Authorization: Bearer.
+    Возвращаем Cookie-заголовок, чтобы существующие вызовы `headers=auth_headers`
+    продолжали работать без изменений на каждом сайте вызова.
     """
     from src.services.auth_service import create_access_token
-
     token = create_access_token(data={"sub": test_user.email})
-    return {"Authorization": f"Bearer {token}"}
+    return {"Cookie": f"access_token={token}"}

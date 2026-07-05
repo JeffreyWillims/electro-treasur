@@ -34,9 +34,15 @@ NOTE: E2E tests are SLOW and FRAGILE by design. Keep them minimal —
 from __future__ import annotations
 
 import pytest
-from playwright.async_api import Page
 
-from tests.e2e.pages.login_page import LoginPage
+# Skip the whole module at collection time if playwright is not installed.
+# (tests/e2e/conftest.py hooks run AFTER module import — they can't prevent
+#  an ImportError here, so the guard must live in the module itself.)
+pytest.importorskip("playwright")
+
+from playwright.async_api import Page  # noqa: E402
+
+from tests.e2e.pages.login_page import LoginPage  # noqa: E402
 
 # ── Configuration ────────────────────────────────────────────────────────────
 FRONTEND_URL = "http://localhost:5173"

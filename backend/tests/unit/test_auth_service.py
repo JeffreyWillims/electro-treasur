@@ -91,8 +91,8 @@ class TestCreateAccessToken:
         assert data == original  # 'exp' should NOT leak into original
 
     def test_access_token_expire_constant(self) -> None:
-        """ACCESS_TOKEN_EXPIRE_MINUTES should be 24 hours for MVP."""
-        assert ACCESS_TOKEN_EXPIRE_MINUTES == 60 * 24
+        """Access-токен короткоживущий (15 мин) — пара к refresh-токену в Redis."""
+        assert ACCESS_TOKEN_EXPIRE_MINUTES == 15
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

@@ -25,6 +25,7 @@ from arq.connections import ArqRedis, RedisSettings, create_pool
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from src.config import settings
+from src.infrastructure.workers.insight_worker import calculate_static_insights
 from src.services.cashflow_prep import (
     build_insight_prompt,
     get_active_user_ids,
@@ -170,7 +171,7 @@ async def schedule_monthly_analysis(ctx: dict[str, Any]) -> dict[str, Any]:
     pool: ArqRedis = ctx["arq_pool"]
     for user_id in user_ids:
         await pool.enqueue_job(
-            "generate_llm_insight",
+            "calculate_static_insights",
             user_id,
             start_date.isoformat(),
             end_date.isoformat(),
@@ -215,7 +216,7 @@ async def shutdown(ctx: dict[str, Any]) -> None:
 class WorkerSettings:
     """arq worker configuration — importable as module path."""
 
-    functions = [generate_annual_llm_insight, generate_llm_insight]
+    functions = [generate_annual_llm_insight, generate_llm_insight, calculate_static_insights]
     cron_jobs = [cron(schedule_monthly_analysis, day=1, hour=3, minute=0)]
     on_startup = startup
     on_shutdown = shutdown

@@ -164,8 +164,10 @@ class TestTransactionValidation:
         )
 
         assert response.status_code == 422
-        errors = response.json()["detail"]
-        # Pydantic V2 returns a list of validation errors
+        # Кастомный handler (src/core/exceptions.py) возвращает
+        # {"detail": "Ошибка валидации данных", "errors": [...]} —
+        # список ошибок Pydantic V2 лежит в ключе "errors".
+        errors = response.json()["errors"]
         assert any("amount" in str(err).lower() for err in errors), (
             f"Expected 'amount' validation error, got: {errors}"
         )

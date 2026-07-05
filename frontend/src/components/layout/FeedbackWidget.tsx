@@ -1,10 +1,33 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { submitFeedback } from '@/api/client';
 
 export function FeedbackWidget() {
   const [isOpen, setIsOpen] = useState(false);
+  const [message, setMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    const text = message.trim();
+    if (!text) {
+      toast.error('Введите сообщение');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await submitFeedback(text);
+      toast.success('Спасибо! Сообщение отправлено');
+      setMessage('');
+      setIsOpen(false);
+    } catch {
+      toast.error('Не удалось отправить. Попробуйте позже');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // 💎 Эталонные стили для полей ввода (как в QuickEntry и настройках)
   const inputWrapperStyle = cn(
@@ -38,7 +61,7 @@ export function FeedbackWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="fixed bottom-28 right-8 w-80 bg-white/95 dark:bg-[#121212]/95 backdrop-blur-3xl border border-black/10 dark:border-white/10 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.6)] p-6 z-50"
+            className="fixed bottom-28 right-8 w-[calc(100vw-4rem)] max-w-80 bg-white/95 dark:bg-[#121212]/95 backdrop-blur-3xl border border-black/10 dark:border-white/10 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.6)] p-6 z-50"
           >
             {/* ── HEADER ── */}
             <div className="flex items-start justify-between mb-6">
@@ -77,6 +100,8 @@ export function FeedbackWidget() {
                 <label className={labelStyle}>Сообщение</label>
                 <textarea
                   placeholder="Ваша идея или вопрос..."
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
                   className={cn(inputWrapperStyle, "h-28 resize-none")}
                 />
               </div>
@@ -84,10 +109,11 @@ export function FeedbackWidget() {
 
             {/* ── SUBMIT BUTTON ── */}
             <button
-              onClick={() => setIsOpen(false)}
-              className="w-full h-14 bg-gradient-to-r from-[#FF7A00] to-[#FFA011] hover:from-[#EA6A00] hover:to-[#FF7A00] text-white rounded-2xl font-bold uppercase tracking-widest text-sm shadow-[0_10px_30px_-5px_rgba(255,122,0,0.4)] transition-all flex items-center justify-center active:scale-[0.98]"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="w-full h-14 bg-gradient-to-r from-[#FF7A00] to-[#FFA011] hover:from-[#EA6A00] hover:to-[#FF7A00] text-white rounded-2xl font-bold uppercase tracking-widest text-sm shadow-[0_10px_30px_-5px_rgba(255,122,0,0.4)] transition-all flex items-center justify-center active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Отправить
+              {isSubmitting ? 'Отправка…' : 'Отправить'}
             </button>
           </motion.div>
         )}

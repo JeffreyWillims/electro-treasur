@@ -1,6 +1,6 @@
 /* eslint-disable */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { fetchMe, login as apiLogin, register as apiRegister } from '@/api/client';
+import { fetchMe, login as apiLogin, logout as apiLogout, register as apiRegister } from '@/api/client';
 import { queryClient } from '@/lib/queryClient';
 
 interface User {
@@ -13,11 +13,10 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
   isLoading: boolean;
   login: (email: string, pass: string) => Promise<void>;
   register: (payload: { email: string; password: string; full_name?: string; phone?: string }) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
@@ -25,24 +24,20 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('aura_token'));
   const [isLoading, setIsLoading] = useState(true);
 
+  // Состояние авторизации определяется НАЛИЧИЕМ user (cookie не читается из JS).
+  // На старте пробуем получить профиль по cookie; 401 → пользователь не залогинен.
   const refreshUser = useCallback(async () => {
-    if (!token) {
-      setUser(null);
-      setIsLoading(false);
-      return;
-    }
     try {
       const userData = await fetchMe();
       setUser(userData);
     } catch {
-      logout();
+      setUser(null);
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => {
     refreshUser();
@@ -53,9 +48,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // This prevents data leakage between user accounts
     queryClient.clear();
 
-    const data = await apiLogin(email, pass);
-    localStorage.setItem('aura_token', data.access_token);
-    setToken(data.access_token);
+    await apiLogin(email, pass); // бэкенд ставит httpOnly-cookie
+    const userData = await fetchMe(); // подтягиваем профиль → пользователь залогинен
+    setUser(userData);
   };
 
   const register = async (payload: { email: string; password: string; full_name?: string; phone?: string }) => {
@@ -66,16 +61,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await login(payload.email, payload.password);
   };
 
-  const logout = () => {
-    localStorage.removeItem('aura_token');
-    setToken(null);
+  const logout = async () => {
+    try {
+      await apiLogout(); // бэкенд отзывает refresh и чистит cookie
+    } catch {
+      // Даже если запрос не прошёл — локально разлогиниваемся.
+    }
     setUser(null);
     // CRITICAL: Purge all cached query data to prevent data leakage
     queryClient.clear();
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, register, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

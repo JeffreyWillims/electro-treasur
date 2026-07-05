@@ -1,37 +1,50 @@
 # 🧪 Citrine Vault — Test Framework Documentation
 
 > Полная документация по тестовому фреймворку проекта Citrine Vault.
-> Версия: 2.0 | Тестов: **270** | Покрытие: **~90%**
+> Тестов: **287** (unit 205 + integration 80 + e2e 2, проверено `pytest --collect-only` на 2026-07-04).
+> Покрытие: **67%** (замер 2026-07-04, полный прогон unit+integration с `--cov=src` против
+> PostgreSQL 16). Порог CI — **≥70%** (`--cov-fail-under=70` передаётся ЯВНО в ci.yml,
+> из локальных `addopts` флаги покрытия убраны) — **порог сейчас не достигается**,
+> в основном из-за непокрытых `src/infrastructure/telegram/*` (~340 строк).
 
 ---
 
 ## 📊 Обзор
 
 ```
-Unit Tests:      198 ████████████████████████████████████████  73%
-Integration:      72 ██████████████░░░░░░░░░░░░░░░░░░░░░░░░░░  27%
+Unit Tests:      205 ████████████████████████████████████████  72%
+Integration:      80 ███████████████░░░░░░░░░░░░░░░░░░░░░░░░░  28%
 ──────────────────────────────────────────────────────────────────
-TOTAL:           270 тестов
+TOTAL:           285 тестов (+ 2 e2e = 287 всего)
 ```
 
 ### Быстрый запуск
 
+Флаги покрытия убраны из `addopts` (2026-07-04) — подмножества тестов запускаются
+без `--no-cov` и без ложного фейла по порогу покрытия.
+
 ```bash
-# Unit-тесты (без БД, без Docker)
-pytest tests/unit/ -v
+# Unit-тесты (без БД, без Docker) — теперь работают «из коробки»
+pytest tests/unit -v
 
-# Integration-тесты (требует PostgreSQL)
-docker-compose up -d postgres
-pytest tests/integration/ -v
+# Integration-тесты (требует PostgreSQL с базой electro_treasur_test)
+docker compose up -d postgres
+pytest tests/integration -v
 
-# Все тесты
-pytest tests/ -v
+# Все тесты (e2e автоматически скипаются без Playwright,
+# integration — без доступного PostgreSQL)
+pytest tests -v
 
 # Только OCR парсинг
 pytest tests/unit/test_ocr_parsing.py -v
 
-# С покрытием
-pytest tests/unit/ --cov=src --cov-report=html
+# Полный прогон с контролем покрытия (как в CI)
+pytest tests/unit tests/integration -m "not e2e" \
+    --cov=src --cov-report=term-missing --cov-fail-under=70
+
+# Тестовая БД на нестандартном хосте/порте (skip_if_set в [tool.pytest_env]):
+ET_DATABASE_URL="postgresql+asyncpg://electro:electro_secret@localhost:5433/electro_treasur_test" \
+    pytest tests/integration -v
 ```
 
 ---
@@ -42,8 +55,9 @@ pytest tests/unit/ --cov=src --cov-report=html
 tests/
 ├── conftest.py                  # Core fixtures (engine, session, client, auth)
 ├── factories/
+│   ├── users.py                 # factory-boy: UserFactory (dict + Argon2 hash)
 │   └── transactions.py          # factory-boy: TransactionCreateFactory, CategoryFactory
-├── unit/                        # 198 тестов — без БД, без I/O
+├── unit/                        # 205 тестов — без БД, без I/O
 │   ├── test_ocr_parsing.py      #  81 — Распознавание чеков/выписок (Tesseract)
 │   ├── test_telegram_helpers.py #  37 — Telegram handler pure functions
 │   ├── test_auth_service.py     #  21 — JWT + Argon2 хэширование
@@ -51,14 +65,17 @@ tests/
 │   ├── test_import_helpers.py   #  17 — CSV/Excel column aliasing + парсинг
 │   ├── test_analytics.py        #  11 — Savings Simulator (compound interest)
 │   ├── test_budget_math.py      #   7 — Budget aggregation math
+│   ├── test_cashflow_prep.py    #   7 — previous_month_range + LLM prompt builder (pure)
 │   └── test_services.py         #   5 — Dashboard aggregation + fake repo
-├── integration/                 # 72 теста — требует PostgreSQL
+├── integration/                 # 80 тестов — требует PostgreSQL
 │   ├── conftest.py              # Auto-skip guard (PG offline → skip)
-│   ├── test_api_full.py         #  35 — Full CRUD API (HTTP→Route→Service→DB)
+│   ├── test_api_full.py         #  31 — Full CRUD API (HTTP→Route→Service→DB)
 │   ├── test_user_service.py     #  15 — User CRUD + category cascade
 │   ├── test_import_export.py    #  11 — CSV import/export roundtrip
 │   ├── test_repositories.py     #  10 — ORM constraints (UNIQUE, CASCADE, NUMERIC)
-│   └── test_api.py              #   5 — Legacy transaction API tests (POST only)
+│   ├── test_api.py              #   5 — Legacy transaction API tests (POST only)
+│   ├── test_cashflow_prep.py    #   4 — Monthly insight pipeline (get_active_user_ids, upsert, arq fan-out)
+│   └── test_offers.py           #   4 — Bank offers API + latest-insight endpoint (new feature, in progress)
 └── e2e/                         # 2 теста — требует Playwright + полный стек
     └── test_user_journey.py     #   2 — Регистрация → логин через браузер
 ```
@@ -114,13 +131,15 @@ tests/
 # Unit-тесты продолжают работать нормально
 ```
 
-**Результат:** `198 passed, 72 skipped` (PG offline) vs `270 passed` (PG online)
+**Результат** (замер 2026-07-04): `205 passed, 81 skipped` (PG offline; 80 integration +
+1 skip модуля e2e без Playwright) vs `285 passed, 1 skipped` (PG online — весь набор
+unit+integration зелёный после фиксов auth и ORM-каскадов; 1 skip — модуль e2e без Playwright)
 
 ---
 
 ## 📋 Детальное описание тестов
 
-### Unit Tests (198)
+### Unit Tests (205)
 
 #### `test_ocr_parsing.py` — 81 тест
 
@@ -222,9 +241,20 @@ Dashboard aggregation с fake repository:
 
 ---
 
-### Integration Tests (72)
+#### `test_cashflow_prep.py` (unit) — 7 тестов
 
-#### `test_api_full.py` — 35 тестов
+Чистые хелперы месячного LLM-инсайта (`src/services/cashflow_prep.py`), без БД:
+
+| Тестов | Что проверяет |
+|---|---|
+| 6 | `previous_month_range`: середина месяца, переход через год (январь→декабрь), невисокосный/високосный февраль, последний день месяца |
+| 1 | `build_insight_prompt`: промпт содержит период и суммы в правильном формате |
+
+---
+
+### Integration Tests (80)
+
+#### `test_api_full.py` — 31 тест
 
 **Full HTTP → Route → Service → ORM → PostgreSQL pipeline:**
 
@@ -274,14 +304,45 @@ Dashboard aggregation с fake repository:
 
 ---
 
+#### `test_cashflow_prep.py` (integration) — 4 теста
+
+Месячный LLM-инсайт пайплайн (`src/infrastructure/workers/llm_worker.py` + `cashflow_prep.py`)
+против реального PostgreSQL, с фейковым arq-пулом:
+
+| Тестов | Что проверяет |
+|---|---|
+| 1 | `get_active_user_ids` фильтрует пользователей строго по периоду (не по соседним месяцам) |
+| 1 | `upsert_insight` идемпотентен — повторный запуск обновляет строку, а не дублирует |
+| 1 | `generate_llm_insight` персистит строку `insights` с ожидаемыми полями |
+| 1 | `schedule_monthly_analysis` делает fan-out: enqueue_job вызывается по разу на активного пользователя |
+
+---
+
+#### `test_offers.py` — 4 теста
+
+Bank Offers API (CPA-монетизация Savings Navigator) + `GET /v1/insights/latest` — новая,
+незакоммиченная фича (см. `git status`):
+
+| Тестов | Что проверяет |
+|---|---|
+| 1 | `GET /v1/offers/` возвращает только активные офферы, отсортированные по `sort_order` |
+| 1 | `POST /v1/offers/{id}/click` атомарно инкрементирует счётчик кликов |
+| 1 | Клик по несуществующему офферу → `404` |
+| 1 | `GET /v1/insights/latest`: `null` при отсутствии инсайтов, затем — самый свежий по `period_end` |
+
+---
+
 ### E2E Tests (2)
 
 | Тест | Что проверяет |
 |---|---|
-| `test_register_flow` | Полный регистрационный флоу через Playwright |
-| `test_login_flow` | Логин + редирект на дашборд |
+| `test_successful_login_redirects_to_dashboard` | Логин через браузер + редирект на дашборд («Общее состояние») |
+| `test_invalid_credentials_show_error` | Неверные креды → сообщение об ошибке, редиректа нет |
 
-> **Требования:** `pip install playwright && playwright install chromium`
+> **Требования:** `pip install playwright && playwright install chromium`,
+> запущенные frontend (`localhost:5173`) и backend (`localhost:8000`).
+> Без установленного Playwright модуль скипается целиком (`pytest.importorskip`)
+> и не ломает коллекцию остальных тестов.
 
 ---
 
@@ -289,12 +350,14 @@ Dashboard aggregation с fake repository:
 
 | Технология | Применение |
 |---|---|
-| **pytest** | Core test runner |
-| **pytest-asyncio** | Async test support (mode=auto) |
-| **hypothesis** | Property-based testing (OCR fuzzing) |
-| **factory-boy** | Test data factories |
-| **httpx** | Async HTTP client для FastAPI |
-| **Playwright** | E2E browser testing |
+| **pytest** | Core test runner (маркер `e2e` зарегистрирован в `pyproject.toml`) |
+| **pytest-asyncio** | Async-тесты без декораторов (`asyncio_mode = "auto"`); event loop на каждый тест — поэтому test_engine использует `NullPool` |
+| **pytest-env** | Тестовое окружение из `[tool.pytest_env]` (ET_DATABASE_URL с `skip_if_set` — можно переопределить извне, ET_SECRET_KEY, ET_REDIS_URL) |
+| **hypothesis** | Property-based testing (`test_ocr_parsing.py` — фаззинг парсера) |
+| **factory-boy** | Фабрики данных (`tests/factories/` — dict-фабрики, `FuzzyDecimal` с float-границами) |
+| **httpx ASGITransport** | `AsyncClient` напрямую к FastAPI app in-process, без сети (`tests/conftest.py::async_client`) |
+| **Playwright + storageState** | E2E: логин через API один раз за сессию, JWT инжектится в localStorage и переиспользуется через `storage_state` (`tests/e2e/conftest.py`) |
+| **SAVEPOINT-изоляция** | `db_session` = `begin_nested()` внутри некоммитящейся транзакции соединения; откат за O(1) после каждого теста |
 
 ### Паттерны
 
@@ -312,11 +375,12 @@ Dashboard aggregation с fake repository:
 
 ## ⚡ Производительность
 
-| Метрика | Значение |
+| Метрика | Значение (замер 2026-07-04) |
 |---|---|
-| Unit-тесты (198) | **~17 секунд** |
-| Integration (72) | **~45 секунд** (с PG) |
-| Полный прогон | **~65 секунд** |
+| Unit-тесты (205) | **~4.5 секунды** |
+| Integration (80) | **~10 секунд** (с PG) |
+| Полный прогон (285, с PG) | **~15 секунд** |
+| Полный прогон + coverage | **~23 секунды** |
 | Очистка per-test | **O(1)** (ROLLBACK, не DROP) |
 
 ---
@@ -330,41 +394,60 @@ Dashboard aggregation с fake repository:
 
 ---
 
+## 🔄 Изменения фреймворка (2026-07-04)
+
+Исправлены дефекты, из-за которых фреймворк был частично неработоспособен локально:
+
+| Изменение | Файл | Почему |
+|---|---|---|
+| **Фикс краша коллекции e2e** — `pytest.importorskip("playwright")` в начале модуля | `tests/e2e/test_user_journey.py` | Импорт `playwright.async_api` на уровне модуля ронял ВСЮ коллекцию (`Interrupted: 1 error during collection`) при отсутствии Playwright. Хук в `e2e/conftest.py` срабатывает после импорта модуля и не спасал. Теперь модуль корректно скипается. |
+| **Убраны cov-флаги из `addopts`** | `pyproject.toml` | `--cov-fail-under=70` в `addopts` ронял ЛЮБОЕ подмножество (`pytest tests/unit` давал ~18% < 70). CI передаёт все cov-флаги явно (см. ниже), поэтому контроль покрытия не потерян. |
+| **`NullPool` для `test_engine`** | `tests/conftest.py` | pytest-asyncio создаёт новый event loop на каждый тест, а соединения asyncpg привязаны к loop. QueuePool (`pool_size=5`) переиспользовал соединение из чужого loop → массовые `RuntimeError: ... attached to a different loop` (41 error в integration-прогоне). |
+| **`FuzzyDecimal` с float-границами** | `tests/factories/users.py`, `tests/factories/transactions.py` | `FuzzyDecimal(low=Decimal(...))` падал с `TypeError` внутри `random.uniform()` — границы должны быть float. |
+| **Фикс контракта 422 в тесте** | `tests/integration/test_api.py` | Тест ожидал дефолтный формат FastAPI (`detail` = список), а кастомный handler (`src/core/exceptions.py`) кладёт список ошибок в ключ `errors`. |
+| **`skip_if_set` для `ET_DATABASE_URL`** | `pyproject.toml` | Позволяет локально указать другой хост/порт тестовой БД через переменную окружения. Значение по умолчанию не изменилось. |
+| **`filterwarnings` для pytesseract** | `pyproject.toml` | Сторонний `DeprecationWarning` (`pkgutil.find_loader`) засорял вывод. Предупреждения из собственного кода `src/` НЕ подавляются. |
+
+### Исправленные дефекты `src/`
+
+| Дата | Дефект | Фикс |
+|---|---|---|
+| 2026-07-04 | `src/api/v1/auth.py` — dummy-хэш для timing-attack защиты был в формате **bcrypt** (`$2b$12$...`), а `verify_password` использует **argon2** → `InvalidHashError` → **HTTP 500 вместо 401** на логине с несуществующим email. | Dummy-хэш вынесен в `auth_service.DUMMY_PASSWORD_HASH` — валидный Argon2-хэш, вычисляемый через `ph.hash(...)`. Argon2-проверка реально выполняется (защита от timing attack сохранена), `verify_password` возвращает `False`. Тест `TestAuthFlow::test_login_nonexistent_user_401` зелёный. |
+| 2026-07-04 | `src/domain/models.py` — FK в БД с `ondelete="CASCADE"`, но ORM-relationships без `passive_deletes=True` → `session.delete(user/category)` пытался `UPDATE ... SET user_id=NULL` по NOT NULL FK → `NotNullViolationError`. | `passive_deletes=True` добавлен к коллекциям с NOT NULL детьми (`User.categories/budgets/transactions`, `Category.budgets/transactions`) — ORM доверяет каскад БД. Схема БД не менялась (миграция не нужна). `TestCascadeDeletes` (2 теста) зелёные. |
+
+> Примечание: `Category.subcategories` намеренно оставлен без `passive_deletes` — `parent_id`
+> nullable, `NotNullViolationError` не возникает; правка сменила бы семантику (orphan vs delete)
+> без покрытия тестом. Здесь БД-уровневый CASCADE и ORM-поведение расходятся — потенциальная
+> отдельная задача.
+
+---
+
 ## 📈 CI/CD интеграция
 
-```yaml
-# .github/workflows/ci.yml
-jobs:
-  test:
-    steps:
-      - name: Unit Tests
-        run: pytest tests/unit/ -v --tb=short
+Реальный пайплайн — `.github/workflows/ci.yml`, один job `test` (запускается после `lint`):
 
-      - name: Integration Tests
-        run: pytest tests/integration/ -v --tb=short
-        # Auto-skips if PG service is not configured
-```
+| Шаг | Что делает |
+|---|---|
+| **service `postgres`** | `postgres:16-alpine` с healthcheck `pg_isready`; user `electro`, база `electro_treasur_test`, порт 5432 |
+| **env** | `ET_DATABASE_URL`, `ET_SECRET_KEY`, `ET_REDIS_URL`, `ET_TELEGRAM_BOT_TOKEN` задаются явно на уровне job |
+| **Системные зависимости** | `tesseract-ocr` + `tesseract-ocr-rus` (для OCR-тестов) |
+| **Прогон** | `pytest tests/unit tests/integration -v --tb=short -m "not e2e" --junitxml=test-results.xml --cov=src --cov-report=term-missing --cov-report=xml:coverage.xml --cov-fail-under=70` |
+| **Артефакты** | `test-results.xml` + `coverage.xml` загружаются даже при фейле (30 дней) |
 
-### Рекомендуемые pytest markers
-
-```ini
-# pyproject.toml
-[tool.pytest.ini_options]
-markers = [
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-]
-```
+Ключевое: **все cov-флаги CI передаёт явно** — именно поэтому их можно было безопасно
+убрать из локальных `addopts`. E2E в CI не запускаются (`-m "not e2e"`).
 
 ---
 
 ## 📦 Зависимости (test-only)
 
 ```
-pytest>=8.0
-pytest-asyncio>=0.23
-pytest-cov
-hypothesis>=6.0
+pytest>=8.3
+pytest-asyncio>=0.25
+pytest-cov>=6.0
+pytest-env>=1.1
+hypothesis>=6.100
 factory-boy>=3.3
-httpx>=0.27
-playwright  # только для E2E
+httpx>=0.28
+playwright  # только для E2E (опционально — без него e2e скипаются)
 ```

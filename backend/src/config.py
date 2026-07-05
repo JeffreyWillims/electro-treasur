@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     # No default — must be set via ET_SECRET_KEY env var. Fails fast on startup.
     secret_key: str
     algorithm: str = "HS256"
+    refresh_token_expire_days: int = 7  # TTL refresh-токена в Redis
+    # Secure-флаг cookie требует HTTPS; в проде True, в локальной/тестовой среде
+    # (http) переопределяется через ET_COOKIE_SECURE=false, иначе браузер/клиент
+    # не отправит cookie.
+    cookie_secure: bool = True
 
     # ── PostgreSQL (via PgBouncer) ──────────────────────────────────────
     database_url: str = (
@@ -45,4 +50,4 @@ class Settings(BaseSettings):
     model_config = {"env_prefix": "ET_", "env_file": ".env", "extra": "ignore"}
 
 
-settings = Settings()  # type: ignore[call-arg]
+settings = Settings()

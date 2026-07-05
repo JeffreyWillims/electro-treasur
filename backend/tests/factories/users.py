@@ -17,8 +17,6 @@ Usage:
 
 from __future__ import annotations
 
-from decimal import Decimal
-
 import factory
 from factory import fuzzy
 
@@ -42,7 +40,9 @@ class UserFactory(factory.Factory):
     )
     full_name = factory.Faker("name", locale="ru_RU")
     phone = factory.Faker("phone_number", locale="ru_RU")
-    monthly_income = fuzzy.FuzzyDecimal(low=Decimal("30000"), high=Decimal("500000"), precision=2)
+    # FuzzyDecimal требует float-границы: внутри вызывается random.uniform(),
+    # который падает с TypeError при Decimal-аргументах.
+    monthly_income = fuzzy.FuzzyDecimal(low=30000.0, high=500000.0, precision=2)
 
     @factory.lazy_attribute
     def hashed_password(self) -> str:

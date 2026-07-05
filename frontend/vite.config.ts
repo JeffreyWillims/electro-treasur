@@ -33,4 +33,8 @@ export default defineConfig({
   optimizeDeps: {
     include: ['recharts', '@tanstack/react-query', 'lucide-react'],
   },
+  // Тяжёлые страницы (recharts) подключены через React.lazy в App.tsx —
+  // rolldown сам выносит их в отдельные чанки, которые не грузятся при старте.
+  // Ручной manualChunks убран: на Vite 8 (rolldown) он затягивал React в чанк
+  // charts и ломал ленивую загрузку (все чанки preload'ились со старта).
 })
