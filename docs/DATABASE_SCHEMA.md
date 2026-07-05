@@ -93,6 +93,46 @@ Alembic-миграции в `backend/migrations/versions/`. Все денежн�
 
 - `UNIQUE(user_id, period_start, period_end)` — `uq_insight_user_period`; повторный запуск анализа делает upsert, месяц не дублируется.
 
+### `feedback`
+
+Сообщения обратной связи; email-доставка идёт асинхронно, строка — аудит-след.
+
+| Поле | Тип | Nullable | Default | Индекс/ограничение |
+|---|---|---|---|---|
+| id | PK (int) | — | — | PRIMARY KEY |
+| user_id | FK → users.id | нет | — | ON DELETE CASCADE, индекс |
+| message | Text | нет | — | |
+| created_at | TIMESTAMPTZ | нет | `now()` | |
+
+### `consultant_access`
+
+Read-only грант: консультант видит транзакции клиента. Грант создаёт сам клиент.
+
+| Поле | Тип | Nullable | Default | Индекс/ограничение |
+|---|---|---|---|---|
+| id | PK (int) | — | — | PRIMARY KEY |
+| consultant_id | FK → users.id | нет | — | ON DELETE CASCADE, индекс |
+| client_id | FK → users.id | нет | — | ON DELETE CASCADE, индекс |
+| created_at | TIMESTAMPTZ | нет | `now()` | |
+
+- `UNIQUE(consultant_id, client_id)` — `uq_consultant_client`; повторный грант идемпотентен.
+- Также в `users` добавлена колонка `role` (`user_role_enum`: `user` / `consultant`, default `user`).
+
+### `api_keys`
+
+Ключи публичного API v2. Секрет — только Argon2-хэш; `prefix` открыт для O(1)-поиска.
+
+| Поле | Тип | Nullable | Default | Индекс/ограничение |
+|---|---|---|---|---|
+| id | PK (int) | — | — | PRIMARY KEY |
+| user_id | FK → users.id | нет | — | ON DELETE CASCADE, индекс |
+| name | String(64) | нет | — | |
+| prefix | String(16) | нет | — | UNIQUE |
+| key_hash | String(255) | нет | — | Argon2-хэш полного ключа |
+| is_active | bool | нет | `true` | мягкий отзыв |
+| created_at | TIMESTAMPTZ | нет | `now()` | |
+| last_used_at | TIMESTAMPTZ | да | — | обновляется при каждом успешном запросе |
+
 ## ER-диаграмма
 
 ```mermaid
@@ -170,7 +210,9 @@ erDiagram
 | `6825ab5d3032` | `..._add_performance_indexes.py` | `ix_transaction_user_executed` |
 | `efe8619e215d` | `..._add_comment_to_transactions.py` | `comment` в транзакциях |
 | `bb95b3b80349` | `..._add_insights_table.py` | Таблица `insights` |
-| `87839f63308a` | `..._add_bank_offers_table.py` | Таблица `bank_offers` (в разработке, не закоммичена) |
+| `87839f63308a` | `..._add_bank_offers_table.py` | Таблица `bank_offers` |
+| `c1d2e3f4a5b6` | `..._add_feedback_table.py` | Таблица `feedback` |
+| `e7a8b9c0d1f2` | `..._add_rbac_consultant_access_api_keys.py` | `users.role` (RBAC), таблицы `consultant_access` и `api_keys` |
 
 ### Команды
 

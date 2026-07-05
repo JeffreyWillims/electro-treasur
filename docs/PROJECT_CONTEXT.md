@@ -33,7 +33,7 @@
 
 | Компонент | Технология |
 |---|---|
-| Язык/фреймворк | TypeScript + React 19 (package.json пинит `^19.2.4`; README-бейдж ещё указывает React 18 — стоит обновить) |
+| Язык/фреймворк | TypeScript + React 19 (package.json пинит `^19.2.4`) |
 | Сборка | Vite 8 |
 | Стилизация | Tailwind CSS v3 (glassmorphic UI) |
 | Серверный стейт | TanStack Query v5 |

@@ -12,7 +12,8 @@ So from the browser/client:
 
 | Client-facing path | Backend path | Router |
 |---|---|---|
-| `/api/v1/...` | `/v1/...` | `v1_router` (auth, users, transactions, budgets, dashboard, analytics, insights, offers) |
+| `/api/v1/...` | `/v1/...` | `v1_router` (auth, users, transactions, budgets, dashboard, analytics, insights, offers, feedback, consultant, api-keys) |
+| `/api/v2/public/...` | `/v2/public/...` | `public_v2_router` — публичное API по `X-API-Key` (без cookie) |
 | `/api/api/analytics/yearly` and `/api/api/analytics/tasks/{task_id}` | `/api/analytics/...` | `analytics_router` (yearly LLM report) — double `/api` is a real, if awkward, consequence of the current mount + proxy setup |
 
 All endpoints below use **backend-path** notation (`/v1/...`); prepend `/api` when calling through
@@ -239,6 +240,51 @@ CPA monetization for Savings Navigator; offers are managed via SQLAdmin, not via
 ```json
 [{ "id": 1, "name": "Т-Банк Вклад", "rate": "18.50", "color": "#FFDD2D", "partner_url": "https://..." }]
 ```
+
+---
+
+## Feedback — `/v1/feedback` (`api/v1/feedback.py`)
+
+| Method | Path | Description |
+|---|---|---|
+| POST | `/` | Сохраняет сообщение в таблицу `feedback` и асинхронно шлёт email админу (zero-blocking) |
+
+---
+
+## Consultant (RBAC) — `/v1/consultant` (`api/v1/consultant.py`)
+
+Роль `consultant` назначается через SQLAdmin. Грант выдаёт ТОЛЬКО клиент; доступ консультанта строго read-only.
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/access` | client | Выдать read-only доступ по email консультанта (`404` если email не консультант; идемпотентно) |
+| DELETE | `/access` | client | Отозвать грант (`204`) |
+| GET | `/access` | client | Список выданных грантов (`GrantInfo[]`) |
+| GET | `/clients` | consultant | Клиенты, выдавшие доступ (`ClientInfo[]`; `403` без роли) |
+| GET | `/clients/{client_id}/transactions` | consultant | Read-only транзакции клиента с пагинацией `limit`/`offset` (`404` без гранта) |
+
+---
+
+## API Keys — `/v1/api-keys` (`api/v1/api_keys.py`)
+
+Ключи для публичного API v2. Секрет хэшируется Argon2 и показывается **один раз** при создании. Лимит — 10 активных ключей.
+
+| Method | Path | Description |
+|---|---|---|
+| POST | `/` | Выпустить ключ `{name}` → `ApiKeyCreatedResponse` c полным `api_key` (единственный показ) |
+| GET | `/` | Список ключей без секретов (`ApiKeyInfo[]`: prefix, is_active, last_used_at) |
+| DELETE | `/{key_id}` | Мягкий отзыв (`is_active=false`), `204` |
+
+---
+
+## Public API v2 — `/v2/public` (`api/v2/public.py`)
+
+Для сторонних сервисов. Аутентификация: заголовок `X-API-Key: cv_…` (401 при неверном/отозванном ключе). Cookie/JWT не используются.
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/categories` | Категории владельца ключа (валидные `category_id` для записи) |
+| POST | `/transactions` | Приём транзакции: `{category_id, amount, currency?, comment?, executed_at?}`; заголовок `Idempotency-Key` (UUID) защищает от дублей — повтор вернёт `{"status": "duplicate"}` с id первой записи |
 
 ---
 

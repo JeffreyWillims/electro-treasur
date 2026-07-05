@@ -85,9 +85,7 @@ async def test_get_active_user_ids_filters_by_period(
     assert ids == [_seeded_june.id]  # only the June user, not May/empty
 
 
-async def test_upsert_insight_is_idempotent(
-    db_session: AsyncSession, _seeded_june: User
-) -> None:
+async def test_upsert_insight_is_idempotent(db_session: AsyncSession, _seeded_june: User) -> None:
     for advice in ("first", "second"):
         await upsert_insight(
             db_session,
@@ -135,6 +133,7 @@ async def test_schedule_monthly_analysis_fans_out(db_session: AsyncSession) -> N
 
     assert result["scheduled"] == 2
     assert fake_pool.enqueue_job.await_count == 2
+    # Cron с v1.1 ставит rule-based задачу, а не mock-LLM.
     fake_pool.enqueue_job.assert_any_await(
-        "generate_llm_insight", u1.id, start.isoformat(), end.isoformat()
+        "calculate_static_insights", u1.id, start.isoformat(), end.isoformat()
     )
