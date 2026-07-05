@@ -27,6 +27,9 @@ const NAV_ITEMS = [
   { name: 'Настройки', path: '/settings/profile', emoji: '⚙️' },
 ];
 
+// Пункт виден только роли CONSULTANT — вставляется перед «Настройками».
+const CONSULTANT_NAV_ITEM = { name: 'Мои клиенты', path: '/consultant', emoji: '🤝' };
+
 function ThemeToggle() {
   const { isDarkMode, toggleTheme } = useTheme();
 
@@ -144,6 +147,13 @@ function UserProfileWidget() {
 
 export function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user } = useAuth();
+  const navItems =
+    user?.role === 'consultant'
+      ? NAV_ITEMS.flatMap((item) =>
+          item.path === '/settings/profile' ? [CONSULTANT_NAV_ITEM, item] : [item]
+        )
+      : NAV_ITEMS;
 
   return (
     <>
@@ -216,7 +226,7 @@ export function Sidebar() {
 
         {/* Navigation */}
         <nav className="flex-1 space-y-2 mt-4">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <NavLink
               key={item.name}
               to={item.path}

@@ -9,6 +9,7 @@ interface User {
   full_name: string | null;
   phone: string | null;
   monthly_income: number | null;
+  role: 'user' | 'consultant';
 }
 
 interface AuthContextType {

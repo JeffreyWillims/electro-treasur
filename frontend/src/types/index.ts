@@ -12,6 +12,7 @@ export interface UserRead {
   full_name: string | null;
   phone: string | null;
   monthly_income: number | null;
+  role: 'user' | 'consultant';
 }
 
 export interface UserUpdate {
@@ -232,4 +233,28 @@ export interface ImportResult {
 export interface TelegramOtpResponse {
   code: string;
   expires_in: number;
+}
+
+// ── API Keys (Developer) ──────────────────────────────────────────────
+export interface ApiKeyInfo {
+  id: number;
+  name: string;
+  prefix: string;
+  is_active: boolean;
+  created_at: string;
+  last_used_at: string | null;
+}
+
+export interface ApiKeyCreatedResponse {
+  id: number;
+  name: string;
+  prefix: string;
+  api_key: string; // Полный ключ — показывается только один раз
+}
+
+// ── Consultant (RBAC) ─────────────────────────────────────────────────
+export interface ClientInfo {
+  id: number;
+  email: string;
+  full_name: string | null;
 }

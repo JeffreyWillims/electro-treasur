@@ -28,6 +28,9 @@ import type {
   BudgetUpsert,
   TelegramOtpResponse,
   ImportResult,
+  ApiKeyInfo,
+  ApiKeyCreatedResponse,
+  ClientInfo,
 } from '@/types';
 
 const API_BASE = '/api';
@@ -408,4 +411,40 @@ export function submitFeedback(message: string): Promise<{ status: string }> {
     method: 'POST',
     body: JSON.stringify({ message }),
   });
+}
+
+// ── API Keys (Developer) ───────────────────────────────────────────────
+export function createApiKey(name: string): Promise<ApiKeyCreatedResponse> {
+  return request<ApiKeyCreatedResponse>('/v1/api-keys/', {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function listApiKeys(): Promise<ApiKeyInfo[]> {
+  return request<ApiKeyInfo[]>('/v1/api-keys/');
+}
+
+export async function revokeApiKey(keyId: number): Promise<void> {
+  const response = await apiFetch(`/v1/api-keys/${keyId}`, { method: 'DELETE' });
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new ApiError(response.status, errorBody.detail || `API error: ${response.status}`);
+  }
+  // 204 No Content — no body to parse
+}
+
+// ── Consultant (RBAC) ──────────────────────────────────────────────────
+export function getConsultantClients(): Promise<ClientInfo[]> {
+  return request<ClientInfo[]>('/v1/consultant/clients');
+}
+
+export function getClientTransactions(
+  clientId: number,
+  limit = 20,
+  offset = 0,
+): Promise<TransactionPaginatedResponse> {
+  return request<TransactionPaginatedResponse>(
+    `/v1/consultant/clients/${clientId}/transactions?limit=${limit}&offset=${offset}`,
+  );
 }

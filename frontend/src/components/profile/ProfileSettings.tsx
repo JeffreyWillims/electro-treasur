@@ -4,6 +4,7 @@ import { updateMe, generateTelegramOtp } from '@/api/client';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { PacificRide } from '@/components/ui/PacificRide';
+import { DeveloperKeys } from '@/components/profile/DeveloperKeys';
 import { Send, Save, Gamepad2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -231,6 +232,11 @@ export function ProfileSettings() {
             </button>
           </div>
         </form>
+
+        {/* 6. DEVELOPER API KEYS */}
+        <div className="mt-10">
+          <DeveloperKeys />
+        </div>
       </motion.div>
 
       {/* ─── PACIFIC RIDE OVERLAY ──────────────────────────────── */}
