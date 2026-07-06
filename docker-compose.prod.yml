@@ -1,7 +1,25 @@
-# Production overlay — swaps the frontend nginx config to the SSL variant.
+# Production overlay — GHCR-образы вместо сборки из исходников + SSL-nginx.
+#
 # Local:  docker compose up -d
 # Prod:   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Immutable Infrastructure: три Python-сервиса используют ОДИН образ, собранный
+# CI и запушенный в GHCR (тегами :latest и :sha-XXXXXXX). Прод не компилирует
+# ничего сам → откат = `docker compose pull` предыдущего sha-тега.
+# Frontend пока собирается на месте (CI не пушит его образ) — только статика.
 services:
+  backend:
+    image: ghcr.io/jeffreywillims/electro-treasur/backend:latest
+    restart: always
+
+  arq-worker:
+    image: ghcr.io/jeffreywillims/electro-treasur/backend:latest
+    restart: always
+
+  telegram-bot:
+    image: ghcr.io/jeffreywillims/electro-treasur/backend:latest
+    restart: always
+
   frontend:
     volumes:
       - ./frontend/nginx.prod.conf:/etc/nginx/conf.d/default.conf:ro

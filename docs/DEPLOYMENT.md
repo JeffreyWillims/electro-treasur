@@ -80,10 +80,35 @@ push / PR → main
   │                → coverage ≥ 70% (--cov-fail-under=70)
   │                → JUnit + coverage.xml как артефакты (30 дней)
   │
-  └─ 🐳 build      (needs: test, frontend; только push в main)
-                   Docker multi-stage build ./backend → push в GHCR
-                   Теги: короткий SHA + latest
+  ├─ 🐳 build      (needs: test, frontend; только push в main)
+  │                Docker multi-stage build ./backend → push в GHCR
+  │                Теги: короткий SHA + latest
+  │
+  └─ 🚀 deploy     (needs: build; только push в main)
+                   SSH на VPS → git pull → compose pull (GHCR)
+                   → alembic upgrade head (до переключения контейнеров!)
+                   → build frontend → up -d
 ```
+
+### Автодеплой (deploy-job)
+
+Требуемые GitHub Secrets (Settings → Secrets → Actions):
+
+| Секрет | Значение |
+|---|---|
+| `VPS_HOST` | IP/домен сервера |
+| `VPS_USER` | SSH-пользователь |
+| `VPS_SSH_KEY` | приватный ключ (пара к authorized_keys на VPS) |
+| `VPS_PROJECT_DIR` | путь к клону репозитория на сервере |
+
+Прод-оверлей `docker-compose.prod.yml` пинит `backend`/`arq-worker`/`telegram-bot` на
+`ghcr.io/jeffreywillims/electro-treasur/backend:latest` — сервер больше НЕ собирает
+Python-образы из исходников (Immutable Infrastructure). Frontend (статика) собирается
+на месте, т.к. CI его образ не публикует.
+
+Миграции применяются НОВЫМ образом **до** `up -d`, пока старые контейнеры ещё обслуживают
+трафик — поэтому каждая миграция обязана быть backward-compatible (expand-contract,
+см. ниже «Zero-Downtime миграции»).
 
 - `test`-джоб явно ждёт `lint` (`needs: lint`), `build` ждёт и `test`, и `frontend` — линт не
   блокирует сборку фронтенда, но блокирует тесты бэкенда.
@@ -100,9 +125,23 @@ push / PR → main
   `docker compose up -d --no-deps backend`.
 - **Kubernetes**: `kubectl rollout undo deployment/fastapi-app` (стандартный механизм K8s,
   манифест не переопределяет стратегию деплоя).
-- Миграции Alembic откатываются вручную: `alembic downgrade -1` — CD-пайплайн миграции
-  автоматически не применяет и не откатывает (см. `docker-compose exec backend alembic upgrade head`
-  как ручной шаг в разделе "Локальный запуск").
+- Миграции Alembic откатываются вручную: `alembic downgrade -1`. Применяет их CD-пайплайн
+  (шаг `run --rm backend alembic upgrade head` в deploy-job), откат — только руками.
+
+## Zero-Downtime миграции (правило expand-contract)
+
+Deploy-job запускает миграции, пока старые контейнеры ещё работают. Поэтому миграция и код
+одного релиза обязаны быть совместимы со СТАРЫМ кодом:
+
+1. **Expand (релиз N)**: только аддитивные изменения — новая колонка (nullable или с default),
+   новая таблица, новый индекс (`CREATE INDEX CONCURRENTLY` для больших таблиц). Старый код
+   такие изменения не замечает.
+2. **Migrate (релиз N)**: новый код пишет в новую структуру, читает из обеих.
+3. **Contract (релиз N+1 или позже)**: удаление старой колонки/таблицы — отдельной миграцией,
+   когда ни одна работающая версия кода к ней не обращается.
+
+Запрещено в одном релизе: `DROP COLUMN` / `RENAME` используемых полей, `NOT NULL` без default
+на существующей таблице, долгие блокирующие `ALTER` без `lock_timeout`.
 
 ## Healthcheck-и
 
