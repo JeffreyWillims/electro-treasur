@@ -24,3 +24,10 @@ test-results.xml
 .ruff_cache/
 # ── Python build artifacts (pip install -e) ──
 *.egg-info/
+
+# ── Local-only: документация и агентная система (не выкатываем на сервер) ──
+/docs/
+/backend/src/agents/
+
+# Local-only compose overlay (MailHog и пр.) — не выкатываем на сервер
+docker-compose.override.yml
