@@ -17,7 +17,7 @@ dependencies = [
     "python-jose[cryptography]>=3.3.0",
     "python-multipart>=0.0.9",
     "email-validator>=2.1.0",
-    "httpx>=0.28.0",
+    # httpx намеренно НЕ в runtime-зависимостях: используется только тестами (см. dev)
     "slowapi>=0.1.9",
     "sqladmin>=0.20.0",
     "itsdangerous>=2.2.0",

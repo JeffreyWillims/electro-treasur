@@ -47,6 +47,22 @@ MERCHANT_TO_CATEGORY = {
 }
 
 
+def resolve_merchant_category(
+    text_lower: str, extra_rules: dict[str, str] | None = None
+) -> tuple[str, str] | None:
+    """
+    (категория, ключевое слово) по словарю мерчантов или None.
+
+    `extra_rules` — правила из таблицы merchant_rules (SQLAdmin): дополняют
+    встроенный словарь, при совпадении ключа — переопределяют его.
+    """
+    rules = {**MERCHANT_TO_CATEGORY, **(extra_rules or {})}
+    for kw, cat_name in rules.items():
+        if kw and kw in text_lower:
+            return cat_name, kw
+    return None
+
+
 def _safe_parse_amount(raw: str) -> float | None:
     """Parse monetary string into float, handling RU/US/EU formats.
 
@@ -124,7 +140,9 @@ def _extract_from_excel(file_bytes: bytes, file_name: str) -> list[dict[str, Any
         return []
 
 
-def _parse_transactions_from_text(text: str, source_name: str) -> list[dict[str, Any]]:
+def _parse_transactions_from_text(
+    text: str, source_name: str, extra_rules: dict[str, str] | None = None
+) -> list[dict[str, Any]]:
     clean_text = re.sub(r"[—–−]", "-", text)
     clean_text = clean_text.replace("₽", " ₽ ")
 
@@ -255,11 +273,10 @@ def _parse_transactions_from_text(text: str, source_name: str) -> list[dict[str,
     merchant_desc = "Документ"
 
     if not final_is_income:
-        for kw, cat_name in MERCHANT_TO_CATEGORY.items():
-            if kw in text_lower:
-                category = cat_name
-                merchant_desc = kw.capitalize()
-                break
+        rule_match = resolve_merchant_category(text_lower, extra_rules)
+        if rule_match is not None:
+            category, matched_kw = rule_match
+            merchant_desc = matched_kw.capitalize()
 
     return [
         {
@@ -272,7 +289,12 @@ def _parse_transactions_from_text(text: str, source_name: str) -> list[dict[str,
 
 
 async def analyze_document_universal(
-    bot: Bot, file_id: str, file_name: str, *args: Any, **kwargs: Any
+    bot: Bot,
+    file_id: str,
+    file_name: str,
+    *args: Any,
+    merchant_rules: dict[str, str] | None = None,
+    **kwargs: Any,
 ) -> list[dict[str, Any]] | None:
     try:
         file_info = await bot.get_file(file_id)
@@ -309,7 +331,9 @@ async def analyze_document_universal(
         if not text.strip():
             return None
 
-        transactions = await asyncio.to_thread(_parse_transactions_from_text, text, file_name)
+        transactions = await asyncio.to_thread(
+            _parse_transactions_from_text, text, file_name, merchant_rules
+        )
         return transactions if transactions else None
 
     except Exception as e:

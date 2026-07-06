@@ -270,6 +270,25 @@ class ApiKey(Base):
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class MerchantRule(Base):
+    """
+    Пользовательское правило «ключевое слово мерчанта → категория» для AI Vision.
+
+    Дополняет/переопределяет встроенный словарь MERCHANT_TO_CATEGORY
+    (ai_vision_service) без релиза — правила редактируются через SQLAdmin.
+    """
+
+    __tablename__ = "merchant_rules"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    keyword: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    category: Mapped[str] = mapped_column(String(128), nullable=False)
+    is_active: Mapped[bool] = mapped_column(nullable=False, server_default=text("true"))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
 class Insight(Base):
     """
     Persisted LLM financial insight for one user over one period.

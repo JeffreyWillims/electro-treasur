@@ -663,13 +663,21 @@ async def handle_receipt_upload(
         return
 
     # ─── 2. ИСПРАВЛЕННЫЙ ИМПОРТ И ВЫЗОВ (Surgical Change) ───────────
+    from src.domain.models import MerchantRule
     from src.services.ai_vision_service import analyze_document_universal
+
+    # Пользовательские правила «мерчант → категория» из SQLAdmin.
+    rules_rows = await session.execute(
+        select(MerchantRule.keyword, MerchantRule.category).where(MerchantRule.is_active.is_(True))
+    )
+    merchant_rules = {kw.lower(): cat for kw, cat in rules_rows.all()}
 
     assert message.bot is not None  # long-polling всегда даёт bot в апдейте
     ai_results = await analyze_document_universal(
         bot=message.bot,
         file_id=file_id,
         file_name=file_name,
+        merchant_rules=merchant_rules,
     )
 
     if not ai_results:

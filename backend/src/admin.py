@@ -17,7 +17,15 @@ from starlette.requests import Request
 
 from src.config import settings
 from src.database import engine
-from src.domain.models import BankOffer, Budget, Category, Insight, Transaction, User
+from src.domain.models import (
+    BankOffer,
+    Budget,
+    Category,
+    Insight,
+    MerchantRule,
+    Transaction,
+    User,
+)
 
 
 class AdminAuth(AuthenticationBackend):
@@ -144,6 +152,21 @@ class InsightAdmin(ModelView, model=Insight):
     can_edit = False
 
 
+class MerchantRuleAdmin(ModelView, model=MerchantRule):
+    name = "Merchant Rule"
+    name_plural = "Merchant Rules"
+    icon = "fa-solid fa-shop"
+    column_list = [
+        MerchantRule.id,
+        MerchantRule.keyword,
+        MerchantRule.category,
+        MerchantRule.is_active,
+        MerchantRule.created_at,
+    ]
+    column_searchable_list = [MerchantRule.keyword, MerchantRule.category]
+    form_excluded_columns = [MerchantRule.created_at]
+
+
 def setup_admin(app: FastAPI) -> None:
     """Mount the SQLAdmin panel and register all model views."""
     authentication_backend = AdminAuth(secret_key=settings.secret_key)
@@ -159,3 +182,4 @@ def setup_admin(app: FastAPI) -> None:
     admin.add_view(TransactionAdmin)
     admin.add_view(BankOfferAdmin)
     admin.add_view(InsightAdmin)
+    admin.add_view(MerchantRuleAdmin)
