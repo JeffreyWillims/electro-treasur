@@ -5,12 +5,14 @@ tests/integration/test_feedback.py — Feedback endpoint + async email stub.
   • POST /v1/feedback с auth → 200 {"status": "ok"} (мгновенный ответ);
   • сообщение персистится в БД (save_feedback через savepoint-сессию);
   • без auth-cookie → 401;
-  • EmailService.send_feedback красиво логирует «письмо» (фоновая часть).
+  • EmailService.send_feedback красиво логирует «письмо» (фоновая часть);
+  • эндпоинт коммитит транзакцию — фидбек переживает закрытие сессии get_db.
 """
 
 from __future__ import annotations
 
 import logging
+from unittest import mock
 
 import pytest
 from httpx import AsyncClient
@@ -51,6 +53,30 @@ async def test_save_feedback_persists_row(db_session: AsyncSession, test_user: U
     row = await db_session.scalar(select(Feedback).where(Feedback.user_id == test_user.id))
     assert row is not None
     assert row.message == "сохрани меня"
+
+
+async def test_submit_feedback_commits_transaction(
+    async_client: AsyncClient,
+    auth_headers: dict[str, str],
+    test_user: User,
+    db_session: AsyncSession,
+) -> None:
+    """Регрессия: save_feedback делал только flush() без commit(), поэтому INSERT
+    откатывался при закрытии реальной сессии get_db, хотя клиент уже получил "ok".
+    Эндпоинт обязан зафиксировать транзакцию до/независимо от фоновой отправки письма.
+    """
+    with (
+        mock.patch.object(db_session, "commit", wraps=db_session.commit) as commit_spy,
+        mock.patch.object(EmailService, "send_feedback", new=mock.AsyncMock()),
+    ):
+        resp = await async_client.post(
+            "/v1/feedback/",
+            json={"message": "должно пережить закрытие сессии"},
+            headers=auth_headers,
+        )
+
+    assert resp.status_code == 200
+    commit_spy.assert_awaited()
 
 
 async def test_email_service_logs_feedback(caplog: pytest.LogCaptureFixture) -> None:
