@@ -116,6 +116,47 @@ Python-образы из исходников (Immutable Infrastructure). Fronte
 - Секреты в тестовом джобе — заглушки (`ci-test-secret-key-not-for-production-...`,
   `fake:token`), реальные секреты в CI не используются.
 
+## Первый автодеплой — чек-лист
+
+**Шаг 0 — бэкап БД на VPS (обязательно, ДО пуша в main):**
+
+```bash
+docker compose exec -T postgres pg_dump -U electro -Fc electro_treasur > backup_$(date +%F).dump
+# восстановление при необходимости:
+# cat backup_YYYY-MM-DD.dump | docker compose exec -T postgres pg_restore -U electro -d electro_treasur --clean
+```
+
+**Новая база НЕ нужна.** `alembic upgrade head` обновляет схему существующей базы на месте,
+данные пользователей сохраняются (миграция `e7a8b9c0d1f2` — чисто аддитивная).
+**Фикстуры не нужны:** категории сеются автоматически при регистрации
+(`user_service.create_user`), партнёрские офферы ведутся через `/admin`.
+
+**Шаг 1 — проверить `backend/.env` на VPS:**
+
+| Переменная | Проверка |
+|---|---|
+| `ET_SECRET_KEY` | задан (без него все Python-контейнеры крашатся на старте) |
+| `ET_ADMIN_PASSWORD` | задан (с пустым — в `/admin` невозможно войти) |
+| `ET_TELEGRAM_BOT_TOKEN` | токен именно **@citrine_vault_bot**: `curl -s "https://api.telegram.org/bot$TOKEN/getMe"` → `username` = `citrine_vault_bot`. Deep-link привязки на фронте захардкожен на этого бота (`ProfileSettings.tsx`) |
+| `ET_COOKIE_SECURE` | НЕ задан или `true` (HTTPS-прод) |
+
+**Шаг 2 — GitHub Secrets** (Settings → Secrets → Actions): `VPS_HOST`, `VPS_USER`,
+`VPS_SSH_KEY`, `VPS_PROJECT_DIR` — см. таблицу выше.
+
+**Шаг 3 — пуш в main.** Actions прогонит lint → test → build → deploy; деплой сам сделает
+`compose pull` (GHCR), `alembic upgrade head` и `up -d`.
+
+**Шаг 4 — проверка после деплоя:**
+
+```bash
+curl -s https://citrinevault.ru/api/v1/health          # {"status":"ok"}
+docker compose ps                                      # все Up / healthy
+docker compose exec backend alembic current            # e7a8b9c0d1f2 (head)
+```
+
+**Если пошло не так** — раздел «Откат» ниже: pull предыдущего sha-тега + `up -d`;
+аддитивную миграцию откатывать не обязательно.
+
 ## Откат (rollback)
 
 Явного скрипта отката в репозитории нет. На практике это означает:
