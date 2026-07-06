@@ -67,6 +67,19 @@ class UserAdmin(ModelView, model=User):
     ]
     column_searchable_list = [User.email, User.full_name]
     column_sortable_list = [User.id, User.created_at]
+    # Detail-view только по скалярным полям: коллекции теперь lazy="raise_on_sql",
+    # и их авто-рендер в detail дёрнул бы ленивую загрузку → ошибка. Связи смотрим
+    # в своих разделах админки (Categories/Budgets/Transactions).
+    column_details_list = [
+        User.id,
+        User.email,
+        User.full_name,
+        User.role,
+        User.monthly_income,
+        User.phone,
+        User.telegram_chat_id,
+        User.created_at,
+    ]
     # Never expose the password hash in edit/create forms.
     form_excluded_columns = [
         User.hashed_password,

@@ -16,6 +16,7 @@ from typing import Any
 from aiogram import BaseMiddleware
 from aiogram.types import CallbackQuery, Message, TelegramObject
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from src.database import async_session_factory
 from src.domain.models import User
@@ -53,7 +54,13 @@ class DbSessionMiddleware(BaseMiddleware):
 
             if chat_id is not None:
                 try:
-                    query = select(User).where(User.telegram_chat_id == chat_id)
+                    # categories грузим явно: модель теперь lazy="raise_on_sql",
+                    # а хендлер выбора конверта читает current_user.categories.
+                    query = (
+                        select(User)
+                        .where(User.telegram_chat_id == chat_id)
+                        .options(selectinload(User.categories))
+                    )
                     result = await session.execute(query)
                     current_user = result.scalar_one_or_none()
                 except Exception as exc:  # noqa: BLE001

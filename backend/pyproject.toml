@@ -60,6 +60,8 @@ filterwarnings = [
 ET_DATABASE_URL = { value = "postgresql+asyncpg://electro:electro_secret@localhost:5432/electro_treasur_test", skip_if_set = true }
 ET_SECRET_KEY = "test-secret-key-do-not-use-in-production-0000000000"
 ET_REDIS_URL = "redis://localhost:6379/15"
+# Rate-limiter в тестах — in-memory (реального Redis в тест-окружении/CI нет).
+ET_RATELIMIT_STORAGE_URI = "memory://"
 ET_TELEGRAM_BOT_TOKEN = "fake:token"
 # Тесты ходят по http — Secure-cookie иначе не отправляется клиентом.
 ET_COOKIE_SECURE = "false"

@@ -34,8 +34,19 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     redis_idempotency_ttl: int = 86400  # 24 h
 
+    # Хранилище счётчиков rate-limiter. Пусто → берётся redis_url (общие счётчики
+    # для всех воркеров/реплик). Тесты переопределяют на "memory://" (без Redis).
+    ratelimit_storage_uri: str = ""
+
     # ── arq Worker ──────────────────────────────────────────────────────
     arq_redis_url: str = "redis://localhost:6379/1"
+
+    # ── Email / SMTP ────────────────────────────────────────────────────
+    # Пустой host — письма уходят в структурный лог (поведение по умолчанию).
+    # Локально: ET_SMTP_HOST=mailhog (см. docker-compose.yml), UI — :8025.
+    smtp_host: str = ""
+    smtp_port: int = 1025
+    smtp_from: str = "noreply@citrine-vault.local"
 
     # ── Telegram Bot ─────────────────────────────────────────────────────
     telegram_bot_token: str = ""

@@ -27,6 +27,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from src.admin import setup_admin
 from src.api.analytics.yearly import router as analytics_router
@@ -53,6 +54,13 @@ app = FastAPI(
     description="HighLoad Financial Tracker — 100k CCU Orbital-Grade FinTech",
     lifespan=lifespan,
 )
+
+# ── Proxy headers ────────────────────────────────────────────────────────────
+# Backend слушает :8000 только внутри docker-сети (наружу торчит лишь nginx на
+# 80/443), поэтому доверяем X-Forwarded-For от любого пира: спуфить его извне
+# нельзя. Без этого get_remote_address у rate-limiter'а видел бы IP nginx, а не
+# клиента, и все клиенты попадали бы в одно ведро лимита.
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 # ── Rate Limiter ─────────────────────────────────────────────────────────────
 app.state.limiter = limiter

@@ -83,14 +83,21 @@ class User(Base):
     # ── Relationships ───────────────────────────────────────────────────
     # passive_deletes=True: полагаемся на ON DELETE CASCADE в БД, а не на попытку
     # ORM обнулить NOT NULL внешние ключи детей (иначе NotNullViolationError).
+    #
+    # lazy="raise_on_sql": НЕ грузим коллекции автоматически. Раньше здесь стоял
+    # "selectin", из-за чего get_user_by_email (вызывается на КАЖДОМ авторизованном
+    # запросе) тянул всю историю транзакций юзера в память. Теперь коллекции нужно
+    # грузить явно через selectinload() там, где они реально нужны (см. телеграм-
+    # мидлвар для categories); случайный ленивый доступ упадёт с понятной ошибкой.
+    # Явный selectinload() эту защиту переопределяет и работает как раньше.
     categories: Mapped[list[Category]] = relationship(
-        back_populates="user", lazy="selectin", passive_deletes=True
+        back_populates="user", lazy="raise_on_sql", passive_deletes=True
     )
     budgets: Mapped[list[Budget]] = relationship(
-        back_populates="user", lazy="selectin", passive_deletes=True
+        back_populates="user", lazy="raise_on_sql", passive_deletes=True
     )
     transactions: Mapped[list[Transaction]] = relationship(
-        back_populates="user", lazy="selectin", passive_deletes=True
+        back_populates="user", lazy="raise_on_sql", passive_deletes=True
     )
 
 
@@ -223,6 +230,21 @@ class Feedback(Base):
     message: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class GameScore(Base):
+    """Лучший результат пользователя в игре Citrine Arcade — одна строка на (user, game)."""
+
+    __tablename__ = "game_scores"
+    __table_args__ = (UniqueConstraint("user_id", "game", name="uq_game_scores_user_game"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    game: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    score: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
 

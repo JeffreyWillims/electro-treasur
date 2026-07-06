@@ -12,7 +12,7 @@ Algorithm:
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -55,6 +55,14 @@ async def get_monthly_dashboard(
     )
 
     # ── Step 1: Fetch aggregated transactions grouped by date ─────────
+    # Sargable-фильтр по сырому executed_at: диапазон [start; end+1) в UTC
+    # использует индекс (user_id, executed_at). Раньше здесь стоял
+    # func.date(executed_at) в WHERE — функция над колонкой блокировала индекс
+    # и заставляла сканировать всю историю транзакций юзера на каждый дашборд.
+    # Границы в UTC совпадают с семантикой func.date() в GROUP BY; редкие
+    # граничные строки из-за tz-дрейфа строго отсекаются day-index-гардом в Step 4.
+    range_start = datetime.combine(start_date, time.min, tzinfo=UTC)
+    range_end = datetime.combine(end_date + timedelta(days=1), time.min, tzinfo=UTC)
     stmt_tx = (
         select(
             Transaction.category_id,
@@ -65,8 +73,8 @@ async def get_monthly_dashboard(
         .join(Category, Transaction.category_id == Category.id)
         .where(
             Transaction.user_id == user_id,
-            func.date(Transaction.executed_at) >= start_date,
-            func.date(Transaction.executed_at) <= end_date,
+            Transaction.executed_at >= range_start,
+            Transaction.executed_at < range_end,
         )
         .group_by(Transaction.category_id, Category.type, func.date(Transaction.executed_at))
     )
