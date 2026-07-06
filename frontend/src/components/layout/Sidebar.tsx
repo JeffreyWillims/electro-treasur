@@ -24,6 +24,7 @@ const NAV_ITEMS = [
   { name: 'Бюджеты', path: '/budgets', emoji: '📝' },
   { name: 'Аналитика', path: '/analytics', emoji: '📊' },
   { name: 'Финплан', path: '/savings-navigator', emoji: '🎯' },
+  { name: 'Игры', path: '/games', emoji: '🎮' },
   { name: 'Настройки', path: '/settings/profile', emoji: '⚙️' },
 ];
 

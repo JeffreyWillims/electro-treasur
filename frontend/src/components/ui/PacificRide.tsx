@@ -12,6 +12,7 @@
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { submitScore } from '@/lib/gameRecords';
 
 interface PacificRideProps {
   onClose: () => void;
@@ -322,6 +323,10 @@ function NumberMatchGame() {
   const [showHelp, setShowHelp]       = useState(false);
   const [score, setScore]             = useState(0);
   const [combo, setCombo]             = useState(0);
+  // Рекорд для Citrine Arcade (localStorage) — на геймплей не влияет.
+  useEffect(() => {
+    if (score > 0) submitScore('match', score);
+  }, [score]);
   const [lastGain, setLastGain]       = useState<{ amount: number; key: number } | null>(null);
   const [addsLeft, setAddsLeft]       = useState<number>(ADDS_PER_LEVEL[0]);
   const badTimeoutRef                 = useRef<NodeJS.Timeout | null>(null);

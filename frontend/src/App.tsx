@@ -138,6 +138,9 @@ const SavingsNavigator = lazy(() =>
 const MyClients = lazy(() =>
   import('@/components/consultant/MyClients').then((m) => ({ default: m.MyClients }))
 );
+const GamesHub = lazy(() =>
+  import('@/components/games/GamesHub').then((m) => ({ default: m.GamesHub }))
+);
 import { BudgetList } from '@/components/budgets/BudgetList';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { LoginForm } from '@/components/auth/LoginForm';
@@ -201,6 +204,7 @@ export default function App() {
                 <Route path="/analytics" element={<MainAnalytics />} />
                 <Route path="/savings-navigator" element={<SavingsNavigator />} />
                 <Route path="/consultant" element={<MyClients />} />
+                <Route path="/games" element={<GamesHub />} />
                 <Route path="/settings/profile" element={<ProfileSettings />} />
               </Route>
             </Routes>
