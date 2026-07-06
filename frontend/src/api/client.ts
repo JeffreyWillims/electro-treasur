@@ -413,6 +413,23 @@ export function submitFeedback(message: string): Promise<{ status: string }> {
   });
 }
 
+// ── Citrine Arcade ─────────────────────────────────────────────────────
+export interface LeaderboardEntry {
+  name: string;
+  score: number;
+}
+
+export function fetchLeaderboard(game: string): Promise<LeaderboardEntry[]> {
+  return request<LeaderboardEntry[]>(`/v1/games/leaderboard?game=${game}`);
+}
+
+export function submitGameScore(game: string, score: number): Promise<{ status: string }> {
+  return request<{ status: string }>('/v1/games/score', {
+    method: 'POST',
+    body: JSON.stringify({ game, score }),
+  });
+}
+
 // ── API Keys (Developer) ───────────────────────────────────────────────
 export function createApiKey(name: string): Promise<ApiKeyCreatedResponse> {
   return request<ApiKeyCreatedResponse>('/v1/api-keys/', {

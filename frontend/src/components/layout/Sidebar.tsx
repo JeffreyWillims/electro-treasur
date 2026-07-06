@@ -183,7 +183,9 @@ export function Sidebar() {
       {/* Floating Island Sidebar */}
       <aside
         className={cn(
-          "flex flex-col w-72 h-[calc(100vh-32px)] m-4 p-7 rounded-3xl z-10",
+          // z-50 на мобильном: меню должно быть выше оверлея (z-40), иначе оно
+          // затемнено и не кликабельно; на десктопе достаточно z-10.
+          "flex flex-col w-72 h-[calc(100vh-32px)] m-4 p-7 rounded-3xl z-50 lg:z-10",
           "bg-white/40 dark:bg-[#111111]/40",
           "backdrop-blur-3xl backdrop-saturate-150",
           "shadow-2xl",

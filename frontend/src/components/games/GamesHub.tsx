@@ -1,14 +1,18 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Gamepad2, Trophy } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { PacificRide } from '@/components/ui/PacificRide';
 import { Game512 } from '@/components/games/Game512';
 import { GoldenSnake } from '@/components/games/GoldenSnake';
 import { getBest, type GameKey } from '@/lib/gameRecords';
+import { fetchLeaderboard } from '@/api/client';
+import { cn } from '@/lib/utils';
 
 /**
  * Citrine Arcade — «Игровой цех финансов».
- * Три игры в финансовой теме, рекорды в localStorage, челлендж дня.
+ * Светлое «жидкое стекло»: пастельные градиенты, полупрозрачные панели, blur.
+ * Рекорды в localStorage + рейтинг топ-100 с бэкенда (кеш react-query).
  */
 
 type GameId = 'match' | 'game512' | 'snake';
@@ -20,6 +24,7 @@ const GAMES: {
   subtitle: string;
   emoji: string;
   unit: string;
+  pastel: string; // пастельный градиент карточки (светлая тема)
 }[] = [
   {
     id: 'match',
@@ -28,6 +33,7 @@ const GAMES: {
     subtitle: 'Number Match · вычёркивай пары',
     emoji: '🌅',
     unit: 'очков',
+    pastel: 'from-[#FFE9D6]/70 via-[#FFF4E8]/60 to-[#FDEFF6]/70',
   },
   {
     id: 'game512',
@@ -36,6 +42,7 @@ const GAMES: {
     subtitle: 'Сливай номиналы до купюры',
     emoji: '💶',
     unit: '₽',
+    pastel: 'from-[#DCEEFF]/70 via-[#EAF5FF]/60 to-[#E8F0FD]/70',
   },
   {
     id: 'snake',
@@ -44,19 +51,108 @@ const GAMES: {
     subtitle: 'Собирай монеты — расти капитал',
     emoji: '🐍',
     unit: '₽',
+    pastel: 'from-[#E3F5EA]/70 via-[#F0FAF3]/60 to-[#FBF7E9]/70',
   },
 ];
 
-// Челлендж дня: детерминированно по дате, «выполнен», если рекорд достиг цели.
-const CHALLENGES: { game: GameId; text: string; target: number }[] = [
-  { game: 'game512', text: 'Собери плитку и накопи 512 ₽ в «Купюре»', target: 512 },
-  { game: 'snake', text: 'Разгони капитал змейки до 500 ₽', target: 500 },
-  { game: 'match', text: 'Набери 3000 очков в Pacific Ride', target: 3000 },
-];
+const MEDALS = ['🥇', '🥈', '🥉'];
 
-function dayOfYear(): number {
-  const now = new Date();
-  return Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86_400_000);
+function Leaderboard() {
+  const [game, setGame] = useState<GameId>('match');
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['leaderboard', game],
+    queryFn: () => fetchLeaderboard(game),
+    staleTime: 60_000, // повторное открытие вкладки — мгновенно, из кеша
+  });
+
+  return (
+    <div
+      className={cn(
+        'rounded-[2.5rem] p-6 md:p-8 backdrop-blur-3xl backdrop-saturate-150 shadow-soft-lift',
+        'bg-white/50 border border-white/60',
+        'dark:bg-white/5 dark:border-white/10',
+      )}
+    >
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <Trophy className="w-5 h-5 text-[#FF7A00]" />
+          <h2 className="font-sans font-extrabold text-xl md:text-2xl tracking-tight text-[#1C3F35] dark:text-white">
+            Рейтинг игроков
+          </h2>
+          <span className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-[#1C3F35]/40 dark:text-white/40">
+            топ-100
+          </span>
+        </div>
+
+        {/* Переключатель игр */}
+        <div className="flex gap-1.5 p-1 rounded-2xl bg-black/5 dark:bg-black/30">
+          {GAMES.map((g) => (
+            <button
+              key={g.id}
+              type="button"
+              onClick={() => setGame(g.id)}
+              className={cn(
+                'px-3.5 h-9 rounded-xl text-xs font-bold tracking-tight transition-all',
+                game === g.id
+                  ? 'bg-white dark:bg-white/15 text-[#1C3F35] dark:text-white shadow-sm'
+                  : 'text-[#1C3F35]/50 dark:text-white/50 hover:text-[#1C3F35] dark:hover:text-white',
+              )}
+            >
+              {g.emoji} {g.title}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="max-h-[26rem] overflow-y-auto pr-1 -mr-1">
+        {isLoading && (
+          <div className="space-y-2">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-12 rounded-2xl bg-black/5 dark:bg-white/5 animate-pulse" />
+            ))}
+          </div>
+        )}
+
+        {isError && (
+          <p className="py-8 text-center text-sm text-[#1C3F35]/50 dark:text-white/40">
+            Не удалось загрузить рейтинг. Попробуйте позже.
+          </p>
+        )}
+
+        {data && data.length === 0 && (
+          <p className="py-8 text-center text-sm text-[#1C3F35]/50 dark:text-white/40">
+            Пока никто не играл — стань первым в таблице! 🏆
+          </p>
+        )}
+
+        {data && data.length > 0 && (
+          <ol className="space-y-1">
+            {data.map((entry, i) => (
+              <li
+                key={`${entry.name}-${i}`}
+                className={cn(
+                  'flex items-center gap-4 px-4 h-12 rounded-2xl transition-colors',
+                  i < 3
+                    ? 'bg-gradient-to-r from-[#FF7A00]/10 to-transparent'
+                    : 'hover:bg-black/[0.03] dark:hover:bg-white/[0.04]',
+                )}
+              >
+                <span className="w-8 shrink-0 text-center font-mono text-sm font-bold text-[#1C3F35]/40 dark:text-white/40">
+                  {MEDALS[i] ?? i + 1}
+                </span>
+                <span className="flex-1 truncate font-semibold text-sm text-[#1C3F35] dark:text-white">
+                  {entry.name}
+                </span>
+                <span className="font-mono font-bold text-sm text-[#FF7A00]">
+                  {entry.score.toLocaleString('ru-RU')}
+                </span>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export function GamesHub() {
@@ -65,9 +161,6 @@ export function GamesHub() {
   const records = Object.fromEntries(
     GAMES.map((g) => [g.id, getBest(g.recordKey)]),
   ) as Record<GameId, number>;
-
-  const challenge = CHALLENGES[dayOfYear() % CHALLENGES.length] ?? CHALLENGES[0]!;
-  const challengeDone = records[challenge.game] >= challenge.target;
 
   return (
     <div className="max-w-5xl mx-auto pt-12 pb-24">
@@ -79,7 +172,7 @@ export function GamesHub() {
       >
         {/* Header */}
         <div className="flex items-center gap-5">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#1C3F35] to-[#0A1A12] dark:from-[#050505] dark:to-[#111111] flex items-center justify-center border border-white/10 shadow-lg">
+          <div className="w-14 h-14 rounded-2xl bg-white/60 dark:bg-white/5 backdrop-blur-2xl flex items-center justify-center border border-white/60 dark:border-white/10 shadow-soft-lift">
             <Gamepad2 className="w-6 h-6 text-[#FF7A00]" />
           </div>
           <div>
@@ -92,32 +185,7 @@ export function GamesHub() {
           </div>
         </div>
 
-        {/* Челлендж дня */}
-        <button
-          type="button"
-          onClick={() => setOpenGame(challenge.game)}
-          className={`rounded-[2rem] p-6 md:p-7 border text-left transition-all active:scale-[0.99] ${
-            challengeDone
-              ? 'bg-emerald-500/10 border-emerald-500/30'
-              : 'bg-[#FF7A00]/10 border-[#FF7A00]/30 hover:bg-[#FF7A00]/15'
-          }`}
-        >
-          <div className="flex items-center gap-4">
-            <Trophy
-              className={`w-8 h-8 shrink-0 ${challengeDone ? 'text-emerald-500' : 'text-[#FF7A00]'}`}
-            />
-            <div>
-              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.25em] text-[#1C3F35]/60 dark:text-white/50">
-                Челлендж дня {challengeDone && '· выполнен ✓'}
-              </p>
-              <p className="font-sans font-extrabold text-lg md:text-xl text-[#1C3F35] dark:text-white tracking-tight">
-                {challenge.text}
-              </p>
-            </div>
-          </div>
-        </button>
-
-        {/* Карточки-автоматы */}
+        {/* Карточки-автоматы — пастельное «жидкое стекло» */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {GAMES.map((game) => (
             <motion.button
@@ -125,35 +193,46 @@ export function GamesHub() {
               type="button"
               whileHover={{ y: -4 }}
               onClick={() => setOpenGame(game.id)}
-              className="group rounded-[2.5rem] p-8 bg-gradient-to-br from-[#1C3F35] to-[#0A1A12] dark:from-[#050505] dark:to-[#111111] border border-black/5 dark:border-white/10 shadow-2xl relative overflow-hidden text-left transition-shadow hover:shadow-[0_20px_50px_rgba(255,122,0,0.15)]"
+              className={cn(
+                'group rounded-[2.5rem] p-8 text-left relative overflow-hidden transition-shadow',
+                'bg-gradient-to-br backdrop-blur-2xl backdrop-saturate-150',
+                game.pastel,
+                'border border-white/60 shadow-soft-lift hover:shadow-[0_24px_50px_rgba(255,122,0,0.12)]',
+                'dark:bg-none dark:bg-white/5 dark:border-white/10',
+              )}
             >
-              <div className="absolute top-0 right-0 w-40 h-40 bg-[#FF7A00]/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none group-hover:bg-[#FF7A00]/20 transition-all" />
+              <div className="absolute top-0 right-0 w-40 h-40 bg-white/40 dark:bg-[#FF7A00]/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none group-hover:bg-[#FF7A00]/15 transition-all" />
               <p className="text-4xl mb-5">{game.emoji}</p>
-              <p className="font-sans font-extrabold text-white text-xl tracking-tight leading-none mb-1.5">
+              <p className="font-sans font-extrabold text-[#1C3F35] dark:text-white text-xl tracking-tight leading-none mb-1.5">
                 {game.title}
               </p>
               <p className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-[#FF7A00] mb-6">
                 {game.subtitle}
               </p>
               <div className="flex items-center justify-between">
-                <p className="text-[11px] font-mono text-white/50">
+                <p className="text-[11px] font-mono text-[#1C3F35]/50 dark:text-white/50">
                   ⭐ {records[game.id] > 0
                     ? `${records[game.id].toLocaleString('ru-RU')} ${game.unit}`
                     : 'нет рекорда'}
                 </p>
-                <span className="px-4 h-9 rounded-xl bg-white/10 text-white text-xs font-bold uppercase tracking-widest flex items-center border border-white/5 group-hover:bg-[#FF7A00] transition-colors">
+                <span className="px-4 h-9 rounded-xl bg-white/60 dark:bg-white/10 text-[#1C3F35] dark:text-white text-xs font-bold uppercase tracking-widest flex items-center border border-white/50 dark:border-white/5 group-hover:bg-[#FF7A00] group-hover:text-white transition-colors">
                   Играть
                 </span>
               </div>
             </motion.button>
           ))}
         </div>
+
+        {/* Рейтинговое окно */}
+        <Leaderboard />
       </motion.div>
 
       {/* Оверлеи игр */}
-      {openGame === 'match' && <PacificRide onClose={() => setOpenGame(null)} />}
-      {openGame === 'game512' && <Game512 onClose={() => setOpenGame(null)} />}
-      {openGame === 'snake' && <GoldenSnake onClose={() => setOpenGame(null)} />}
+      <AnimatePresence>
+        {openGame === 'match' && <PacificRide onClose={() => setOpenGame(null)} />}
+        {openGame === 'game512' && <Game512 onClose={() => setOpenGame(null)} />}
+        {openGame === 'snake' && <GoldenSnake onClose={() => setOpenGame(null)} />}
+      </AnimatePresence>
     </div>
   );
 }

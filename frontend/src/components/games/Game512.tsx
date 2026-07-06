@@ -6,7 +6,7 @@ import { getBest, submitScore } from '@/lib/gameRecords';
 /**
  * «Купюра 512 ₽» — 2048-механика в финансовой теме Citrine Vault.
  * Плитки — номиналы рублей: 1 ₽ → 2 ₽ → … → 512 ₽. Собери купюру!
- * Управление: стрелки / свайпы.
+ * Управление: стрелки / WASD / свайпы.
  */
 
 const SIZE = 4;
@@ -135,6 +135,8 @@ export function Game512({ onClose }: { onClose: () => void }) {
         ArrowRight: 'right',
         ArrowUp: 'up',
         ArrowDown: 'down',
+        w: 'up', s: 'down', a: 'left', d: 'right',
+        ц: 'up', ы: 'down', ф: 'left', в: 'right',
       };
       if (e.key === 'Escape') onClose();
       const dir = map[e.key];
@@ -182,7 +184,7 @@ export function Game512({ onClose }: { onClose: () => void }) {
               Купюра 512 ₽
             </h2>
             <p className="text-[10px] font-mono font-bold uppercase tracking-[0.25em] text-[#FF7A00]">
-              Сливай номиналы · стрелки или свайпы
+              Сливай номиналы · стрелки, WASD или свайпы
             </p>
           </div>
           <button

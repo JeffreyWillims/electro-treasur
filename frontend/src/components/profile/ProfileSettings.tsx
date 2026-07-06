@@ -3,9 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import { updateMe, generateTelegramOtp } from '@/api/client';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { PacificRide } from '@/components/ui/PacificRide';
-import { DeveloperKeys } from '@/components/profile/DeveloperKeys';
-import { Send, Save, Gamepad2 } from 'lucide-react';
+import { Send, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function ProfileSettings() {
@@ -14,9 +12,6 @@ export function ProfileSettings() {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Состояние для игры
-  const [isGameOpen, setIsGameOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -181,40 +176,7 @@ export function ProfileSettings() {
             </div>
           </div>
 
-          {/* 4. PACIFIC RIDE GAME CARD */}
-          <div>
-            <h2 className={sectionHeaderStyles}>
-              Citrine Arcade
-            </h2>
-            <div className="rounded-[2.5rem] p-8 md:p-10 bg-gradient-to-br from-[#1C3F35] to-[#0A1A12] dark:from-[#050505] dark:to-[#111111] border border-black/5 dark:border-white/10 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden transition-all group hover:shadow-[0_20px_50px_rgba(255,122,0,0.15)]">
-              {/* Sunset glow inside */}
-              <div className="absolute top-0 right-0 w-64 h-64 bg-[#FF7A00]/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none transition-all group-hover:bg-[#FF7A00]/20" />
-
-              <div className="flex items-center gap-5 w-full md:w-auto relative z-10">
-                <div className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 bg-[#FF7A00]/10 border border-[#FF7A00]/20 shadow-inner group-hover:scale-110 transition-transform duration-300">
-                  <Gamepad2 className="w-7 h-7 text-[#FF7A00] ml-0.5" />
-                </div>
-                <div>
-                  <p className="font-sans font-extrabold tracking-tight text-white text-xl md:text-2xl leading-none mb-1.5">
-                    Pacific Ride
-                  </p>
-                  <p className="text-[10px] md:text-[11px] font-mono font-bold uppercase tracking-[0.25em] text-[#FF7A00]">
-                    California Sunset Edition
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setIsGameOpen(true)}
-                className="w-full md:w-auto px-8 h-14 md:h-16 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-bold uppercase tracking-widest text-sm shadow-md transition-all flex items-center justify-center gap-3 active:scale-[0.98] shrink-0 border border-white/5 backdrop-blur-md relative z-10"
-              >
-                Запустить
-              </button>
-            </div>
-          </div>
-
-          {/* 5. THE GOLDEN TRIGGER */}
+          {/* 4. THE GOLDEN TRIGGER */}
           <div className="pt-4">
             <button
               type="submit"
@@ -232,15 +194,7 @@ export function ProfileSettings() {
             </button>
           </div>
         </form>
-
-        {/* 6. DEVELOPER API KEYS */}
-        <div className="mt-10">
-          <DeveloperKeys />
-        </div>
       </motion.div>
-
-      {/* ─── PACIFIC RIDE OVERLAY ──────────────────────────────── */}
-      {isGameOpen && <PacificRide onClose={() => setIsGameOpen(false)} />}
     </div>
   );
 }
