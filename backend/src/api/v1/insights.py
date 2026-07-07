@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from collections.abc import Sequence
 
 from arq.connections import ArqRedis, RedisSettings, create_pool
 from arq.jobs import Job, JobResult
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -80,6 +81,27 @@ async def latest_insight(
     )
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
+
+
+@router.get(
+    "/",
+    response_model=list[LatestInsightResponse],
+    summary="Insight history for current user",
+    description="All persisted monthly insights, newest first (capped by limit).",
+)
+async def list_insights(
+    limit: int = Query(12, ge=1, le=60, description="Max rows, newest first"),
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> Sequence[Insight]:
+    stmt = (
+        select(Insight)
+        .where(Insight.user_id == current_user.id)
+        .order_by(Insight.period_end.desc(), Insight.created_at.desc())
+        .limit(limit)
+    )
+    result = await db.execute(stmt)
+    return result.scalars().all()
 
 
 @router.get(

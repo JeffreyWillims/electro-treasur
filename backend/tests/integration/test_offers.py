@@ -99,3 +99,44 @@ async def test_latest_insight_none_then_value(
     body = resp.json()
     assert body["advice"] == "fresh advice"  # newest period wins
     assert body["period_end"] == "2026-06-30"
+
+
+async def test_insight_history_list(
+    async_client: AsyncClient,
+    auth_headers: dict[str, str],
+    test_user: User,
+    db_session: AsyncSession,
+) -> None:
+    resp = await async_client.get("/v1/insights/", headers=auth_headers)
+    assert resp.status_code == 200
+    assert resp.json() == []  # empty history
+
+    def _insight(user_id: int, month: int, advice: str) -> Insight:
+        return Insight(
+            user_id=user_id,
+            period_start=date(2026, month, 1),
+            period_end=date(2026, month, 28),
+            advice=advice,
+            summary={"m": month},
+            model_used="rule-based-v1",
+        )
+
+    other = User(email="other-history@citrine.dev", hashed_password="x")
+    db_session.add(other)
+    await db_session.flush()
+    db_session.add_all(
+        [
+            _insight(test_user.id, 4, "april"),
+            _insight(test_user.id, 5, "may"),
+            _insight(test_user.id, 6, "june"),
+            _insight(other.id, 6, "not mine"),  # ownership isolation
+        ]
+    )
+    await db_session.flush()
+
+    resp = await async_client.get("/v1/insights/", headers=auth_headers)
+    advices = [r["advice"] for r in resp.json()]
+    assert advices == ["june", "may", "april"]  # newest period first, only mine
+
+    resp = await async_client.get("/v1/insights/?limit=2", headers=auth_headers)
+    assert [r["advice"] for r in resp.json()] == ["june", "may"]  # limit honoured
