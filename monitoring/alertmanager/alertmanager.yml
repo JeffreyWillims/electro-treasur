@@ -8,10 +8,13 @@ route:
 receivers:
   - name: telegram
     telegram_configs:
-      # TODO: replace with your real bot token + numeric chat id before relying on alerts.
-      # The project already has a bot token in backend/.env (ET_TELEGRAM_BOT_TOKEN).
-      # Do NOT commit a real token here.
-      - bot_token: "REPLACE_WITH_BOT_TOKEN"
-        chat_id: 123456789
+      # Secret-free: the bot token is read from a FILE, never committed.
+      # By default the compose overlay mounts bot_token.example (a dummy) here,
+      # so Alertmanager starts but delivery is effectively OFF. To ENABLE real
+      # alerts, point ONE env var at a file holding your token, e.g.
+      #   ALERTMANAGER_BOT_TOKEN_FILE=./monitoring/alertmanager/bot_token
+      # (see monitoring/README.md) and set the numeric chat_id below.
+      - bot_token_file: /etc/alertmanager/bot_token
+        chat_id: 123456789  # ← your Telegram chat/channel id (not a secret)
         parse_mode: HTML
         send_resolved: true

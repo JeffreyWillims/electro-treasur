@@ -31,3 +31,6 @@ test-results.xml
 
 # Local-only compose overlay (MailHog и пр.) — не выкатываем на сервер
 docker-compose.override.yml
+
+# Alertmanager Telegram bot token (real secret) — only the .example is committed
+/monitoring/alertmanager/bot_token

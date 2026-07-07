@@ -21,7 +21,11 @@ services:
   alertmanager:
     image: prom/alertmanager:v0.27.0
     volumes:
-      - ./monitoring/alertmanager:/etc/alertmanager:ro
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      # Secret-free token injection: defaults to the committed dummy (alerts OFF).
+      # Enable real delivery with ONE env var pointing at your token file:
+      #   ALERTMANAGER_BOT_TOKEN_FILE=./monitoring/alertmanager/bot_token
+      - ${ALERTMANAGER_BOT_TOKEN_FILE:-./monitoring/alertmanager/bot_token.example}:/etc/alertmanager/bot_token:ro
     command:
       - --config.file=/etc/alertmanager/alertmanager.yml
     ports:
