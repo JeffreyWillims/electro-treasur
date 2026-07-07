@@ -15,8 +15,13 @@ from pathlib import Path
 
 import pytest
 
-from src.agents import BackendAgent, Orchestrator, Skill, SkillRegistry, SkillResult
-from src.agents.skills import file_skills, test_skills
+# src/agents/ (и docs/) — локальная агентная подсистема, gitignored и НЕ уезжает
+# на сервер/в CI. На чистом клоне модуля нет → скипаем весь набор, чтобы сбор
+# тестов не падал (тот же приём, что для e2e/playwright).
+pytest.importorskip("src.agents")
+
+from src.agents import BackendAgent, Orchestrator, Skill, SkillRegistry, SkillResult  # noqa: E402
+from src.agents.skills import file_skills, test_skills  # noqa: E402
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
