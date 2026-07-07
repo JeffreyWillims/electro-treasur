@@ -13,6 +13,7 @@ from src.api.v1.games import router as games_router
 from src.api.v1.goals import router as goals_router
 from src.api.v1.insights import router as insights_router
 from src.api.v1.offers import router as offers_router
+from src.api.v1.report import router as report_router
 from src.api.v1.transactions import router as transactions_router
 from src.api.v1.users import router as users_router
 
@@ -33,6 +34,7 @@ router.include_router(analytics_router, prefix="/analytics")
 router.include_router(budgets_router, prefix="/budgets")
 router.include_router(insights_router, prefix="/insights")
 router.include_router(offers_router, prefix="/offers")
+router.include_router(report_router, prefix="/reports")
 router.include_router(feedback_router, prefix="/feedback")
 router.include_router(games_router, prefix="/games")
 router.include_router(goals_router, prefix="/goals")
