@@ -334,3 +334,29 @@ class Insight(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+class SavingsGoal(Base):
+    """
+    Персональная цель-накопление (ретеншн): режим «Цель» Savings Navigator
+    сохраняет её в приложение.
+
+    Гибрид «план + факт»: `monthly_plan` — рекомендованный месячный взнос до
+    `target_date` (из калькулятора), `current_amount` — фактически отложено
+    (растёт через POST /goals/{id}/contribute). Прогресс = current/target.
+    """
+
+    __tablename__ = "savings_goals"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    target_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    target_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    monthly_plan: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    current_amount: Mapped[Decimal] = mapped_column(
+        Numeric(12, 2), nullable=False, server_default=text("0")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
