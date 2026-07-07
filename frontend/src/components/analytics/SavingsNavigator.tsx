@@ -3,7 +3,7 @@
  */
 import { useState, useMemo, useDeferredValue } from 'react';
 import { getLocalDateString, getMoscowDate } from '@/lib/dateUtils';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid,
@@ -12,7 +12,8 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import {
   fetchDashboard, fetchAnalyticsProfile,
-  fetchBankOffers, clickBankOffer, fetchLatestInsight,
+  fetchBankOffers, clickBankOffer, fetchLatestInsight, createGoal,
+  downloadFinancialPlanPdf,
 } from '@/api/client';
 import { cn } from '@/lib/utils';
 
@@ -132,6 +133,8 @@ export function SavingsNavigator() {
   const [annualYield, setAnnualYield] = useState(16);
   const [inflation, setInflation] = useState(8);
   const [goalSum, setGoalSum] = useState<string>('');
+  const [goalName, setGoalName] = useState<string>('');
+  const queryClient = useQueryClient();
 
   const effCapital = startCapital !== '' ? parseSum(startCapital) : dbBalance;
   const effIncome = monthlyIncome !== '' ? parseSum(monthlyIncome) : dbIncome;
@@ -152,6 +155,26 @@ export function SavingsNavigator() {
       : ((goalTarget - effCapital * growth) * r) / (growth - 1);
     return Math.max(Math.ceil(req), 0);
   }, [goalTarget, horizonMonths, annualYield, effCapital]);
+
+  // Сохранить цель в приложение (ретеншн): target_date = сегодня + горизонт.
+  const saveGoal = useMutation({
+    mutationFn: () => {
+      const due = getMoscowDate();
+      due.setMonth(due.getMonth() + horizonMonths);
+      return createGoal({
+        name: goalName.trim() || 'Моя цель',
+        target_amount: String(goalTarget),
+        target_date: getLocalDateString(due),
+        monthly_plan: requiredMonthly !== null ? String(requiredMonthly) : null,
+      });
+    },
+    onSuccess: (g) => {
+      setGoalName('');
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+      toast.success(`Цель «${g.name}» сохранена — прогресс на дашборде`);
+    },
+    onError: (e: Error) => toast.error(`Ошибка: ${e.message}`),
+  });
 
   // Сценарии: пессимист / база / оптимист (±4 п.п. к доходности), в реальных деньгах
   const scenarios = useMemo(() => {
@@ -318,6 +341,28 @@ export function SavingsNavigator() {
               </div>
             )}
           </div>
+
+          {/* Сохранить цель в приложение (ретеншн) */}
+          {goalTarget > 0 && (
+            <div className="flex flex-col sm:flex-row items-stretch gap-3 mt-6">
+              <input
+                type="text"
+                value={goalName}
+                onChange={(e) => setGoalName(e.target.value)}
+                maxLength={128}
+                placeholder="Название цели (напр. «Ипотека»)"
+                className="flex-1 min-w-0 rounded-full bg-black/5 dark:bg-white/10 px-5 py-3 text-sm outline-none focus:ring-2 ring-[#FF7A00]/40 text-[#1C3F35] dark:text-white"
+              />
+              <button
+                type="button"
+                onClick={() => saveGoal.mutate()}
+                disabled={saveGoal.isPending}
+                className="bg-[#1C3F35] dark:bg-[#FF7A00] text-white text-sm font-semibold py-3 px-6 rounded-full active:scale-[0.98] transition-transform disabled:opacity-50 whitespace-nowrap"
+              >
+                Сохранить цель
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
@@ -542,7 +587,7 @@ export function SavingsNavigator() {
       )}
 
       {/* ═══ SHARE ═══ */}
-      <div className="flex justify-center">
+      <div className="flex flex-wrap justify-center gap-3">
         <motion.button
           whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
           onClick={() => {
@@ -559,6 +604,19 @@ export function SavingsNavigator() {
           style={{ background: 'linear-gradient(135deg, #1C3F35, #2d5f4f)' }}
         >
           Поделиться результатом
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+          onClick={() => {
+            toast.promise(downloadFinancialPlanPdf(), {
+              loading: 'Формируем PDF…',
+              success: 'PDF скачан',
+              error: 'Не удалось сформировать PDF',
+            });
+          }}
+          className="px-8 py-3.5 rounded-2xl text-[#1C3F35] dark:text-white text-xs font-sans font-extrabold uppercase tracking-widest outline-none shadow-lg border border-[#1C3F35]/20 dark:border-white/20"
+        >
+          Скачать PDF-план
         </motion.button>
       </div>
     </motion.div>

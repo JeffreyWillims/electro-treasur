@@ -405,6 +405,62 @@ export function fetchLatestInsight(): Promise<LatestInsightDto | null> {
   return request<LatestInsightDto | null>('/v1/insights/latest');
 }
 
+// ── Savings Goals (режим «Цель») ───────────────────────────────────────
+export interface GoalDto {
+  id: number;
+  name: string;
+  target_amount: string;
+  target_date: string | null;
+  monthly_plan: string | null;
+  current_amount: string;
+  created_at: string;
+  progress_pct: number;
+  remaining: string;
+}
+
+export interface GoalCreate {
+  name: string;
+  target_amount: string;
+  target_date?: string | null;
+  monthly_plan?: string | null;
+}
+
+export function fetchGoals(): Promise<GoalDto[]> {
+  return request<GoalDto[]>('/v1/goals/');
+}
+
+export function createGoal(payload: GoalCreate): Promise<GoalDto> {
+  return request<GoalDto>('/v1/goals/', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export function contributeGoal(goalId: number, amount: string): Promise<GoalDto> {
+  return request<GoalDto>(`/v1/goals/${goalId}/contribute`, {
+    method: 'PATCH',
+    body: JSON.stringify({ amount }),
+  });
+}
+
+export function deleteGoal(goalId: number): Promise<void> {
+  return apiFetch(`/v1/goals/${goalId}`, { method: 'DELETE' }).then(() => undefined);
+}
+
+// ── PDF-отчёт «Личный финансовый план» ─────────────────────────────────
+export async function downloadFinancialPlanPdf(): Promise<void> {
+  const response = await apiFetch('/v1/reports/financial-plan.pdf');
+  if (!response.ok) {
+    throw new ApiError(response.status, 'Не удалось сформировать PDF');
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'financial-plan.pdf';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 // ── Feedback ───────────────────────────────────────────────────────────
 export function submitFeedback(message: string): Promise<{ status: string }> {
   return request<{ status: string }>('/v1/feedback/', {

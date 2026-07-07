@@ -4,6 +4,7 @@ import { Toaster } from 'sonner';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { BalanceCards } from '@/components/dashboard/BalanceCards';
 import { QuickEntry } from '@/components/dashboard/QuickEntry';
+import { GoalsProgress } from '@/components/dashboard/GoalsProgress';
 import { TransactionList } from '@/components/dashboard/TransactionList';
 import { Sparkles } from 'lucide-react';
 import { FeedbackWidget } from '@/components/layout/FeedbackWidget';
@@ -121,6 +122,7 @@ function Overview() {
 
         <div className="flex flex-col items-stretch w-full max-w-[1400px] mx-auto gap-8 px-4 lg:px-8">
           <BalanceCards startDate={startDate} endDate={endDate} />
+          <GoalsProgress />
           <QuickEntry />
         </div>
       </div>
