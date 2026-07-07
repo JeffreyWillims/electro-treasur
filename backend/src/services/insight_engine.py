@@ -1,13 +1,16 @@
 """
-Rule-Based Insight Engine — мгновенные финансовые советы без LLM.
+Rule-Based Insight Engine — персональный финансовый план без LLM.
 
 Чистая бизнес-логика: принимает транзакции и бюджеты пользователя за месяц
-в виде dataclass-«снимков» (без ORM/сессии) и возвращает одну готовую строку —
-самое важное наблюдение по приоритету правил:
+в виде dataclass-«снимков» (без ORM/сессии) и возвращает готовый многострочный
+план (рендерится как есть, `whitespace-pre-line`). Секции по приоритету, каждая
+включается только при наличии данных:
 
-  1. Budget Alert   — категория съела ≥ 80% лимита бюджета.
-  2. Anomaly        — больше 3 трат за один день (импульсивные покупки).
-  3. Cashflow Summary — баланс месяца (fallback, срабатывает всегда).
+  1. 📊 Итог месяца   — доходы/расходы/отложено + норма сбережений (всегда).
+  2. ⚠️ Дефицит       — расходы превысили доходы.
+  3. Бюджеты          — худшая пробитая категория (≥80% лимита) или «в норме».
+  4. 🕵️ Аномалия      — пиковый день с > 3 трат (импульсивные покупки).
+  5. 👉 Рекомендация  — детерминированный actionable-совет (всегда).
 
 Никакого I/O — движок юнит-тестируется без БД и считается за микросекунды.
 """
@@ -50,20 +53,29 @@ def _format_money(value: Decimal) -> str:
     return f"{value:,.2f} ₽".replace(",", " ")
 
 
+TARGET_SAVINGS_RATE = Decimal("0.10")
+
+
 class RuleBasedInsightEngine:
-    """«Меню» правил аналитики; generate() возвращает одну строку по приоритету."""
+    """«Меню» правил аналитики; generate() собирает персональный план по секциям."""
 
     def generate(
         self,
         transactions: Sequence[TransactionData],
         budgets: Sequence[BudgetData],
     ) -> str:
-        """Самое важное наблюдение за период: Budget Alert → Anomaly → Summary."""
-        return (
-            self._budget_alert(transactions, budgets)
-            or self._anomaly(transactions)
-            or self._cashflow_summary(transactions)
-        )
+        """Многострочный персональный план: итог → дефицит → бюджеты → аномалия → совет."""
+        income, expense = self.cashflow_totals(transactions)
+        lines = [self._summary_line(income, expense)]
+        for section in (
+            self._deficit_line(income, expense),
+            self._budget_status(transactions, budgets),
+            self._anomaly(transactions),
+        ):
+            if section:
+                lines.append(section)
+        lines.append(self._recommendation(income, expense, transactions, budgets))
+        return "\n".join(lines)
 
     def cashflow_totals(self, transactions: Sequence[TransactionData]) -> tuple[Decimal, Decimal]:
         """(доходы, расходы) за период — используется и правилами, и воркером."""
@@ -77,35 +89,43 @@ class RuleBasedInsightEngine:
         )
         return income, expense
 
-    # ── Блюдо 1: Budget Alert ───────────────────────────────────────────
-    def _budget_alert(
+    # ── Секция 1: Итог месяца (всегда) ──────────────────────────────────
+    def _summary_line(self, income: Decimal, expense: Decimal) -> str:
+        saved = income - expense
+        line = (
+            f"📊 Итог месяца: доходы {_format_money(income)}, "
+            f"расходы {_format_money(expense)}, отложено {_format_money(saved)}."
+        )
+        if income > 0:
+            rate = saved / income * 100
+            line += f" Норма сбережений: {rate:.0f}%."
+        return line
+
+    # ── Секция 2: Дефицит ───────────────────────────────────────────────
+    def _deficit_line(self, income: Decimal, expense: Decimal) -> str | None:
+        saved = income - expense
+        if saved >= 0:
+            return None
+        return f"⚠️ Расходы превысили доходы на {_format_money(-saved)} — месяц в минусе."
+
+    # ── Секция 3: Статус бюджетов ───────────────────────────────────────
+    def _budget_status(
         self,
         transactions: Sequence[TransactionData],
         budgets: Sequence[BudgetData],
     ) -> str | None:
-        spent_by_category: dict[int, Decimal] = defaultdict(lambda: Decimal("0"))
-        for tx in transactions:
-            if tx.category_type is CategoryType.expense:
-                spent_by_category[tx.category_id] += tx.amount
+        worst = self._worst_budget(transactions, budgets)
+        if worst is not None:
+            ratio, name, spent = worst
+            return (
+                f"⚠️ Бюджет «{name}»: потрачено {_format_money(spent)} — "
+                f"это {ratio * 100:.0f}% лимита."
+            )
+        if any(b.amount_limit > 0 for b in budgets):
+            return "✅ Все бюджеты в пределах лимитов."
+        return None
 
-        worst: tuple[Decimal, BudgetData, Decimal] | None = None  # (ratio, budget, spent)
-        for budget in budgets:
-            if budget.amount_limit <= 0:
-                continue
-            spent = spent_by_category.get(budget.category_id, Decimal("0"))
-            ratio = spent / budget.amount_limit
-            if ratio >= BUDGET_ALERT_THRESHOLD and (worst is None or ratio > worst[0]):
-                worst = (ratio, budget, spent)
-
-        if worst is None:
-            return None
-        _, budget, spent = worst
-        return (
-            f"⚠️ Внимание: Вы потратили {_format_money(spent)} на {budget.category_name}. "
-            "Бюджет почти исчерпан!"
-        )
-
-    # ── Блюдо 3: Anomaly ───────────────────────────────────────────────
+    # ── Секция 4: Аномалия ──────────────────────────────────────────────
     def _anomaly(self, transactions: Sequence[TransactionData]) -> str | None:
         expenses_per_day = Counter(
             tx.executed_at.date()
@@ -118,15 +138,57 @@ class RuleBasedInsightEngine:
         if count <= ANOMALY_DAILY_TX_LIMIT:
             return None
         return (
-            f"🕵️‍♂️ Вы сегодня очень активны: {count} транзакций. "
-            "Проверьте, нет ли импульсивных покупок."
+            f"🕵️‍♂️ Пиковый день месяца: {count} трат за сутки — "
+            "проверьте, нет ли импульсивных покупок."
         )
 
-    # ── Блюдо 2: Cashflow Summary (fallback) ─────────────────────────────
-    def _cashflow_summary(self, transactions: Sequence[TransactionData]) -> str:
-        income, expense = self.cashflow_totals(transactions)
+    # ── Секция 5: Рекомендация (всегда) ─────────────────────────────────
+    def _recommendation(
+        self,
+        income: Decimal,
+        expense: Decimal,
+        transactions: Sequence[TransactionData],
+        budgets: Sequence[BudgetData],
+    ) -> str:
         saved = income - expense
+        if income <= 0:
+            return "👉 Рекомендация: добавьте доходы в учёт — так план станет точнее."
+        if saved < 0:
+            worst = self._worst_budget(transactions, budgets)
+            where = f", начните с категории «{worst[1]}»" if worst else ""
+            return (
+                f"👉 Рекомендация: сократите расходы минимум на {_format_money(-saved)}"
+                f"{where}, чтобы выйти в ноль."
+            )
+        if saved / income < TARGET_SAVINGS_RATE:
+            target = income * TARGET_SAVINGS_RATE
+            return (
+                "👉 Рекомендация: старайтесь откладывать хотя бы 10% дохода — "
+                f"около {_format_money(target)} в месяц."
+            )
         return (
-            f"📊 Ваш баланс за месяц: Доходы {_format_money(income)}, "
-            f"Расходы {_format_money(expense)}. Отложено: {_format_money(saved)}."
+            f"👉 Рекомендация: у вас профицит {_format_money(saved)} — разместите его "
+            "на вкладе или в инвестициях, чтобы деньги работали."
         )
+
+    # ── Общий помощник: худшая пробитая категория (≥80% лимита) ─────────
+    def _worst_budget(
+        self,
+        transactions: Sequence[TransactionData],
+        budgets: Sequence[BudgetData],
+    ) -> tuple[Decimal, str, Decimal] | None:
+        """(ratio, category_name, spent) для самой пробитой категории или None."""
+        spent_by_category: dict[int, Decimal] = defaultdict(lambda: Decimal("0"))
+        for tx in transactions:
+            if tx.category_type is CategoryType.expense:
+                spent_by_category[tx.category_id] += tx.amount
+
+        worst: tuple[Decimal, str, Decimal] | None = None
+        for budget in budgets:
+            if budget.amount_limit <= 0:
+                continue
+            spent = spent_by_category.get(budget.category_id, Decimal("0"))
+            ratio = spent / budget.amount_limit
+            if ratio >= BUDGET_ALERT_THRESHOLD and (worst is None or ratio > worst[0]):
+                worst = (ratio, budget.category_name, spent)
+        return worst
