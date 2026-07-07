@@ -60,7 +60,7 @@ async def enqueue_yearly_analytics(
     task_id = str(uuid.uuid4())
 
     await pool.enqueue_job(
-        "generate_annual_llm_insight",
+        "generate_period_insight",
         current_user.id,
         body.year,
         _job_id=task_id,

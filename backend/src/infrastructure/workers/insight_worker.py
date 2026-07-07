@@ -12,7 +12,7 @@ Cron `schedule_weekly_push` (воскресенье 18:00 UTC) раз в нед�
 инсайт за текущий месяц и с notify=True пушит его прямо в Telegram юзера —
 Zero-Friction: советы приходят сами, без захода в приложение.
 
-Регистрируется в общем WorkerSettings (см. llm_worker.py) — отдельный
+Регистрируется в общем WorkerSettings (см. insight_scheduler.py) — отдельный
 процесс не нужен.
 """
 

@@ -12,7 +12,7 @@ async def test_ai():
     cache_redis = Redis.from_url("redis://localhost:6379/0", decode_responses=True)
 
     print("Enqueueing task...")
-    job = await arq_redis.enqueue_job("generate_annual_llm_insight", 1, 2026)
+    job = await arq_redis.enqueue_job("generate_period_insight", 1, "2026-01-01", "2026-12-31")
 
     print(f"Waiting for job {job.job_id}...")
     for _ in range(20):

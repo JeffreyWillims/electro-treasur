@@ -12,11 +12,11 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.models import Category, Insight, Transaction, User
-from src.infrastructure.workers.insight_worker import calculate_static_insights
-from src.infrastructure.workers.llm_worker import (
-    generate_annual_llm_insight,
+from src.infrastructure.workers.insight_scheduler import (
+    generate_period_insight,
     schedule_monthly_analysis,
 )
+from src.infrastructure.workers.insight_worker import calculate_static_insights
 from src.services.cashflow_prep import (
     get_active_user_ids,
     previous_month_range,
@@ -122,12 +122,12 @@ async def test_calculate_static_insights_persists_row(
     assert "📊" in row.advice or "⚠️" in row.advice or "🕵️" in row.advice
 
 
-async def test_generate_annual_llm_insight_returns_real_numbers(
+async def test_generate_period_insight_returns_real_numbers(
     db_session: AsyncSession, _seeded_june: User
 ) -> None:
-    """Кнопка «AI Анализ»: честный движок вместо мока — реальные суммы, без sleep(3)."""
+    """Кнопка «AI Анализ»: детерминированный движок — реальные суммы, без sleep(3)."""
     ctx = {"SessionLocal": _session_local(db_session)}
-    result = await generate_annual_llm_insight(ctx, _seeded_june.id, "2026-06-01", "2026-06-30")
+    result = await generate_period_insight(ctx, _seeded_june.id, "2026-06-01", "2026-06-30")
 
     assert result["summary"]["total_income"] == "10000.00"
     assert result["summary"]["total_expense"] == "3500.00"

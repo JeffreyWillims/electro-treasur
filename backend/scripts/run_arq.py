@@ -12,7 +12,7 @@ if sys.platform == "win32":
 
 from arq.worker import run_worker
 
-from src.infrastructure.workers.llm_worker import WorkerSettings
+from src.infrastructure.workers.insight_scheduler import WorkerSettings
 
 if __name__ == "__main__":
     run_worker(WorkerSettings)

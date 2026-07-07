@@ -22,7 +22,7 @@ spec:
       containers:
         - name: arq
           image: ghcr.io/electro-treasur/backend:latest
-          command: ["arq", "src.infrastructure.workers.llm_worker.WorkerSettings"]
+          command: ["arq", "src.infrastructure.workers.insight_scheduler.WorkerSettings"]
           env:
             - name: DATABASE_URL
               valueFrom:

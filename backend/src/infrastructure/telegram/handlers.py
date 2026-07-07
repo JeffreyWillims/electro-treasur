@@ -631,7 +631,7 @@ async def _create_bot_transaction(
 
 
 # ============================================================================
-# Photo / Document Upload (Ollama AI Vision)
+# Photo / Document Upload (local OCR — Tesseract, без внешних моделей)
 # ============================================================================
 
 

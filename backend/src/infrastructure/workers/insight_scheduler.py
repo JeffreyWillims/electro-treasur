@@ -1,8 +1,8 @@
 """
-arq Worker — Insight tasks (Rule-Based Engine, без LLM и без моков).
+arq Worker — Insight tasks (детерминированный RuleBasedInsightEngine, без LLM).
 
 Задачи:
-  • generate_annual_llm_insight — кнопка «AI Анализ» и годовой отчёт:
+  • generate_period_insight — кнопка «AI Анализ» и годовой отчёт:
     мгновенный расчёт RuleBasedInsightEngine за произвольный период,
     результат возвращается через polling арк-джобы.
   • calculate_static_insights — предрасчёт с записью в `insights`
@@ -11,7 +11,7 @@ arq Worker — Insight tasks (Rule-Based Engine, без LLM и без моков
 Cron: месячный фан-аут (1-е число) и еженедельный пуш (воскресенье).
 
 Usage:
-    arq src.infrastructure.workers.llm_worker.WorkerSettings
+    arq src.infrastructure.workers.insight_scheduler.WorkerSettings
 """
 
 from __future__ import annotations
@@ -39,14 +39,14 @@ from src.services.cashflow_prep import (
 logger = logging.getLogger(__name__)
 
 
-async def generate_annual_llm_insight(
+async def generate_period_insight(
     ctx: dict[str, Any], user_id: int, start_date_str: str, end_date_str: str
 ) -> dict[str, Any]:
     """
     arq task: инсайт за произвольный период для кнопки «AI Анализ».
 
-    Реальный расчёт RuleBasedInsightEngine (микросекунды вместо фейкового
-    sleep(3) у прежнего мока). Результат читается через polling джобы.
+    Детерминированный расчёт RuleBasedInsightEngine (микросекунды).
+    Результат читается через polling джобы.
     """
     start_date = date.fromisoformat(start_date_str)
     end_date = date.fromisoformat(end_date_str)
@@ -122,7 +122,7 @@ async def shutdown(ctx: dict[str, Any]) -> None:
 class WorkerSettings:
     """arq worker configuration — importable as module path."""
 
-    functions = [generate_annual_llm_insight, calculate_static_insights]
+    functions = [generate_period_insight, calculate_static_insights]
     cron_jobs = [
         cron(schedule_monthly_analysis, day=1, hour=3, minute=0),
         # Воскресенье (weekday=6, как в datetime.weekday()), 18:00 UTC = 21:00 МСК.

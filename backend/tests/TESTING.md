@@ -306,7 +306,7 @@ Dashboard aggregation с fake repository:
 
 #### `test_cashflow_prep.py` (integration) — 4 теста
 
-Месячный LLM-инсайт пайплайн (`src/infrastructure/workers/llm_worker.py` + `cashflow_prep.py`)
+Месячный инсайт-пайплайн (`src/infrastructure/workers/insight_scheduler.py` + `cashflow_prep.py`)
 против реального PostgreSQL, с фейковым arq-пулом:
 
 | Тестов | Что проверяет |

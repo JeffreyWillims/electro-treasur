@@ -14,7 +14,7 @@ import asyncio
 
 from arq import Worker
 
-from src.infrastructure.workers.llm_worker import WorkerSettings
+from src.infrastructure.workers.insight_scheduler import WorkerSettings
 
 
 async def _run() -> None:
