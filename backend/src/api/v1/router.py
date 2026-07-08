@@ -14,6 +14,7 @@ from src.api.v1.goals import router as goals_router
 from src.api.v1.health_score import router as health_router
 from src.api.v1.imports import router as imports_router
 from src.api.v1.insights import router as insights_router
+from src.api.v1.jobs import router as jobs_router
 from src.api.v1.offers import router as offers_router
 from src.api.v1.report import router as report_router
 from src.api.v1.tax import router as tax_router
@@ -43,6 +44,7 @@ router.include_router(games_router, prefix="/games")
 router.include_router(goals_router, prefix="/goals")
 router.include_router(health_router, prefix="/health-score")
 router.include_router(imports_router, prefix="/imports")
+router.include_router(jobs_router, prefix="/jobs")
 router.include_router(tax_router, prefix="/tax")
 router.include_router(consultant_router, prefix="/consultant")
 router.include_router(api_keys_router, prefix="/api-keys")
