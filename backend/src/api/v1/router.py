@@ -11,6 +11,7 @@ from src.api.v1.dashboard import router as dashboard_router
 from src.api.v1.feedback import router as feedback_router
 from src.api.v1.games import router as games_router
 from src.api.v1.goals import router as goals_router
+from src.api.v1.imports import router as imports_router
 from src.api.v1.insights import router as insights_router
 from src.api.v1.offers import router as offers_router
 from src.api.v1.report import router as report_router
@@ -38,5 +39,6 @@ router.include_router(report_router, prefix="/reports")
 router.include_router(feedback_router, prefix="/feedback")
 router.include_router(games_router, prefix="/games")
 router.include_router(goals_router, prefix="/goals")
+router.include_router(imports_router, prefix="/imports")
 router.include_router(consultant_router, prefix="/consultant")
 router.include_router(api_keys_router, prefix="/api-keys")

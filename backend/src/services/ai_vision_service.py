@@ -288,6 +288,49 @@ def _parse_transactions_from_text(
     ]
 
 
+async def parse_document_bytes(
+    content: bytes,
+    file_name: str,
+    merchant_rules: dict[str, str] | None = None,
+) -> list[dict[str, Any]] | None:
+    """
+    Из сырых байтов документа (PDF / изображение / Excel) → список кандидатов
+    транзакций. Транспорт-независимо: используется и Telegram-загрузкой, и
+    HTTP-импортом выписок. Тяжёлый разбор — в thread-pool, чтобы не блокировать loop.
+    """
+    ext = file_name.split(".")[-1].lower()
+
+    if ext in ["xlsx", "xls"]:
+        return await asyncio.to_thread(_extract_from_excel, content, file_name)
+
+    text = ""
+    if ext == "pdf":
+        try:
+            with pdfplumber.open(io.BytesIO(content)) as pdf:
+                text = "\n".join([p.extract_text() or "" for p in pdf.pages])
+        except Exception as e:
+            logger.error(f"PDF parsing error: {e}")
+            return None
+    else:
+        processed_img = await asyncio.to_thread(_preprocess_image, content)
+        try:
+            text = str(
+                await asyncio.to_thread(
+                    pytesseract.image_to_string, processed_img, lang="rus+eng"
+                )
+            )
+        finally:
+            processed_img.close()
+
+    if not text.strip():
+        return None
+
+    transactions = await asyncio.to_thread(
+        _parse_transactions_from_text, text, file_name, merchant_rules
+    )
+    return transactions if transactions else None
+
+
 async def analyze_document_universal(
     bot: Bot,
     file_id: str,
@@ -304,37 +347,7 @@ async def analyze_document_universal(
         if downloaded is None:
             return None
         content = downloaded.read()
-        ext = file_name.split(".")[-1].lower()
-
-        if ext in ["xlsx", "xls"]:
-            return await asyncio.to_thread(_extract_from_excel, content, file_name)
-
-        text = ""
-        if ext == "pdf":
-            try:
-                with pdfplumber.open(io.BytesIO(content)) as pdf:
-                    text = "\n".join([p.extract_text() or "" for p in pdf.pages])
-            except Exception as e:
-                logger.error(f"PDF parsing error: {e}")
-                return None
-        else:
-            processed_img = await asyncio.to_thread(_preprocess_image, content)
-            try:
-                text = str(
-                    await asyncio.to_thread(
-                        pytesseract.image_to_string, processed_img, lang="rus+eng"
-                    )
-                )
-            finally:
-                processed_img.close()
-
-        if not text.strip():
-            return None
-
-        transactions = await asyncio.to_thread(
-            _parse_transactions_from_text, text, file_name, merchant_rules
-        )
-        return transactions if transactions else None
+        return await parse_document_bytes(content, file_name, merchant_rules=merchant_rules)
 
     except Exception as e:
         logger.error(f"Universal Parser Error: {e}")

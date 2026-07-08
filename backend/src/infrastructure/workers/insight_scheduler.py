@@ -26,6 +26,7 @@ from arq.connections import ArqRedis, RedisSettings, create_pool
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from src.config import settings
+from src.infrastructure.workers.import_worker import parse_statement
 from src.infrastructure.workers.insight_worker import (
     build_insight_for_period,
     calculate_static_insights,
@@ -122,7 +123,7 @@ async def shutdown(ctx: dict[str, Any]) -> None:
 class WorkerSettings:
     """arq worker configuration — importable as module path."""
 
-    functions = [generate_period_insight, calculate_static_insights]
+    functions = [generate_period_insight, calculate_static_insights, parse_statement]
     cron_jobs = [
         cron(schedule_monthly_analysis, day=1, hour=3, minute=0),
         # Воскресенье (weekday=6, как в datetime.weekday()), 18:00 UTC = 21:00 МСК.
