@@ -21,6 +21,7 @@ from typing import Any
 
 from sqlalchemy import (
     BigInteger,
+    Computed,
     Date,
     DateTime,
     Enum,
@@ -33,7 +34,7 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -356,6 +357,38 @@ class SavingsGoal(Base):
     monthly_plan: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     current_amount: Mapped[Decimal] = mapped_column(
         Numeric(12, 2), nullable=False, server_default=text("0")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class TaxRule(Base):
+    """
+    Справочная норма (налоги/вычеты) — бесплатный контент для всех пользователей.
+
+    Глобальная, не привязана к юзеру. Полнотекстовый поиск на Postgres FTS
+    (русский словарь), без LLM: `tsv` — генерируемая колонка с весами
+    (заголовок = A, тело = B), под GIN-индексом.
+    """
+
+    __tablename__ = "tax_rules"
+    __table_args__ = (
+        Index("ix_tax_rules_tsv", "tsv", postgresql_using="gin"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    category: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    source: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    tsv: Mapped[str] = mapped_column(
+        TSVECTOR,
+        Computed(
+            "setweight(to_tsvector('russian', coalesce(title,'')), 'A') || "
+            "setweight(to_tsvector('russian', coalesce(body,'')), 'B')",
+            persisted=True,
+        ),
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
