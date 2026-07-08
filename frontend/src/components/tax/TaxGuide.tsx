@@ -4,7 +4,7 @@
  * Пользователь пишет запрос («вычет за лечение», «продал квартиру», «ИИС») —
  * сервер возвращает релевантные нормы, ранжированные по ts_rank. Без LLM.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Search, BookOpen, Scale, Sparkles } from 'lucide-react';
@@ -26,6 +26,13 @@ export function TaxGuide() {
   const [query, setQuery] = useState('');
   const [activeCat, setActiveCat] = useState<string | null>(null);
   const debounced = useDebounced(query, 300);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  const explain = (q: string) => {
+    setActiveCat(null);
+    setQuery(q);
+    searchRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   const { data: categories = [] } = useQuery({
     queryKey: ['taxCategories'],
@@ -63,11 +70,11 @@ export function TaxGuide() {
 
       {/* Калькулятор вычета */}
       <div className="mt-8">
-        <DeductionCalculator />
+        <DeductionCalculator onExplain={explain} />
       </div>
 
       {/* Search */}
-      <div className="mt-8 relative">
+      <div ref={searchRef} className="mt-8 relative scroll-mt-6">
         <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-[#1C3F35]/40 dark:text-white/40" />
         <input
           autoFocus

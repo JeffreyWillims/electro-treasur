@@ -10,7 +10,7 @@ import { fetchDeductionKinds, calcDeduction, type DeductionResult } from '@/api/
 
 const fmt = (v: string) => Number(v).toLocaleString('ru-RU', { maximumFractionDigits: 0 });
 
-export function DeductionCalculator() {
+export function DeductionCalculator({ onExplain }: { onExplain?: (q: string) => void }) {
   const { data: kinds = [] } = useQuery({
     queryKey: ['deductionKinds'],
     queryFn: fetchDeductionKinds,
@@ -120,6 +120,14 @@ export function DeductionCalculator() {
                   С базы {fmt(result.eligible_base)} ₽ · {result.note}
                   {result.capped_by_income && ' · ограничено уплаченным НДФЛ'}
                 </p>
+                {onExplain && (
+                  <button
+                    onClick={() => onExplain(result.label)}
+                    className="mt-3 text-xs font-bold text-[#FF7A00] hover:underline"
+                  >
+                    Как оформить вычет →
+                  </button>
+                )}
               </div>
             </div>
           </motion.div>

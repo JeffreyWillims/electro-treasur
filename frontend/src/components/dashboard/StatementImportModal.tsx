@@ -1,11 +1,11 @@
 /**
  * StatementImportModal — сканирование выписки/чека (PDF · фото · Excel).
  *
- * Поток: загрузка → фоновый разбор (arq, polling) → редактируемое превью
- * кандидатов → подтверждение импорта. Без LLM — эвристический парсер на сервере.
- * Стекло/оранж-эстетика в тон DataVaultModal.
+ * Поток: загрузка → фоновый разбор (arq) → живой прогресс через SSE
+ * (/v1/jobs/{id}/stream, с фолбэком на polling) → редактируемое превью →
+ * подтверждение импорта. Без LLM — эвристический парсер на сервере.
  */
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ScanLine, FileText, Loader2, Trash2, CheckCircle2, AlertCircle, X } from 'lucide-react';
@@ -31,55 +31,114 @@ interface Props {
 export function StatementImportModal({ isOpen, onClose }: Props) {
   const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
+  const esRef = useRef<EventSource | null>(null);
+  const rampRef = useRef<number | null>(null);
   const [phase, setPhase] = useState<Phase>('idle');
   const [dragOver, setDragOver] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [rows, setRows] = useState<StatementCandidate[]>([]);
   const [importing, setImporting] = useState(false);
 
+  const cleanup = useCallback(() => {
+    esRef.current?.close();
+    esRef.current = null;
+    if (rampRef.current) {
+      clearInterval(rampRef.current);
+      rampRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => cleanup, [cleanup]); // закрыть поток при размонтировании
+
   const reset = useCallback(() => {
+    cleanup();
     setPhase('idle');
+    setProgress(0);
     setRows([]);
     setImporting(false);
-  }, []);
+  }, [cleanup]);
 
   const close = useCallback(() => {
     reset();
     onClose();
   }, [reset, onClose]);
 
-  const handleFile = useCallback(async (file: File) => {
-    const ext = '.' + (file.name.split('.').pop() ?? '').toLowerCase();
-    if (!ALLOWED.includes(ext)) {
-      toast.error(`Формат ${ext} не поддерживается`);
-      return;
+  const applyResult = useCallback((candidates: StatementCandidate[]) => {
+    cleanup();
+    setProgress(100);
+    if (candidates.length === 0) setPhase('empty');
+    else {
+      setRows(candidates);
+      setPhase('preview');
     }
-    if (file.size > MAX_SIZE) {
-      toast.error('Файл больше 10 МБ');
-      return;
-    }
-    setPhase('parsing');
-    try {
-      const { task_id } = await uploadStatement(file);
+  }, [cleanup]);
+
+  const pollFallback = useCallback(
+    async (taskId: string) => {
       for (let i = 0; i < 40; i++) {
-        const task = await pollStatement(task_id);
-        if (task.status === 'complete') {
-          const candidates = task.result?.candidates ?? [];
-          if (candidates.length === 0) {
-            setPhase('empty');
+        try {
+          const task = await pollStatement(taskId);
+          if (task.status === 'complete') {
+            applyResult(task.result?.candidates ?? []);
             return;
           }
-          setRows(candidates);
-          setPhase('preview');
-          return;
+        } catch {
+          /* продолжаем опрос */
         }
         await sleep(1500);
       }
       setPhase('error');
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Ошибка разбора');
-      setPhase('error');
-    }
-  }, []);
+    },
+    [applyResult],
+  );
+
+  const handleFile = useCallback(
+    async (file: File) => {
+      const ext = '.' + (file.name.split('.').pop() ?? '').toLowerCase();
+      if (!ALLOWED.includes(ext)) {
+        toast.error(`Формат ${ext} не поддерживается`);
+        return;
+      }
+      if (file.size > MAX_SIZE) {
+        toast.error('Файл больше 10 МБ');
+        return;
+      }
+      setProgress(0);
+      setPhase('parsing');
+      rampRef.current = window.setInterval(
+        () => setProgress((p) => Math.min(p + 7, 90)),
+        250,
+      );
+      try {
+        const { task_id } = await uploadStatement(file);
+        let settled = false;
+        const es = new EventSource(`/api/v1/jobs/${task_id}/stream`, { withCredentials: true });
+        esRef.current = es;
+        es.onmessage = (ev) => {
+          const d = JSON.parse(ev.data);
+          if (d.status === 'complete') {
+            settled = true;
+            applyResult(d.result?.candidates ?? []);
+          } else if (d.status === 'error' || d.status === 'timeout') {
+            settled = true;
+            cleanup();
+            setPhase('error');
+          }
+        };
+        es.onerror = () => {
+          if (settled) return;
+          es.close();
+          esRef.current = null;
+          pollFallback(task_id); // SSE недоступен → фолбэк на polling
+        };
+      } catch (e) {
+        cleanup();
+        toast.error(e instanceof Error ? e.message : 'Ошибка разбора');
+        setPhase('error');
+      }
+    },
+    [applyResult, cleanup, pollFallback],
+  );
 
   const onDrop = useCallback(
     (e: React.DragEvent) => {
@@ -190,13 +249,20 @@ export function StatementImportModal({ isOpen, onClose }: Props) {
               </div>
             )}
 
-            {/* parsing */}
+            {/* parsing: live progress */}
             {phase === 'parsing' && (
-              <div className="py-16 flex flex-col items-center gap-4">
-                <Loader2 className="w-10 h-10 text-[#FF7A00] animate-spin" />
+              <div className="py-16 flex flex-col items-center gap-5">
+                <Loader2 className="w-9 h-9 text-[#FF7A00] animate-spin" />
                 <p className="font-sans font-bold text-[#1C3F35] dark:text-white">
                   Разбираем документ…
                 </p>
+                <div className="w-64 h-2 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
+                  <motion.div
+                    className="h-full rounded-full bg-[#FF7A00]"
+                    animate={{ width: `${progress}%` }}
+                    transition={{ ease: 'easeOut', duration: 0.3 }}
+                  />
+                </div>
                 <p className="text-xs text-[#1C3F35]/50 dark:text-white/40">
                   Извлекаем суммы и категории
                 </p>
