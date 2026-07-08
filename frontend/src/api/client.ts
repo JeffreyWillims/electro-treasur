@@ -496,6 +496,24 @@ export function confirmStatementImport(
   });
 }
 
+// ── Справочник «Налоги и вычеты» (Postgres FTS) ────────────────────────
+export interface TaxRule {
+  id: number;
+  category: string;
+  title: string;
+  body: string;
+  source: string | null;
+}
+
+export function searchTaxRules(q: string): Promise<TaxRule[]> {
+  const query = q.trim() ? `?q=${encodeURIComponent(q.trim())}` : '';
+  return request<TaxRule[]>(`/v1/tax/search${query}`);
+}
+
+export function fetchTaxCategories(): Promise<string[]> {
+  return request<string[]>('/v1/tax/categories');
+}
+
 // ── PDF-отчёт «Личный финансовый план» ─────────────────────────────────
 export async function downloadFinancialPlanPdf(): Promise<void> {
   const response = await apiFetch('/v1/reports/financial-plan.pdf');

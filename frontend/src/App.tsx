@@ -143,6 +143,9 @@ const MyClients = lazy(() =>
 const GamesHub = lazy(() =>
   import('@/components/games/GamesHub').then((m) => ({ default: m.GamesHub }))
 );
+const TaxGuide = lazy(() =>
+  import('@/components/tax/TaxGuide').then((m) => ({ default: m.TaxGuide }))
+);
 import { BudgetList } from '@/components/budgets/BudgetList';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { LoginForm } from '@/components/auth/LoginForm';
@@ -205,6 +208,7 @@ export default function App() {
                 <Route path="/budgets" element={<BudgetList />} />
                 <Route path="/analytics" element={<MainAnalytics />} />
                 <Route path="/savings-navigator" element={<SavingsNavigator />} />
+                <Route path="/tax" element={<TaxGuide />} />
                 <Route path="/consultant" element={<MyClients />} />
                 <Route path="/games" element={<GamesHub />} />
                 <Route path="/settings/profile" element={<ProfileSettings />} />
