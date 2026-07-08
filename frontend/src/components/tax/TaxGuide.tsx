@@ -9,6 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Search, BookOpen, Scale, Sparkles } from 'lucide-react';
 import { searchTaxRules, fetchTaxCategories, type TaxRule } from '@/api/client';
+import { DeductionCalculator } from './DeductionCalculator';
 
 const SUGGESTIONS = ['вычет за лечение', 'покупка квартиры', 'продал машину', 'ИИС', 'самозанятый'];
 
@@ -58,6 +59,11 @@ export function TaxGuide() {
             Бесплатный справочник · верните деньги, которые вам положены
           </p>
         </div>
+      </div>
+
+      {/* Калькулятор вычета */}
+      <div className="mt-8">
+        <DeductionCalculator />
       </div>
 
       {/* Search */}

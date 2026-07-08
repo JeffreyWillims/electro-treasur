@@ -405,6 +405,28 @@ export function fetchLatestInsight(): Promise<LatestInsightDto | null> {
   return request<LatestInsightDto | null>('/v1/insights/latest');
 }
 
+export function fetchInsightHistory(limit = 12): Promise<LatestInsightDto[]> {
+  return request<LatestInsightDto[]>(`/v1/insights/?limit=${limit}`);
+}
+
+// ── Индекс финансового здоровья ────────────────────────────────────────
+export interface HealthFactor {
+  name: string;
+  score: number;
+  weight: number;
+  detail: string;
+}
+
+export interface HealthScore {
+  score: number;
+  grade: string;
+  factors: HealthFactor[];
+}
+
+export function fetchHealthScore(): Promise<HealthScore> {
+  return request<HealthScore>('/v1/health-score/');
+}
+
 // ── Savings Goals (режим «Цель») ───────────────────────────────────────
 export interface GoalDto {
   id: number;
@@ -512,6 +534,38 @@ export function searchTaxRules(q: string): Promise<TaxRule[]> {
 
 export function fetchTaxCategories(): Promise<string[]> {
   return request<string[]>('/v1/tax/categories');
+}
+
+export interface DeductionKind {
+  kind: string;
+  label: string;
+  base_limit: string;
+  note: string;
+}
+
+export interface DeductionResult {
+  kind: string;
+  label: string;
+  eligible_base: string;
+  refund: string;
+  base_limit: string;
+  capped_by_income: boolean;
+  note: string;
+}
+
+export function fetchDeductionKinds(): Promise<DeductionKind[]> {
+  return request<DeductionKind[]>('/v1/tax/deductions');
+}
+
+export function calcDeduction(
+  kind: string,
+  amount: string,
+  annualIncome?: string,
+): Promise<DeductionResult> {
+  return request<DeductionResult>('/v1/tax/calc', {
+    method: 'POST',
+    body: JSON.stringify({ kind, amount, annual_income: annualIncome || null }),
+  });
 }
 
 // ── PDF-отчёт «Личный финансовый план» ─────────────────────────────────

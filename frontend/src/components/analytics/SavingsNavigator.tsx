@@ -15,6 +15,7 @@ import {
   fetchBankOffers, clickBankOffer, fetchLatestInsight, createGoal,
   downloadFinancialPlanPdf,
 } from '@/api/client';
+import { InsightHistory } from '@/components/insights/InsightHistory';
 import { cn } from '@/lib/utils';
 
 const INFINITY_PATH = "M50,50 C50,32 28,32 28,50 C28,68 50,68 50,50 C50,32 72,32 72,50 C72,68 50,68 50,50";
@@ -585,6 +586,8 @@ export function SavingsNavigator() {
           </p>
         </div>
       )}
+
+      <InsightHistory />
 
       {/* ═══ SHARE ═══ */}
       <div className="flex flex-wrap justify-center gap-3">
