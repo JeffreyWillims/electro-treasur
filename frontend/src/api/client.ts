@@ -444,6 +444,58 @@ export function deleteGoal(goalId: number): Promise<void> {
   return apiFetch(`/v1/goals/${goalId}`, { method: 'DELETE' }).then(() => undefined);
 }
 
+// ── Импорт выписок (PDF/картинка/Excel) ────────────────────────────────
+export interface StatementCandidate {
+  amount: number;
+  type: 'income' | 'expense';
+  description: string;
+  category?: string | null;
+}
+
+export interface StatementTask {
+  task_id: string;
+  status: 'pending' | 'complete';
+  result?: { file_name: string; candidates: StatementCandidate[]; count: number } | null;
+}
+
+export interface ConfirmImportResult {
+  created: number;
+  skipped: number;
+  errors: string[];
+}
+
+export async function uploadStatement(file: File): Promise<{ task_id: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await apiFetch('/v1/imports/statement', { method: 'POST', body: formData });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ detail: 'Upload failed' }));
+    throw new ApiError(response.status, err.detail || `API error: ${response.status}`);
+  }
+  return response.json() as Promise<{ task_id: string }>;
+}
+
+export function pollStatement(taskId: string): Promise<StatementTask> {
+  return request<StatementTask>(`/v1/imports/${taskId}`);
+}
+
+export function confirmStatementImport(
+  items: StatementCandidate[],
+): Promise<ConfirmImportResult> {
+  const payload = {
+    items: items.map((i) => ({
+      amount: String(i.amount),
+      type: i.type,
+      description: i.description,
+      category: i.category ?? null,
+    })),
+  };
+  return request<ConfirmImportResult>('/v1/imports/confirm', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 // ── PDF-отчёт «Личный финансовый план» ─────────────────────────────────
 export async function downloadFinancialPlanPdf(): Promise<void> {
   const response = await apiFetch('/v1/reports/financial-plan.pdf');

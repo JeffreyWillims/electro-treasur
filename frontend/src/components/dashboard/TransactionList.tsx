@@ -6,9 +6,10 @@ import { fetchTransactions, fetchCategories, updateTransaction, deleteTransactio
 import type { CategoryRead, TransactionResponse, TransactionUpdate } from '@/types';
 import { cn } from '@/lib/utils';
 import { getLocalDateString } from '@/lib/dateUtils';
-import { Search, X, SlidersHorizontal, Upload, Download } from 'lucide-react';
+import { Search, X, SlidersHorizontal, Upload, Download, ScanLine } from 'lucide-react';
 import { GlassDateRangePicker } from '@/components/ui/GlassDateRangePicker';
 import { DataVaultModal } from './DataVaultModal';
+import { StatementImportModal } from './StatementImportModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
@@ -83,6 +84,7 @@ export function TransactionList() {
   useOnClickOutside(filterRef, () => setIsFiltersOpen(false));
 
   const [isVaultOpen, setIsVaultOpen] = useState(false);
+  const [isScanOpen, setIsScanOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
   const handleExport = useCallback(async () => {
@@ -212,6 +214,10 @@ export function TransactionList() {
                 </div>
 
                 <div className="flex gap-2.5">
+                  <button onClick={() => setIsScanOpen(true)} className="group flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors font-bold text-sm text-[#1C3F35] dark:text-white">
+                    <ScanLine className="w-4 h-4 text-[#1C3F35]/50 dark:text-white/50 group-hover:text-[#FF7A00] transition-colors" />
+                    Сканировать
+                  </button>
                   <button onClick={() => setIsVaultOpen(true)} className="group flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors font-bold text-sm text-[#1C3F35] dark:text-white">
                     <Upload className="w-4 h-4 text-[#1C3F35]/50 dark:text-white/50 group-hover:text-[#FF7A00] transition-colors" />
                     Импорт
@@ -416,6 +422,7 @@ export function TransactionList() {
         )}
       </AnimatePresence>
       <DataVaultModal isOpen={isVaultOpen} onClose={() => setIsVaultOpen(false)} />
+      <StatementImportModal isOpen={isScanOpen} onClose={() => setIsScanOpen(false)} />
     </>
   );
 }
