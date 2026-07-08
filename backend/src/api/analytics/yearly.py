@@ -49,7 +49,7 @@ class YearlyTaskStatusResponse(BaseModel):
     "/yearly",
     response_model=YearlyEnqueueResponse,
     status_code=status.HTTP_202_ACCEPTED,
-    summary="Enqueue yearly LLM analytics report",
+    summary="Enqueue yearly analytics report",
 )
 async def enqueue_yearly_analytics(
     body: YearlyAnalyticsRequest,
@@ -59,10 +59,12 @@ async def enqueue_yearly_analytics(
     pool = await _get_arq_pool()
     task_id = str(uuid.uuid4())
 
+    # Год → полный диапазон дат: задача ждёт (user_id, start_date_str, end_date_str).
     await pool.enqueue_job(
         "generate_period_insight",
         current_user.id,
-        body.year,
+        f"{body.year}-01-01",
+        f"{body.year}-12-31",
         _job_id=task_id,
     )
 

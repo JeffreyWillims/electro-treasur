@@ -104,7 +104,9 @@ setup_exception_handlers(app)
 # ── Routers ─────────────────────────────────────────────────────────────
 app.include_router(v1_router)
 app.include_router(public_v2_router)
-app.include_router(analytics_router, prefix="/api")
+# nginx проксирует /api/ → backend со срезанием префикса, поэтому монтируем без
+# "/api" (роутер уже несёт prefix="/analytics"). Путь снаружи: /api/analytics/...
+app.include_router(analytics_router)
 
 # ── Admin Back-office (SQLAdmin, mounted at /admin) ──────────────────────
 setup_admin(app)
