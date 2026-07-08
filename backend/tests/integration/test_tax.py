@@ -90,3 +90,31 @@ async def test_categories_endpoint(
 async def test_search_requires_auth(async_client: AsyncClient) -> None:
     resp = await async_client.get("/v1/tax/search", params={"q": "вычет"})
     assert resp.status_code == 401
+
+
+async def test_deduction_kinds_endpoint(
+    async_client: AsyncClient, auth_headers: dict[str, str]
+) -> None:
+    resp = await async_client.get("/v1/tax/deductions", headers=auth_headers)
+    assert resp.status_code == 200
+    kinds = {k["kind"] for k in resp.json()}
+    assert {"treatment", "property", "mortgage", "iis"} <= kinds
+
+
+async def test_calc_endpoint(async_client: AsyncClient, auth_headers: dict[str, str]) -> None:
+    resp = await async_client.post(
+        "/v1/tax/calc",
+        json={"kind": "property", "amount": "3000000"},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["refund"] == "260000.00"
+
+
+async def test_calc_unknown_kind_400(
+    async_client: AsyncClient, auth_headers: dict[str, str]
+) -> None:
+    resp = await async_client.post(
+        "/v1/tax/calc", json={"kind": "nope", "amount": "1000"}, headers=auth_headers
+    )
+    assert resp.status_code == 400

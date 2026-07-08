@@ -9,14 +9,20 @@ GET /v1/tax/categories    — список категорий (для фильт
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_session
 from src.dependencies import get_current_user
 from src.domain.models import TaxRule, User
-from src.schemas.tax import TaxRuleResult
+from src.schemas.tax import (
+    DeductionKind,
+    DeductionRequest,
+    DeductionResult,
+    TaxRuleResult,
+)
+from src.services.tax_deduction_service import DEDUCTION_KINDS, calculate_deduction
 
 router = APIRouter(tags=["Tax Reference"])
 
@@ -55,3 +61,26 @@ async def list_categories(
 ) -> list[str]:
     stmt = select(TaxRule.category).distinct().order_by(TaxRule.category)
     return list((await session.execute(stmt)).scalars().all())
+
+
+@router.get("/deductions", response_model=list[DeductionKind], summary="Deduction kinds")
+async def list_deduction_kinds(_: User = Depends(get_current_user)) -> list[DeductionKind]:
+    return [
+        DeductionKind(kind=k, label=str(v["label"]), base_limit=v["base_limit"], note=str(v["note"]))  # type: ignore[arg-type]
+        for k, v in DEDUCTION_KINDS.items()
+    ]
+
+
+@router.post("/calc", response_model=DeductionResult, summary="Calculate a tax refund")
+async def calc_deduction(
+    body: DeductionRequest,
+    _: User = Depends(get_current_user),
+) -> DeductionResult:
+    try:
+        result = calculate_deduction(body.kind, body.amount, body.annual_income)
+    except KeyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Неизвестный вид вычета: {body.kind}",
+        ) from exc
+    return DeductionResult.model_validate(result)
