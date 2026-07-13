@@ -1,13 +1,14 @@
 """
-Electro-Treasur — FastAPI Application Factory.
+Electro-Treasur — фабрика приложения FastAPI.
 
-Startup/shutdown lifecycle hooks manage:
-  • Async database engine
-  • Redis connection pool
-  • arq connection pool
+Хуки жизненного цикла startup/shutdown управляют:
+  • асинхронным движком БД
+  • пулом соединений Redis
+  • пулом соединений arq
 
-OpenAPI schema is auto-generated — frontend can derive TypeScript types
-via `openapi-typescript` CLI for Single Source of Truth DTO alignment.
+Схема OpenAPI генерируется автоматически — фронтенд может выводить TypeScript
+типы через CLI `openapi-typescript` для согласования DTO по принципу Single
+Source of Truth.
 """
 
 from __future__ import annotations
@@ -41,10 +42,10 @@ from src.infrastructure.redis_client import close_redis, get_redis
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Manage application lifecycle — startup and shutdown hooks."""
-    # ── Startup ─────────────────────────────────────────────────────────
+    """Управление жизненным циклом приложения — хуки startup и shutdown."""
+    # ── Запуск ─────────────────────────────────────────────────────────
     yield
-    # ── Shutdown ────────────────────────────────────────────────────────
+    # ── Остановка ────────────────────────────────────────────────────────
     await close_redis()
 
 
@@ -55,14 +56,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# ── Proxy headers ────────────────────────────────────────────────────────────
+# ── Proxy-заголовки ────────────────────────────────────────────────────────────
 # Backend слушает :8000 только внутри docker-сети (наружу торчит лишь nginx на
 # 80/443), поэтому доверяем X-Forwarded-For от любого пира: спуфить его извне
 # нельзя. Без этого get_remote_address у rate-limiter'а видел бы IP nginx, а не
 # клиента, и все клиенты попадали бы в одно ведро лимита.
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
-# ── Rate Limiter ─────────────────────────────────────────────────────────────
+# ── Ограничитель запросов (Rate Limiter) ─────────────────────────────────────
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, cast(Any, _rate_limit_exceeded_handler))
 
@@ -101,14 +102,14 @@ async def json_log_middleware(request: Request, call_next: Callable[[Request], A
 
 setup_exception_handlers(app)
 
-# ── Routers ─────────────────────────────────────────────────────────────
+# ── Роутеры ─────────────────────────────────────────────────────────────
 app.include_router(v1_router)
 app.include_router(public_v2_router)
 # nginx проксирует /api/ → backend со срезанием префикса, поэтому монтируем без
 # "/api" (роутер уже несёт prefix="/analytics"). Путь снаружи: /api/analytics/...
 app.include_router(analytics_router)
 
-# ── Admin Back-office (SQLAdmin, mounted at /admin) ──────────────────────
+# ── Админ-панель (SQLAdmin, монтируется в /admin) ──────────────────────
 setup_admin(app)
 
 
@@ -116,7 +117,7 @@ setup_admin(app)
 async def health_check(
     db: AsyncSession = Depends(get_session), redis_client: Redis = Depends(get_redis)
 ) -> dict[str, str]:
-    """Liveness probe resolving actual persistence layers."""
+    """Проверка живости, реально обращающаяся к слоям хранения данных."""
     try:
         await db.execute(text("SELECT 1"))
         await redis_client.ping()

@@ -95,7 +95,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      disable: true  # bot has no HTTP server; the image's :8000 healthcheck would false-fail
+      disable: true  # у бота нет HTTP-сервера; healthcheck образа на :8000 давал бы ложный fail
     dns:
       - 8.8.8.8
       - 1.1.1.1
@@ -114,7 +114,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      disable: true  # worker has no HTTP server; the image's :8000 healthcheck would false-fail
+      disable: true  # у воркера нет HTTP-сервера; healthcheck образа на :8000 давал бы ложный fail
 
 volumes:
   pg_data:

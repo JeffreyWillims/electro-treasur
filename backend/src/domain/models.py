@@ -1,15 +1,15 @@
 """
-SQLAlchemy 2.0 Declarative Models — Normalized Financial Domain.
+Декларативные модели SQLAlchemy 2.0 — нормализованный финансовый домен.
 
-Architectural invariants:
-  • NUMERIC(12,2) for ALL monetary columns — no IEEE-754 float drift.
-  • No day_1…day_31 denormalization — transactions table is the single source of truth.
-  • idempotency_key on Transaction is UNIQUE — DB-level guard against double-writes.
-  • executed_at uses TIMESTAMPTZ — timezone-aware by design.
+Архитектурные инварианты:
+  • NUMERIC(12,2) для ВСЕХ денежных колонок — без дрейфа IEEE-754 float.
+  • Без денормализации day_1…day_31 — таблица transactions является единственным источником истины.
+  • idempotency_key в Transaction — UNIQUE — защита на уровне БД от повторных записей.
+  • executed_at использует TIMESTAMPTZ — учитывает часовой пояс по дизайну.
 
-Complexity:
-  • INSERT  O(1) per transaction (B-Tree on idempotency_key).
-  • SELECT  O(N) scan with index on (user_id, executed_at) for monthly aggregation.
+Сложность:
+  • INSERT  O(1) на транзакцию (B-Tree по idempotency_key).
+  • SELECT  O(N) скан с индексом по (user_id, executed_at) для месячной агрегации.
 """
 
 from __future__ import annotations
@@ -40,25 +40,25 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 class Base(DeclarativeBase):
-    """Shared declarative base for all ORM models."""
+    """Общий декларативный базовый класс для всех ORM-моделей."""
 
 
 class CategoryType(enum.StrEnum):
-    """Discriminator for income vs expense categories."""
+    """Дискриминатор для категорий доход/расход."""
 
     income = "income"
     expense = "expense"
 
 
 class UserRole(enum.StrEnum):
-    """RBAC role. CONSULTANT gets read-only access to granting clients' data."""
+    """Роль RBAC. CONSULTANT получает доступ только на чтение к данным предоставивших доступ клиентов."""
 
     user = "user"
     consultant = "consultant"
 
 
 class User(Base):
-    """Application user — authentication handled externally (JWT / OAuth2)."""
+    """Пользователь приложения — аутентификация обрабатывается извне (JWT / OAuth2)."""
 
     __tablename__ = "users"
 
@@ -81,7 +81,7 @@ class User(Base):
         DateTime(timezone=True), server_default=func.now()
     )
 
-    # ── Relationships ───────────────────────────────────────────────────
+    # ── Отношения ───────────────────────────────────────────────────
     # passive_deletes=True: полагаемся на ON DELETE CASCADE в БД, а не на попытку
     # ORM обнулить NOT NULL внешние ключи детей (иначе NotNullViolationError).
     #
@@ -103,7 +103,7 @@ class User(Base):
 
 
 class Category(Base):
-    """Spending / income category bound to a single user."""
+    """Категория расходов/доходов, привязанная к одному пользователю."""
 
     __tablename__ = "categories"
 
@@ -118,7 +118,7 @@ class Category(Base):
         Enum(CategoryType, name="category_type_enum"), nullable=False
     )
 
-    # ── Relationships ───────────────────────────────────────────────────
+    # ── Отношения ───────────────────────────────────────────────────
     user: Mapped[User] = relationship(back_populates="categories")
     parent: Mapped[Category] = relationship(back_populates="subcategories", remote_side=[id])
     subcategories: Mapped[list[Category]] = relationship(back_populates="parent")
@@ -130,7 +130,7 @@ class Category(Base):
 
 class Budget(Base):
     """
-    Monthly amount limit per category.
+    Месячный лимит суммы по категории.
     """
 
     __tablename__ = "budgets"
@@ -155,18 +155,18 @@ class Budget(Base):
         Numeric(12, 2), nullable=False, server_default=text("0")
     )
 
-    # ── Relationships ───────────────────────────────────────────────────
+    # ── Отношения ───────────────────────────────────────────────────
     user: Mapped[User] = relationship(back_populates="budgets")
     category: Mapped[Category] = relationship(back_populates="budgets")
 
 
 class Transaction(Base):
     """
-    Single financial fact — one row per real-world money movement.
+    Единичный финансовый факт — одна строка на реальное движение денег.
 
-    Race-condition protection:
-      • `idempotency_key` is UNIQUE — INSERT with duplicate key raises IntegrityError.
-      • Application layer checks Redis BEFORE hitting the DB (see transaction_service.py).
+    Защита от гонки условий:
+      • `idempotency_key` уникален — INSERT с дублирующимся ключом бросает IntegrityError.
+      • Слой приложения проверяет Redis ДО обращения к БД (см. transaction_service.py).
     """
 
     __tablename__ = "transactions"
@@ -193,17 +193,17 @@ class Transaction(Base):
         PG_UUID(as_uuid=False), nullable=True, unique=True
     )
 
-    # ── Relationships ───────────────────────────────────────────────────
+    # ── Отношения ───────────────────────────────────────────────────
     user: Mapped[User] = relationship(back_populates="transactions")
     category: Mapped[Category] = relationship(back_populates="transactions")
 
 
 class BankOffer(Base):
     """
-    Partner deposit offer shown in Savings Navigator (CPA monetization).
+    Партнёрское предложение по вкладу, показываемое в Savings Navigator (CPA-монетизация).
 
-    Rates are editable via SQLAdmin; `clicks` is a raw funnel counter for
-    partner negotiations. `partner_url` is the CPA tracking link.
+    Ставки редактируются через SQLAdmin; `clicks` — сырой счётчик воронки для
+    переговоров с партнёрами. `partner_url` — CPA-трекинговая ссылка.
     """
 
     __tablename__ = "bank_offers"
@@ -222,7 +222,7 @@ class BankOffer(Base):
 
 
 class Feedback(Base):
-    """User feedback message. Persisted for audit; email delivery via EmailService."""
+    """Сообщение обратной связи от пользователя. Сохраняется для аудита; доставка письма через EmailService."""
 
     __tablename__ = "feedback"
 
@@ -249,9 +249,33 @@ class GameScore(Base):
     )
 
 
+class Notification(Base):
+    """Уведомление колокольчика — обновление проекта или личное событие пользователя.
+
+    dedup_key делает вставку идемпотентной: записи «Что нового» и рекорды
+    не дублируются при повторных запросах (уникальность на (user_id, dedup_key)).
+    """
+
+    __tablename__ = "notifications"
+    __table_args__ = (
+        UniqueConstraint("user_id", "dedup_key", name="uq_notifications_user_dedup"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    type: Mapped[str] = mapped_column(String(24), nullable=False)
+    title: Mapped[str] = mapped_column(String(160), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    dedup_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    is_read: Mapped[bool] = mapped_column(nullable=False, server_default=text("false"))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
 class ConsultantAccess(Base):
     """
-    Read-only grant: consultant может ЧИТАТЬ транзакции клиента.
+    Грант только на чтение: consultant может ЧИТАТЬ транзакции клиента.
 
     Грант создаёт сам клиент (по email консультанта) — консультант не может
     выдать себе доступ к чужим данным. Одна пара (consultant, client) — одна строка.
@@ -314,10 +338,10 @@ class MerchantRule(Base):
 
 class Insight(Base):
     """
-    Persisted LLM financial insight for one user over one period.
+    Сохранённый LLM-финансовый инсайт для одного пользователя за один период.
 
-    One row per (user, period). Re-running an analysis upserts on the unique
-    constraint, so a month is never duplicated.
+    Одна строка на (user, period). Повторный запуск анализа делает upsert по
+    уникальному ограничению, поэтому месяц никогда не дублируется.
     """
 
     __tablename__ = "insights"

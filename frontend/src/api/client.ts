@@ -392,6 +392,13 @@ export function clickBankOffer(offerId: number): Promise<void> {
 }
 
 // ── Latest persisted monthly insight (Cashflow Prophet) ────────────────
+export interface Psychopassport {
+  persona_code: string;
+  persona_title: string;
+  traits: string[];
+  recommendations: string[];
+}
+
 export interface LatestInsightDto {
   period_start: string;
   period_end: string;
@@ -399,6 +406,7 @@ export interface LatestInsightDto {
   summary: Record<string, unknown>;
   model_used: string;
   created_at: string;
+  psychopassport?: Psychopassport | null;
 }
 
 export function fetchLatestInsight(): Promise<LatestInsightDto | null> {
@@ -608,6 +616,33 @@ export function submitGameScore(game: string, score: number): Promise<{ status: 
     method: 'POST',
     body: JSON.stringify({ game, score }),
   });
+}
+
+export function fetchTotalLeaderboard(): Promise<LeaderboardEntry[]> {
+  return request<LeaderboardEntry[]>('/v1/games/leaderboard/total');
+}
+
+// ── Notifications (колокольчик) ────────────────────────────────────────
+export interface NotificationDto {
+  id: number;
+  type: string;
+  title: string;
+  body: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface NotificationListDto {
+  items: NotificationDto[];
+  unread: number;
+}
+
+export function fetchNotifications(): Promise<NotificationListDto> {
+  return request<NotificationListDto>('/v1/notifications/');
+}
+
+export function markNotificationsRead(): Promise<{ status: string }> {
+  return request<{ status: string }>('/v1/notifications/read-all', { method: 'POST' });
 }
 
 // ── API Keys (Developer) ───────────────────────────────────────────────

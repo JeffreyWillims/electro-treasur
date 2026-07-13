@@ -1,4 +1,4 @@
-"""add rbac role, consultant_access and api_keys tables
+"""добавление таблиц rbac role, consultant_access и api_keys
 
 Revision ID: e7a8b9c0d1f2
 Revises: c1d2e3f4a5b6
@@ -10,7 +10,7 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-# revision identifiers, used by Alembic.
+# идентификаторы ревизии, используются Alembic.
 revision: str = 'e7a8b9c0d1f2'
 down_revision: str | None = 'c1d2e3f4a5b6'
 branch_labels: str | Sequence[str] | None = None

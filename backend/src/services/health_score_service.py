@@ -39,6 +39,16 @@ def compute_health_score(
     rate = float((avg_income - avg_expense) / avg_income) if avg_income > 0 else 0.0
     savings_score = _clamp(rate / 0.20, 0.0, 1.0) * 100  # 20% нормы = 100
 
+    # Человечный текст без отрицательных процентов («Откладывается -45% дохода»).
+    if avg_income <= 0:
+        savings_detail = "Пока нет данных о доходах — добавьте поступления, и оценка оживёт."
+    elif rate < 0:
+        savings_detail = "Расходы превышают доходы — в этом месяце отложить не получилось."
+    elif rate == 0:
+        savings_detail = "Доходы уходят полностью — попробуйте отложить хотя бы немного."
+    else:
+        savings_detail = f"Вы откладываете {rate * 100:.0f}% дохода — ориентир 20%."
+
     # ── Фактор 2: цели (вес 0.25) — нейтрально 60, если целей нет ────────
     goals_score = goals_progress_pct if goals_progress_pct is not None else 60.0
 
@@ -66,16 +76,16 @@ def compute_health_score(
                 "name": "Норма сбережений",
                 "score": round(savings_score),
                 "weight": 0.5,
-                "detail": f"Откладывается {rate * 100:.0f}% дохода (цель — 20%).",
+                "detail": savings_detail,
             },
             {
                 "name": "Цели",
                 "score": round(goals_score),
                 "weight": 0.25,
                 "detail": (
-                    f"Средний прогресс по целям — {goals_progress_pct:.0f}%."
+                    f"Цели пройдены в среднем на {goals_progress_pct:.0f}% — так держать."
                     if goals_progress_pct is not None
-                    else "Целей пока нет — нейтральная оценка."
+                    else "Целей пока нет — поставьте первую, это плюс к оценке."
                 ),
             },
             {
@@ -83,9 +93,9 @@ def compute_health_score(
                 "score": round(budget_score),
                 "weight": 0.25,
                 "detail": (
-                    f"В рамках лимита — {budgets_within_limit_ratio * 100:.0f}% бюджетов."
+                    f"В лимит уложились {budgets_within_limit_ratio * 100:.0f}% бюджетов месяца."
                     if budgets_within_limit_ratio is not None
-                    else "Бюджетов пока нет — нейтральная оценка."
+                    else "Бюджетов пока нет — заведите конверты, и оценка станет точнее."
                 ),
             },
         ],

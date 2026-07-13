@@ -1,9 +1,10 @@
 """
-SQLAdmin Back-office — browser-based control panel for the financial domain.
+SQLAdmin Back-office — панель управления финансовым доменом в браузере.
 
-Mounted at /admin. Single-admin session auth backed by itsdangerous
-(secret_key reused from JWT settings). Login is disabled until
-ET_ADMIN_PASSWORD is set — empty password rejects every attempt.
+Монтируется в /admin. Аутентификация по сессии для единственного админа на
+базе itsdangerous (secret_key переиспользуется из настроек JWT). Вход
+отключён, пока не задан ET_ADMIN_PASSWORD — пустой пароль отклоняет любую
+попытку входа.
 """
 
 from __future__ import annotations
@@ -29,14 +30,14 @@ from src.domain.models import (
 
 
 class AdminAuth(AuthenticationBackend):
-    """Single-admin session login against ET_ADMIN_USERNAME / ET_ADMIN_PASSWORD."""
+    """Вход по сессии для единственного админа против ET_ADMIN_USERNAME / ET_ADMIN_PASSWORD."""
 
     async def login(self, request: Request) -> bool:
         form = await request.form()
         username = str(form.get("username", ""))
         password = str(form.get("password", ""))
         if not settings.admin_password:
-            return False  # admin disabled until password configured
+            return False  # админка отключена, пока не задан пароль
         ok_user = secrets.compare_digest(username, settings.admin_username)
         ok_pass = secrets.compare_digest(password, settings.admin_password)
         if ok_user and ok_pass:
@@ -80,7 +81,7 @@ class UserAdmin(ModelView, model=User):
         User.telegram_chat_id,
         User.created_at,
     ]
-    # Never expose the password hash in edit/create forms.
+    # Никогда не показывать хеш пароля в формах редактирования/создания.
     form_excluded_columns = [
         User.hashed_password,
         User.created_at,
@@ -145,7 +146,7 @@ class BankOfferAdmin(ModelView, model=BankOffer):
         BankOffer.sort_order,
     ]
     column_sortable_list = [BankOffer.id, BankOffer.rate, BankOffer.clicks, BankOffer.sort_order]
-    form_excluded_columns = [BankOffer.clicks, BankOffer.created_at]  # counter is API-owned
+    form_excluded_columns = [BankOffer.clicks, BankOffer.created_at]  # счётчик управляется API
 
 
 class InsightAdmin(ModelView, model=Insight):
@@ -161,7 +162,7 @@ class InsightAdmin(ModelView, model=Insight):
         Insight.created_at,
     ]
     column_sortable_list = [Insight.id, Insight.created_at]
-    can_create = False  # insights are produced by the ARQ pipeline only
+    can_create = False  # инсайты создаются только пайплайном ARQ
     can_edit = False
 
 
@@ -181,7 +182,7 @@ class MerchantRuleAdmin(ModelView, model=MerchantRule):
 
 
 def setup_admin(app: FastAPI) -> None:
-    """Mount the SQLAdmin panel and register all model views."""
+    """Смонтировать панель SQLAdmin и зарегистрировать все view моделей."""
     authentication_backend = AdminAuth(secret_key=settings.secret_key)
     admin = Admin(
         app,

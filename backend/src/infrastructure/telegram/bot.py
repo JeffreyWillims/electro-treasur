@@ -1,19 +1,19 @@
 """
-Telegram Bot Entry Point — Citrine Vault.
+Точка входа Telegram-бота — Citrine Vault.
 
-Lifecycle:
-  1. Instantiate Bot with token from centralized settings.
-  2. Instantiate Dispatcher (no FSM storage needed for stateless commands).
-  3. Create shared async Redis client and inject into Dispatcher workflow data.
-  4. Register DbSessionMiddleware as outer middleware on both message and
-     callback_query observers (covers all update types the bot handles).
-  5. Include the command router.
-  6. Start long-polling. On shutdown: close Redis + Bot session gracefully.
+Жизненный цикл:
+  1. Создать Bot с токеном из централизованных настроек.
+  2. Создать Dispatcher (FSM-хранилище не нужно для stateless-команд).
+  3. Создать общий асинхронный Redis-клиент и внедрить его в workflow data Dispatcher.
+  4. Зарегистрировать DbSessionMiddleware как внешний middleware для observers
+     message и callback_query (покрывает все типы обновлений, обрабатываемые ботом).
+  5. Подключить роутер команд.
+  6. Запустить long-polling. При остановке: аккуратно закрыть Redis + сессию Bot.
 
-Usage (local):
+Использование (локально):
     python -m src.infrastructure.telegram.bot
 
-Usage (Docker):
+Использование (Docker):
     command: python -m src.infrastructure.telegram.bot
 """
 
@@ -57,12 +57,12 @@ async def main() -> None:
     else:
         logger.info("📡 Запуск Telegram без прокси")
         bot = Bot(token=settings.telegram_bot_token)
-    # Shared Redis client — injected via dp workflow_data so handlers can
-    # receive it as `redis_client` parameter via aiogram's DI system.
+    # Общий Redis-клиент — внедряется через dp workflow_data, чтобы хендлеры
+    # могли получать его как параметр `redis_client` через DI-систему aiogram.
     redis_client = Redis.from_url(settings.redis_url, decode_responses=True)
     dp["redis_client"] = redis_client
 
-    # Outer middlewares — execute before any handler, guaranteed session scope.
+    # Внешние middleware — выполняются перед любым хендлером, гарантированная область видимости сессии.
     db_middleware = DbSessionMiddleware()
     dp.message.outer_middleware(db_middleware)
     dp.callback_query.outer_middleware(db_middleware)

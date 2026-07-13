@@ -6,7 +6,7 @@
 
 import { submitGameScore } from '@/api/client';
 
-export type GameKey = 'match' | 'game512' | 'snake';
+export type GameKey = 'match' | 'game512' | 'piggy';
 
 const STORAGE_PREFIX = 'cv_best_';
 const SYNC_DEBOUNCE_MS = 4000;

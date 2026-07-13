@@ -4,33 +4,35 @@
  */
 import {
   Wallet,
-  LogOut,
-  Sliders,
   Sun,
   Moon,
   Menu,
   X,
 } from 'lucide-react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
+import { NotificationBell } from '@/components/layout/NotificationBell';
 
-const NAV_ITEMS = [
+// icon: 'avatar' — вместо эмодзи рендерится кружок с первой буквой имени
+// пользователя (см. ветку в NavLink ниже); данные берутся из useAuth.
+type NavItem = { name: string; path: string; emoji?: string; icon?: 'avatar' };
+
+const NAV_ITEMS: NavItem[] = [
   { name: 'Обзор', path: '/', emoji: '🧭' },
   { name: 'Операции', path: '/transactions', emoji: '💳' },
   { name: 'Бюджеты', path: '/budgets', emoji: '📝' },
   { name: 'Аналитика', path: '/analytics', emoji: '📊' },
   { name: 'Финплан', path: '/savings-navigator', emoji: '🎯' },
-  { name: 'Налоги', path: '/tax', emoji: '📚' },
   { name: 'Игры', path: '/games', emoji: '🎮' },
-  { name: 'Настройки', path: '/settings/profile', emoji: '⚙️' },
+  { name: 'Профиль', path: '/settings/profile', icon: 'avatar' },
 ];
 
-// Пункт виден только роли CONSULTANT — вставляется перед «Настройками».
-const CONSULTANT_NAV_ITEM = { name: 'Мои клиенты', path: '/consultant', emoji: '🤝' };
+// Пункт виден только роли CONSULTANT — вставляется перед «Профилем».
+const CONSULTANT_NAV_ITEM: NavItem = { name: 'Мои клиенты', path: '/consultant', emoji: '🤝' };
 
 function ThemeToggle() {
   const { isDarkMode, toggleTheme } = useTheme();
@@ -69,87 +71,11 @@ function ThemeToggle() {
   );
 }
 
-function UserProfileWidget() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-  const [isOpen, setIsOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const initials = user?.full_name
-    ? user.full_name.charAt(0).toUpperCase()
-    : 'Q';
-
-  const displayName = user?.full_name || user?.email?.split('@')[0] || 'Пользователь';
-
-  return (
-    <div className="relative" ref={menuRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-10 h-10 rounded-full flex items-center justify-center cursor-pointer transition-transform hover:scale-105 bg-black/5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.1),0_1px_0_rgba(255,255,255,0.8)] border border-black/5 dark:bg-black/40 dark:shadow-[inset_0_2px_6px_rgba(0,0,0,0.5),0_1px_0_rgba(255,255,255,0.05)] dark:border-white/5"
-      >
-        <div className="w-8 h-8 bg-gradient-to-br from-[#FF7A00] to-[#FFA011] rounded-full flex items-center justify-center text-white font-bold shadow-sm text-sm">
-          {initials}
-        </div>
-      </button>
-
-      {/* Glass Popover */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.96 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-            className="absolute bottom-14 right-0 min-w-48 bg-white/80 dark:bg-[#121212]/80 backdrop-blur-3xl border border-white/40 dark:border-white/10 rounded-2xl shadow-2xl p-4 z-50 origin-bottom-right"
-          >
-            <div className="mb-3 px-1">
-              <p className="text-base font-bold text-vault-pine dark:text-white leading-tight truncate">
-                {displayName}
-              </p>
-              <p className="text-[11px] font-mono text-vault-pine/50 dark:text-white/40 truncate mt-0.5">
-                {user?.email}
-              </p>
-            </div>
-
-            <div className="h-px bg-black/5 dark:bg-white/5 mb-2 mx-1" />
-
-            <div className="space-y-0.5">
-              <button
-                onClick={() => { navigate('/settings/profile'); setIsOpen(false); }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-vault-pine dark:text-white hover:bg-[#FF7A00]/10 hover:text-[#FF7A00] transition-colors group"
-              >
-                <Sliders size={16} className="text-vault-pine/50 dark:text-white/40 group-hover:text-[#FF7A00]" />
-                <span>Настройки</span>
-              </button>
-
-              <button
-                onClick={() => { logout(); setIsOpen(false); }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-rose-500 hover:bg-rose-500/10 transition-colors"
-              >
-                <LogOut size={16} />
-                <span>Выйти</span>
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
 export function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user } = useAuth();
+  // Единственный аватар приложения — пункт меню «Профиль» (кружок с буквой).
+  const avatarInitial = user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'Q';
   const navItems =
     user?.role === 'consultant'
       ? NAV_ITEMS.flatMap((item) =>
@@ -255,14 +181,23 @@ export function Sidebar() {
                       "dark:bg-black/40 dark:shadow-[inset_0_2px_6px_rgba(0,0,0,0.5),0_1px_0_rgba(255,255,255,0.05)] dark:border-white/5"
                     )} />
 
-                    {/* The Emoji */}
+                    {/* The Emoji / Avatar */}
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <span className={cn(
-                        "text-xl transition-all duration-300 drop-shadow-sm",
-                        isActive ? "opacity-100 scale-110" : "opacity-50 grayscale-[50%] hover:grayscale-0 hover:opacity-100"
-                      )}>
-                        {item.emoji}
-                      </span>
+                      {item.icon === 'avatar' ? (
+                        <span className={cn(
+                          "w-6 h-6 rounded-full bg-gradient-to-br from-[#FF7A00] to-[#FFA011] flex items-center justify-center text-white text-[11px] font-bold shadow-sm transition-all duration-300",
+                          isActive ? "opacity-100 scale-110" : "opacity-50 grayscale-[50%] group-hover:grayscale-0 group-hover:opacity-100"
+                        )}>
+                          {avatarInitial}
+                        </span>
+                      ) : (
+                        <span className={cn(
+                          "text-xl transition-all duration-300 drop-shadow-sm",
+                          isActive ? "opacity-100 scale-110" : "opacity-50 grayscale-[50%] hover:grayscale-0 hover:opacity-100"
+                        )}>
+                          {item.emoji}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <span className="font-semibold text-[#1C3F35] dark:text-white tracking-tight text-base">
@@ -277,7 +212,7 @@ export function Sidebar() {
         {/* Compact Dock Bottom Section */}
         <div className="flex justify-between items-center w-full px-2 mt-auto pt-6 border-t border-[#FF7A00]/[0.06]">
           <ThemeToggle />
-          <UserProfileWidget />
+          <NotificationBell />
         </div>
       </aside>
     </>

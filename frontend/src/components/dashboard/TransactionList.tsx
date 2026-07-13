@@ -2,13 +2,12 @@
  * TransactionList — Premium Infinite Ledger with Dual-Mode Editing.
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchTransactions, fetchCategories, updateTransaction, deleteTransaction, exportTransactions } from '@/api/client';
+import { fetchTransactions, fetchCategories, updateTransaction, deleteTransaction } from '@/api/client';
 import type { CategoryRead, TransactionResponse, TransactionUpdate } from '@/types';
 import { cn } from '@/lib/utils';
 import { getLocalDateString } from '@/lib/dateUtils';
-import { Search, X, SlidersHorizontal, Upload, Download, ScanLine } from 'lucide-react';
+import { Search, X, SlidersHorizontal, ScanLine } from 'lucide-react';
 import { GlassDateRangePicker } from '@/components/ui/GlassDateRangePicker';
-import { DataVaultModal } from './DataVaultModal';
 import { StatementImportModal } from './StatementImportModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useCallback, useEffect, useRef } from 'react';
@@ -83,21 +82,7 @@ export function TransactionList() {
   const filterRef = useRef<HTMLDivElement>(null);
   useOnClickOutside(filterRef, () => setIsFiltersOpen(false));
 
-  const [isVaultOpen, setIsVaultOpen] = useState(false);
   const [isScanOpen, setIsScanOpen] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-
-  const handleExport = useCallback(async () => {
-    setIsExporting(true);
-    try {
-      await exportTransactions();
-      toast.success('Данные экспортированы');
-    } catch {
-      toast.error('Ошибка экспорта');
-    } finally {
-      setIsExporting(false);
-    }
-  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -218,14 +203,6 @@ export function TransactionList() {
                     <ScanLine className="w-4 h-4 text-[#1C3F35]/50 dark:text-white/50 group-hover:text-[#FF7A00] transition-colors" />
                     Сканировать
                   </button>
-                  <button onClick={() => setIsVaultOpen(true)} className="group flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors font-bold text-sm text-[#1C3F35] dark:text-white">
-                    <Upload className="w-4 h-4 text-[#1C3F35]/50 dark:text-white/50 group-hover:text-[#FF7A00] transition-colors" />
-                    Импорт
-                  </button>
-                  <button onClick={handleExport} disabled={isExporting} className="group flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors font-bold text-sm text-[#1C3F35] dark:text-white disabled:opacity-50">
-                    {isExporting ? <motion.div className="w-4 h-4 border-2 border-[#1C3F35]/20 dark:border-white/20 border-t-[#FF7A00] rounded-full" animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} /> : <Download className="w-4 h-4 text-[#1C3F35]/50 dark:text-white/50 group-hover:text-[#FF7A00] transition-colors" />}
-                    Экспорт
-                  </button>
                 </div>
               </div>
             </div>
@@ -268,25 +245,25 @@ export function TransactionList() {
                           </p>
 
                           <div>
-                            <label className="text-[12px] font-mono font-bold uppercase tracking-[0.25em] text-[#1C3F35] dark:text-emerald-500 mb-2 block">Категория</label>
+                            <label className="text-sm font-bold tracking-wide text-slate-800 dark:text-white mb-2 block">Категория</label>
                             <select value={selectedCategory} onChange={(e) => { setSelectedCategory(e.target.value); setPage(1); }} className={cn(filterInputStyle, "cursor-pointer appearance-none")}>
                               <option value="" className="bg-white dark:bg-[#1A1A1A]">Все категории</option>
                               {categories.map(c => <option key={c.id} value={c.id} className="bg-white dark:bg-[#1A1A1A]">{getRussianCategoryName(c.name)}</option>)}
                             </select>
                           </div>
                           <div>
-                            <label className="text-[12px] font-mono font-bold uppercase tracking-[0.25em] text-[#1C3F35] dark:text-emerald-500 mb-2 block">Сумма</label>
+                            <label className="text-sm font-bold tracking-wide text-slate-800 dark:text-white mb-2 block">Сумма</label>
                             <div className="grid grid-cols-2 gap-2">
                               <input type="number" placeholder="От ₽" value={minAmount} onChange={(e) => { setMinAmount(e.target.value); setPage(1); }} className={filterInputStyle} />
                               <input type="number" placeholder="До ₽" value={maxAmount} onChange={(e) => { setMaxAmount(e.target.value); setPage(1); }} className={filterInputStyle} />
                             </div>
                           </div>
                           <div>
-                            <label className="text-[12px] font-mono font-bold uppercase tracking-[0.25em] text-[#1C3F35] dark:text-emerald-500 mb-2 block">Период</label>
+                            <label className="text-sm font-bold tracking-wide text-slate-800 dark:text-white mb-2 block">Период</label>
                             <GlassDateRangePicker startDate={startDate} endDate={endDate} onChange={(s, e) => { setStartDate(s); setEndDate(e); setPage(1); }} align="right" />
                           </div>
                           <div>
-                            <label className="text-[12px] font-mono font-bold uppercase tracking-[0.25em] text-[#1C3F35] dark:text-emerald-500 mb-2 block">Тип операции</label>
+                            <label className="text-sm font-bold tracking-wide text-slate-800 dark:text-white mb-2 block">Тип операции</label>
                             <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }} className={cn(filterInputStyle, "cursor-pointer appearance-none")}>
                               <option value="" className="bg-white dark:bg-[#1A1A1A]">Все типы</option>
                               <option value="income" className="bg-white dark:bg-[#1A1A1A]">Доходы</option>
@@ -421,7 +398,6 @@ export function TransactionList() {
           </>
         )}
       </AnimatePresence>
-      <DataVaultModal isOpen={isVaultOpen} onClose={() => setIsVaultOpen(false)} />
       <StatementImportModal isOpen={isScanOpen} onClose={() => setIsScanOpen(false)} />
     </>
   );

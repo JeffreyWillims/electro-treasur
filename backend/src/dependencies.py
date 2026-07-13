@@ -1,8 +1,8 @@
 """
-FastAPI Dependencies — Dependency Injection layer.
+FastAPI Dependencies — слой Dependency Injection.
 
-Provides async DB sessions and Redis clients to route handlers
-via FastAPI's Depends() mechanism.
+Предоставляет асинхронные сессии БД и клиенты Redis обработчикам роутов
+через механизм Depends() из FastAPI.
 """
 
 from __future__ import annotations
@@ -24,20 +24,20 @@ ACCESS_COOKIE = "access_token"
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """Yield an async SQLAlchemy session, auto-close on exit."""
+    """Отдать асинхронную сессию SQLAlchemy, автоматически закрыв её при выходе."""
     async with async_session_factory() as session:
         yield session
 
 
 async def get_redis_client() -> Redis:
-    """Return a shared async Redis client."""
+    """Вернуть общий асинхронный клиент Redis."""
     return await get_redis()
 
 
 async def get_current_user(request: Request, db: AsyncSession = Depends(get_db)) -> User:
     """
-    Retrieve the current user from the httpOnly access_token cookie.
-    Throws 401 if the cookie is missing/invalid or the user is not found.
+    Получить текущего пользователя из httpOnly cookie access_token.
+    Бросает 401, если cookie отсутствует/невалиден или пользователь не найден.
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

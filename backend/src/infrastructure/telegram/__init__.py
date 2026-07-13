@@ -1,1 +1,1 @@
-# Telegram bot infrastructure package marker.
+# Маркер пакета инфраструктуры Telegram-бота.

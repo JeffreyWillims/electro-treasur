@@ -3,7 +3,8 @@ Savings Goals — режим «Цель» Savings Navigator, сохранённ�
 
 POST   /v1/goals/                 — создать цель (из калькулятора «Цель»).
 GET    /v1/goals/                 — список целей с прогрессом (для дашборда).
-PATCH  /v1/goals/{id}/contribute  — пополнить фактическую сумму (current_amount).
+PATCH  /v1/goals/{id}/contribute  — пополнить фактическую сумму (current_amount)
+                                    + расходная транзакция «Цель: {имя}».
 DELETE /v1/goals/{id}             — удалить цель.
 """
 
@@ -17,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_session
 from src.dependencies import get_current_user
-from src.domain.models import SavingsGoal, User
+from src.domain.models import Category, CategoryType, SavingsGoal, Transaction, User
 from src.schemas.goal import GoalContribute, GoalCreate, GoalResponse
 
 router = APIRouter(tags=["Savings Goals"])
@@ -45,6 +46,28 @@ async def _owned_goal(goal_id: int, session: AsyncSession, user: User) -> Saving
     if goal is None or goal.user_id != user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Goal not found")
     return goal
+
+
+async def _goal_expense_category(session: AsyncSession, user: User, goal: SavingsGoal) -> Category:
+    """
+    Find-or-create системной расходной категории «Цель: {имя цели}».
+
+    Создаётся при первом взносе и переиспользуется дальше, чтобы взносы были
+    видны в операциях и структуре расходов. Имя обрезается до лимита колонки
+    (String(128)): «Цель: » + имя цели длиной 128 может превысить его.
+    """
+    name = f"Цель: {goal.name}"[:128]
+    stmt = select(Category).where(
+        Category.user_id == user.id,
+        Category.name == name,
+        Category.type == CategoryType.expense,
+    )
+    category = (await session.execute(stmt)).scalars().first()
+    if category is None:
+        category = Category(user_id=user.id, name=name, type=CategoryType.expense)
+        session.add(category)
+        await session.flush()  # получить category.id до вставки транзакции
+    return category
 
 
 @router.post("/", response_model=GoalResponse, status_code=status.HTTP_201_CREATED)
@@ -89,6 +112,20 @@ async def contribute(
 ) -> GoalResponse:
     goal = await _owned_goal(goal_id, session, current_user)
     goal.current_amount += body.amount
+
+    # Взнос — это реальный отток денег: фиксируем расходную транзакцию в
+    # системной категории «Цель: {имя}», чтобы свободные средства оставались
+    # честными (executed_at = now() по server_default, как момент взноса).
+    category = await _goal_expense_category(session, current_user, goal)
+    session.add(
+        Transaction(
+            user_id=current_user.id,
+            category_id=category.id,
+            amount=body.amount,
+            entry_type="goal_contribution",
+        )
+    )
+
     await session.commit()
     await session.refresh(goal)
     return _to_response(goal)

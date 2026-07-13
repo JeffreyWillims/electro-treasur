@@ -1,8 +1,8 @@
 """
-tests/integration/conftest.py — Integration Test Guard.
+tests/integration/conftest.py — страж интеграционных тестов.
 
-Auto-skips all integration tests when PostgreSQL is not reachable,
-instead of crashing with ConnectionRefusedError.
+Автоматически скипает все интеграционные тесты, если PostgreSQL недоступен,
+вместо падения с ConnectionRefusedError.
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ import pytest
 
 
 def _pg_is_reachable() -> bool:
-    """Synchronous check: can we connect to the test PostgreSQL?"""
+    """Синхронная проверка: доступен ли тестовый PostgreSQL?"""
     try:
         from src.config import settings
 
@@ -44,7 +44,7 @@ _PG_AVAILABLE = _pg_is_reachable()
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
-    """Skip integration tests if PostgreSQL is not available."""
+    """Скипает интеграционные тесты, если PostgreSQL недоступен."""
     if _PG_AVAILABLE:
         return
 

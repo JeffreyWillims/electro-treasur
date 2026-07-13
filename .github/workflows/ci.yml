@@ -1,15 +1,15 @@
 ###############################################################################
-# Citrine Vault — Unified CI/CD Pipeline
+# Citrine Vault — единый пайплайн CI/CD
 #
-# Single pipeline replacing backend_tests.yml + production.yml.
+# Один пайплайн вместо backend_tests.yml + production.yml.
 #
-# Jobs:
+# Джобы:
 #   1. lint       — ruff check, ruff format --check, mypy (backend)
 #   2. frontend   — tsc --noEmit, vite build (frontend)
 #   3. test       — PostgreSQL 16 + pytest unit/integration + coverage ≥ 70%
-#   4. build      — Docker multi-stage → push to GHCR (main push only)
+#   4. build      — Docker multi-stage → push в GHCR (только при push в main)
 #
-# Concurrency: auto-cancels previous runs for same branch/PR.
+# Concurrency: автоматически отменяет предыдущие запуски для той же ветки/PR.
 ###############################################################################
 
 name: CI/CD
@@ -33,7 +33,7 @@ env:
 # ═══════════════════════════════════════════════════════════════════════════════
 jobs:
 
-  # ── 1. Backend Static Analysis ─────────────────────────────────────────────
+  # ── 1. Статический анализ бэкенда ──────────────────────────────────────────
   lint:
     name: 🔍 Backend Lint
     runs-on: ubuntu-latest
@@ -70,7 +70,7 @@ jobs:
           pip install pip-audit
           pip-audit --desc -r requirements.txt
 
-  # ── 2. Frontend Build Verification ─────────────────────────────────────────
+  # ── 2. Проверка сборки фронтенда ───────────────────────────────────────────
   frontend:
     name: ⚛️ Frontend Build
     runs-on: ubuntu-latest
@@ -96,7 +96,7 @@ jobs:
       - name: Build production bundle
         run: npm run build
 
-  # ── 3. Backend Tests (Unit + Integration) ──────────────────────────────────
+  # ── 3. Тесты бэкенда (Unit + Integration) ──────────────────────────────────
   test:
     name: 🧪 Backend Tests
     runs-on: ubuntu-latest
@@ -175,7 +175,7 @@ jobs:
             backend/coverage.xml
           retention-days: 30
 
-  # ── 4. Docker Build & Push to GHCR ─────────────────────────────────────────
+  # ── 4. Сборка и пуш Docker-образа в GHCR ───────────────────────────────────
   build:
     name: 🐳 Build & Push
     runs-on: ubuntu-latest
@@ -214,7 +214,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ── 5. Continuous Deployment → VPS ──────────────────────────────────────────
+  # ── 5. Непрерывный деплой → VPS ─────────────────────────────────────────────
   # Требуемые GitHub Secrets: VPS_HOST, VPS_USER, VPS_SSH_KEY, VPS_PROJECT_DIR.
   # Порядок внутри скрипта — expand-фаза zero-downtime деплоя:
   # образы тянутся заранее, миграции (backward-compatible!) применяются НОВЫМ

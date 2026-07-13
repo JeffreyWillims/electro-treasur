@@ -1,5 +1,5 @@
 /**
- * MainAnalytics.tsx — Data Cortex (Single Query Orchestrator)
+ * MainAnalytics.tsx — информационное ядро (единый оркестратор запросов)
  */
 import { useState, useMemo } from 'react';
 import { GlassDateRangePicker } from '@/components/ui/GlassDateRangePicker';
@@ -9,6 +9,9 @@ import { motion } from 'framer-motion';
 import { fetchDashboard, fetchCategories } from '@/api/client';
 import { SpendingChart } from '@/components/dashboard/SpendingChart';
 import { CategoryPieChart } from '@/components/dashboard/CategoryPieChart';
+import { HealthScoreCard } from '@/components/dashboard/HealthScoreCard';
+import { PurchaseAdvisor } from '@/components/dashboard/PurchaseAdvisor';
+import { DailyTip } from '@/components/analytics/DailyTip';
 import { CapitalGrowthChart } from '@/components/analytics/CapitalGrowthChart';
 import type { DashboardResponse, CategoryRead, CategoryRowSchema } from '@/types';
 
@@ -150,7 +153,7 @@ export function MainAnalytics() {
       transition={{ duration: 0.6, ease: "easeOut" }}
       className="flex flex-col gap-10 w-full mt-4 pb-24"
     >
-      {/* ═══ HEADER ═══ */}
+      {/* ═══ ШАПКА ═══ */}
       <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6 mb-2">
         <div className="flex items-center gap-4">
           <HolographicPrism />
@@ -169,7 +172,7 @@ export function MainAnalytics() {
         />
       </div>
 
-      {/* ═══ LOADING STATE ═══ */}
+      {/* ═══ СОСТОЯНИЕ ЗАГРУЗКИ ═══ */}
       {isLoading && (
         <div className="flex items-center justify-center py-32">
            <motion.div
@@ -180,9 +183,12 @@ export function MainAnalytics() {
         </div>
       )}
 
-      {/* ═══ THE THREE DATA STORIES ═══ */}
+      {/* ═══ ТРИ ИСТОРИИ ДАННЫХ ═══ */}
       {!isLoading && (
         <div className="flex flex-col gap-8 w-full">
+          <DailyTip />
+          <PurchaseAdvisor startDate={startDate} endDate={endDate} />
+          <HealthScoreCard />
           <SpendingChart dailyFlows={dailyFlows} totalIncome={totalIncome} totalExpense={totalExpense} />
           <CategoryPieChart categoryTotals={categoryTotals} />
           <CapitalGrowthChart dailyFlows={dailyFlows} />

@@ -1,1 +1,1 @@
-# Page Object Model classes for Playwright E2E tests
+# Классы Page Object Model для E2E-тестов на Playwright

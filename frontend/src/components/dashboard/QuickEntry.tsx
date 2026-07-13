@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { PlusCircle, Search, Plus, Check, Settings } from 'lucide-react';
 import { createTransaction, fetchCategories, createCategory } from '@/api/client';
+import { VoiceInput } from '@/components/dashboard/VoiceInput';
 import type { CategoryRead } from '@/types';
 import { getLocalDateString } from '@/lib/dateUtils';
 import { cn } from '@/lib/utils';
@@ -153,6 +154,20 @@ export function QuickEntry() {
 
   const selectedCat = categories.find((c) => c.id === selectedCategoryId);
 
+  // Голосовой ввод: «500 кофе» → сумма 500, остальное — в «Детали».
+  const handleVoiceResult = (text: string) => {
+    const match = text.match(/\d[\d\s]*(?:[.,]\d+)?/);
+    if (match) {
+      setAmount(match[0].replace(/\s/g, '').replace(',', '.'));
+      const rest = text.replace(match[0], '').trim();
+      if (rest) setSubcategory(rest.charAt(0).toUpperCase() + rest.slice(1));
+      toast.success('Распознано — проверьте сумму и детали перед сохранением');
+    } else {
+      setSubcategory(text.charAt(0).toUpperCase() + text.slice(1));
+      toast.info('Сумму не расслышал — записал текст в детали');
+    }
+  };
+
   const inputWrapperStyle = cn(
     "flex items-center w-full rounded-2xl h-14 md:h-16 px-4 md:px-5 transition-all duration-300",
     "bg-black/5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] border border-transparent",
@@ -203,6 +218,7 @@ export function QuickEntry() {
               <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="ml-2 bg-transparent text-sm md:text-base font-bold uppercase tracking-widest text-[#1C3F35] dark:text-white outline-none cursor-pointer">
                 {CURRENCIES.map((c) => <option key={c} value={c} className="bg-white dark:bg-[#1A1A1A] text-[#1C3F35] dark:text-white">{c}</option>)}
               </select>
+              <VoiceInput onResult={handleVoiceResult} />
             </div>
           </div>
 

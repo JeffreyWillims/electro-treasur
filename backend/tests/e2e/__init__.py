@@ -1,1 +1,1 @@
-# E2E tests — Playwright browser automation
+# E2E-тесты — автоматизация браузера через Playwright

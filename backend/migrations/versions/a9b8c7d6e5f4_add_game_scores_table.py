@@ -1,4 +1,4 @@
-"""add game_scores table
+"""добавление таблицы game_scores
 
 Revision ID: a9b8c7d6e5f4
 Revises: f3b4c5d6e7a8
@@ -10,7 +10,7 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-# revision identifiers, used by Alembic.
+# идентификаторы ревизии, используются Alembic.
 revision: str = 'a9b8c7d6e5f4'
 down_revision: str | None = 'f3b4c5d6e7a8'
 branch_labels: str | Sequence[str] | None = None

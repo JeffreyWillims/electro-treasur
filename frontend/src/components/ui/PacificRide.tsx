@@ -21,57 +21,19 @@ interface PacificRideProps {
 const COLS = 9;
 const MAX_CELLS = 1000;
 
-const LEVELS = [
-  {
-    label: 'УРОВЕНЬ 1 · ОБУЧЕНИЕ',
-    hint: 'Одинаковые или в сумме 10 — пустые ячейки пропускаются',
-    grid: [
-      1, 2, 3, 4, 5, 6, 7, 8, 9,
-      1, 1, 1, 2, 1, 3, 1, 4, 1,
-    ],
-  },
-  {
-    label: 'УРОВЕНЬ 2 · КЛАССИКА',
-    hint: 'По горизонтали, вертикали и диагонали',
-    grid: [
-      1, 2, 3, 4, 5, 6, 7, 8, 9,
-      1, 1, 1, 2, 1, 3, 1, 4, 1,
-      5, 1, 6, 1, 7, 1, 8, 1, 9,
-    ],
-  },
-  {
-    label: 'УРОВЕНЬ 3 · МАСТЕР',
-    hint: 'Думай наперёд — не все пары на поверхности',
-    grid: [
-      3, 5, 4, 6, 2, 8, 1, 9, 7,
-      5, 5, 6, 7, 4, 8, 3, 2, 1,
-      2, 8, 3, 7, 6, 4, 9, 1, 5,
-      4, 6, 5, 5, 8, 2, 7, 3, 9,
-    ],
-  },
-  {
-    label: 'УРОВЕНЬ 4 · ЭКСПЕРТ',
-    hint: 'Добавления ограничены — трать с умом',
-    grid: [
-      7, 2, 9, 4, 6, 3, 8, 5, 1,
-      3, 8, 1, 6, 2, 7, 4, 9, 5,
-      6, 4, 7, 3, 9, 2, 5, 8, 1,
-      9, 1, 5, 8, 4, 6, 2, 7, 3,
-      2, 7, 4, 9, 1, 5, 8, 3, 6,
-    ],
-  },
-  {
-    label: 'УРОВЕНЬ 5 · ЛЕГЕНДА',
-    hint: 'Финал: серия комбо решает всё',
-    grid: [
-      4, 9, 2, 7, 5, 3, 8, 6, 1,
-      8, 3, 6, 1, 9, 4, 2, 7, 5,
-      1, 5, 8, 4, 2, 9, 6, 3, 7,
-      7, 2, 4, 9, 6, 1, 5, 8, 3,
-      5, 8, 3, 6, 7, 2, 9, 1, 4,
-    ],
-  },
+// Метаданные уровней: числа на поле генерируются случайно при каждой партии
+// (rows × COLS цифр 1–9), поэтому две партии подряд больше не совпадают.
+const LEVEL_META = [
+  { label: 'УРОВЕНЬ 1 · ОБУЧЕНИЕ', hint: 'Одинаковые или в сумме 10 — пустые ячейки пропускаются', rows: 2 },
+  { label: 'УРОВЕНЬ 2 · КЛАССИКА', hint: 'По горизонтали, вертикали и диагонали', rows: 3 },
+  { label: 'УРОВЕНЬ 3 · МАСТЕР', hint: 'Думай наперёд — не все пары на поверхности', rows: 4 },
+  { label: 'УРОВЕНЬ 4 · ЭКСПЕРТ', hint: 'Добавления ограничены — трать с умом', rows: 5 },
+  { label: 'УРОВЕНЬ 5 · ЛЕГЕНДА', hint: 'Финал: серия комбо решает всё', rows: 5 },
 ] as const;
+
+function randomGrid(rows: number): number[] {
+  return Array.from({ length: rows * COLS }, () => 1 + Math.floor(Math.random() * 9));
+}
 
 // Игровая экономика: очки за пару растут с комбо, окно серии тает за 5 секунд.
 const MATCH_POINTS = 10;
@@ -218,7 +180,7 @@ function HelpScreen({ onClose }: { onClose: () => void }) {
 }
 
 function WinScreen({ levelIdx, score, onNext }: { levelIdx: number; score: number; onNext: () => void }) {
-  const isLast = levelIdx >= LEVELS.length - 1;
+  const isLast = levelIdx >= LEVEL_META.length - 1;
   const textVariants = {
     hidden: { opacity: 0, y: 18 },
     show: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.15, duration: 0.45, ease: 'easeOut' as const } }),
@@ -316,7 +278,9 @@ const MATCH_FLASH_MS = 280;
 
 function NumberMatchGame() {
   const [levelIdx, setLevelIdx]       = useState(0);
-  const [cells, setCells]             = useState<Cell[]>(() => makeGrid(LEVELS[0].grid));
+  // Случайные сетки на всю партию; пересоздаются при рестарте уровня.
+  const gridsRef                      = useRef<number[][]>(LEVEL_META.map((m) => randomGrid(m.rows)));
+  const [cells, setCells]             = useState<Cell[]>(() => makeGrid(gridsRef.current[0]!));
   const [selectedId, setSelectedId]   = useState<string | null>(null);
   const [badId, setBadId]             = useState<string | null>(null);
   const [panelShake, setPanelShake]   = useState(false);
@@ -385,9 +349,9 @@ function NumberMatchGame() {
 
   const goNextLevel = useCallback(() => {
     const next = levelIdx + 1;
-    if (next < LEVELS.length) {
+    if (next < LEVEL_META.length) {
       setLevelIdx(next);
-      setCells(makeGrid(LEVELS[next]!.grid));
+      setCells(makeGrid(gridsRef.current[next]!));
       setSelectedId(null);
       setBadId(null);
       setPanelShake(false);
@@ -398,7 +362,9 @@ function NumberMatchGame() {
   }, [levelIdx, resetCombo]);
 
   const restartLevel = useCallback(() => {
-    setCells(makeGrid((LEVELS[levelIdx] ?? LEVELS[0]).grid));
+    // Новый случайный расклад на этот же уровень — «разброс» при каждом рестарте.
+    gridsRef.current[levelIdx] = randomGrid(LEVEL_META[levelIdx]?.rows ?? 2);
+    setCells(makeGrid(gridsRef.current[levelIdx]!));
     setSelectedId(null);
     setBadId(null);
     setPanelShake(false);
@@ -457,7 +423,7 @@ function NumberMatchGame() {
     setSelectedId(null);
   }, [cells, addsLeft]);
 
-  const level = LEVELS[levelIdx] ?? LEVELS[0]!;
+  const level = LEVEL_META[levelIdx] ?? LEVEL_META[0]!;
 
   const cellElements = useMemo(() =>
     cells.map((cell) => (
@@ -552,7 +518,7 @@ function NumberMatchGame() {
               <div className="text-center">
                 <p className="text-[9px] font-mono uppercase tracking-wider text-slate-400">Уровень</p>
                 <p className="text-lg font-black text-orange-500 leading-none">
-                  {levelIdx + 1} / {LEVELS.length}
+                  {levelIdx + 1} / {LEVEL_META.length}
                 </p>
               </div>
             </div>

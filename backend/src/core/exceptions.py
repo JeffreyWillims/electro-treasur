@@ -1,9 +1,9 @@
 """
-Global Exception Shield.
+Глобальный щит исключений.
 
-Intercepts standard Exceptions and HTTPExceptions to sanitize
-output and prevent stack trace leaks. Generates error_ids
-for telemetry tracing in the JSON logs.
+Перехватывает стандартные Exception и HTTPException, чтобы очистить
+вывод и предотвратить утечку stack trace. Генерирует error_id
+для трассировки телеметрии в JSON-логах.
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ def setup_exception_handlers(app: FastAPI) -> None:
     async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
         error_id = f"aura_err_{int(datetime.now().timestamp())}_{uuid.uuid4().hex[:6]}"
 
-        # Log the full traceback with the error_id for observability
+        # Логируем полный traceback вместе с error_id для наблюдаемости
         error_msg = (
             f"❌ Geodetic Trap [{error_id}]: Unhandled Exception in "
             f"{request.method} {request.url.path}\n"
@@ -33,7 +33,7 @@ def setup_exception_handlers(app: FastAPI) -> None:
         )
         logging.getLogger("uvicorn.error").error(error_msg)
 
-        # Return sanitized JSON to client
+        # Возвращаем клиенту очищенный JSON
         return JSONResponse(
             status_code=500,
             content={"detail": "Внутренняя ошибка сервера", "error_id": error_id},

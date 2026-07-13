@@ -8,7 +8,7 @@ import {
   AreaChart, Area, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid,
 } from 'recharts';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import {
   fetchDashboard, fetchAnalyticsProfile,
@@ -16,6 +16,8 @@ import {
   downloadFinancialPlanPdf,
 } from '@/api/client';
 import { InsightHistory } from '@/components/insights/InsightHistory';
+import { PsychopassportCard } from '@/components/analytics/PsychopassportCard';
+import { TaxGuide } from '@/components/tax/TaxGuide';
 import { cn } from '@/lib/utils';
 
 const INFINITY_PATH = "M50,50 C50,32 28,32 28,50 C28,68 50,68 50,50 C50,32 72,32 72,50 C72,68 50,68 50,50";
@@ -135,6 +137,7 @@ export function SavingsNavigator() {
   const [inflation, setInflation] = useState(8);
   const [goalSum, setGoalSum] = useState<string>('');
   const [goalName, setGoalName] = useState<string>('');
+  const [taxOpen, setTaxOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const effCapital = startCapital !== '' ? parseSum(startCapital) : dbBalance;
@@ -261,12 +264,12 @@ export function SavingsNavigator() {
   const inputStyles = "flex-1 w-full bg-transparent outline-none text-xl md:text-2xl font-sans font-black tabular-nums tracking-tighter text-[#1C3F35] dark:text-white placeholder-[#1C3F35]/30 dark:placeholder-white/30";
 
   // 🔥 ЭТАЛОННЫЙ ШРИФТ ИЗ QUICK ENTRY
-  const premiumLabelStyle = "block mb-2 text-[14px] md:text-[15px] font-sans font-extrabold tracking-tight text-[#1C3F35] dark:text-emerald-400 dark:drop-shadow-[0_0_8px_rgba(52,211,153,0.6)]";
+  const premiumLabelStyle = "block mb-2 text-[14px] md:text-[15px] font-sans font-extrabold tracking-tight text-[#1C3F35] dark:text-white";
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: 'easeOut' }} className="flex flex-col gap-10 w-full mt-4 pb-24">
 
-      {/* ═══ HEADER ═══ */}
+      {/* ═══ ШАПКА ═══ */}
       <div className="flex items-center gap-5 mb-2">
         <div className="bg-white/40 dark:bg-[#111111]/40 backdrop-blur-3xl rounded-2xl p-2 border border-black/5 dark:border-white/10 shadow-sm shrink-0">
            <ChronosCore />
@@ -278,7 +281,7 @@ export function SavingsNavigator() {
         </div>
       </div>
 
-      {/* ═══ THE CONTROL DECK ═══ */}
+      {/* ═══ ПАНЕЛЬ УПРАВЛЕНИЯ ═══ */}
       <div className="bg-white/40 dark:bg-[#111111]/40 backdrop-blur-3xl border border-black/5 dark:border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-2xl">
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
@@ -470,7 +473,7 @@ export function SavingsNavigator() {
         </motion.div>
       )}
 
-      {/* ═══ RESULT BANNER ═══ */}
+      {/* ═══ ИТОГОВЫЙ БАННЕР ═══ */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[
           { label: 'Инвестиции (реальн.)', val: finalInvested, color: 'text-emerald-600 dark:text-emerald-400' },
@@ -489,7 +492,7 @@ export function SavingsNavigator() {
         ))}
       </div>
 
-      {/* ═══ DUAL REALITY CHART ═══ */}
+      {/* ═══ ГРАФИК ДВОЙНОЙ РЕАЛЬНОСТИ ═══ */}
       <div className={`bg-white/40 dark:bg-[#111111]/40 backdrop-blur-3xl border border-black/5 dark:border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-2xl transition-opacity duration-300 ${isStale ? 'opacity-50' : 'opacity-100'}`}>
         <div className="mb-8">
           <h2 className="text-xl md:text-2xl font-sans font-extrabold tracking-tight text-[#1C3F35] dark:text-white">
@@ -587,9 +590,11 @@ export function SavingsNavigator() {
         </div>
       )}
 
+      <PsychopassportCard psychopassport={aiInsight?.psychopassport} />
+
       <InsightHistory />
 
-      {/* ═══ SHARE ═══ */}
+      {/* ═══ ПОДЕЛИТЬСЯ ═══ */}
       <div className="flex flex-wrap justify-center gap-3">
         <motion.button
           whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
@@ -621,6 +626,39 @@ export function SavingsNavigator() {
         >
           Скачать PDF-план
         </motion.button>
+      </div>
+
+      {/* ═══ НАЛОГИ И ВЫЧЕТЫ (спрятано, раскрывается по клику) ═══ */}
+      <div className="rounded-[2rem] border border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/5 overflow-hidden">
+        <button
+          onClick={() => setTaxOpen((o) => !o)}
+          className="w-full flex items-center justify-between px-7 py-5"
+        >
+          <span className="flex items-center gap-3 font-sans font-extrabold text-[#1C3F35] dark:text-white">
+            <span className="text-xl">📚</span>
+            Налоги и вычеты
+            <span className="text-[11px] font-bold text-[#1C3F35]/40 dark:text-white/40 uppercase tracking-wide">
+              калькулятор + поиск норм
+            </span>
+          </span>
+          <motion.span animate={{ rotate: taxOpen ? 180 : 0 }} className="text-[#1C3F35]/40 dark:text-white/40">
+            ▾
+          </motion.span>
+        </button>
+        <AnimatePresence initial={false}>
+          {taxOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="px-7 pb-7">
+                <TaxGuide embedded />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );

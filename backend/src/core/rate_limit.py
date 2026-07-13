@@ -1,14 +1,14 @@
 """
-rate_limit.py — Centralized SlowAPI Rate Limiter Instance.
+rate_limit.py — централизованный экземпляр SlowAPI Rate Limiter.
 
-Single source of truth for the limiter object.
-Import `limiter` from here in:
-  • main.py  → attach to app.state + register error handler
-  • auth.py  → decorate /login and /register endpoints
+Единый источник истины для объекта limiter.
+Импортируйте `limiter` отсюда в:
+  • main.py  → прикрепить к app.state + зарегистрировать обработчик ошибок
+  • auth.py  → декорировать эндпоинты /login и /register
 
-Key function: get_remote_address — identifies clients by real IP.
-On VPS behind Nginx/Traefik, ensure X-Forwarded-For or X-Real-IP
-is forwarded and trusted (configure ProxyHeadersMiddleware if needed).
+Ключевая функция: get_remote_address — определяет клиентов по реальному IP.
+На VPS за Nginx/Traefik убедитесь, что X-Forwarded-For или X-Real-IP
+передаётся и доверенный (настройте ProxyHeadersMiddleware при необходимости).
 """
 
 from slowapi import Limiter

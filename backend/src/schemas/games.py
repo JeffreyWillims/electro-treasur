@@ -6,7 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-GameKey = Literal["match", "game512", "snake"]
+GameKey = Literal["match", "game512", "piggy"]
 
 
 class GameScoreSubmit(BaseModel):

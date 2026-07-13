@@ -1,43 +1,44 @@
 """
-tests/e2e/test_user_journey.py — End-to-End User Journey (Playwright).
+tests/e2e/test_user_journey.py — Сквозной пользовательский сценарий (Playwright).
 
-Tests the complete login → dashboard flow through a real browser.
+Тестирует полный поток вход → дашборд через настоящий браузер.
 
-Prerequisites:
-  • Frontend dev server running: `npm run dev` (localhost:5173)
-  • Backend API running: `uvicorn src.main:app` (localhost:8000)
-  • A user must exist in the database with known credentials
-  • Playwright browsers installed: `npx playwright install chromium`
+Предварительные условия:
+  • Запущен dev-сервер фронтенда: `npm run dev` (localhost:5173)
+  • Запущен backend API: `uvicorn src.main:app` (localhost:8000)
+  • В базе данных должен существовать пользователь с известными учётными данными
+  • Установлены браузеры Playwright: `npx playwright install chromium`
 
-Run:
-  pytest tests/e2e/ --headed          # watch the browser
-  pytest tests/e2e/ -k test_login     # run specific test
+Запуск:
+  pytest tests/e2e/ --headed          # смотреть за браузером
+  pytest tests/e2e/ -k test_login     # запустить конкретный тест
 
-Architecture:
+Архитектура:
   ┌──────────────────────────────────────────────────┐
-  │  E2E Test (top of the pyramid)                   │
+  │  E2E-тест (вершина пирамиды)                     │
   │                                                  │
-  │  Playwright Browser ──→ Frontend (Vite)          │
+  │  Браузер Playwright ──→ Фронтенд (Vite)          │
   │       ↓                      ↓                   │
-  │  Fill login form        fetch('/api/v1/auth')    │
+  │  Заполнить форму входа  fetch('/api/v1/auth')    │
   │       ↓                      ↓                   │
-  │  Submit                 Backend (FastAPI)         │
+  │  Отправить              Backend (FastAPI)         │
   │       ↓                      ↓                   │
-  │  Expect redirect        PostgreSQL + Redis       │
+  │  Ожидать редирект       PostgreSQL + Redis       │
   │  "Общее состояние"                               │
   └──────────────────────────────────────────────────┘
 
-NOTE: E2E tests are SLOW and FRAGILE by design. Keep them minimal —
-      only test critical user journeys, not edge cases.
+ПРИМЕЧАНИЕ: E2E-тесты МЕДЛЕННЫЕ и ХРУПКИЕ по своей природе. Держите их
+      минимальными — проверяйте только критичные пользовательские сценарии,
+      а не граничные случаи.
 """
 
 from __future__ import annotations
 
 import pytest
 
-# Skip the whole module at collection time if playwright is not installed.
-# (tests/e2e/conftest.py hooks run AFTER module import — they can't prevent
-#  an ImportError here, so the guard must live in the module itself.)
+# Пропустить весь модуль на этапе сбора тестов, если playwright не установлен.
+# (хуки tests/e2e/conftest.py срабатывают ПОСЛЕ импорта модуля — они не могут
+#  предотвратить ImportError здесь, поэтому проверка должна быть в самом модуле.)
 pytest.importorskip("playwright")
 
 from playwright.async_api import Page  # noqa: E402

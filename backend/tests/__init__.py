@@ -1,1 +1,1 @@
-# Citrine Vault — Test Suite Root
+# Citrine Vault — корень тестового набора

@@ -3,11 +3,11 @@ import { useAuth } from '@/context/AuthContext';
 import { updateMe, generateTelegramOtp } from '@/api/client';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { Send, Save } from 'lucide-react';
+import { Send, Save, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function ProfileSettings() {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, logout } = useAuth();
 
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -194,6 +194,19 @@ export function ProfileSettings() {
             </button>
           </div>
         </form>
+
+        {/* Выход из аккаунта — единственная точка логаута после удаления
+            виджета-аватара из дока сайдбара. */}
+        <div className="mt-10 pt-8 border-t border-black/5 dark:border-white/5 flex justify-center">
+          <button
+            type="button"
+            onClick={logout}
+            className="flex items-center gap-3 px-8 h-14 rounded-2xl bg-rose-500/10 hover:bg-rose-500 border border-rose-500/25 text-rose-600 dark:text-rose-400 hover:text-white font-bold uppercase tracking-widest text-sm transition-colors active:scale-[0.98]"
+          >
+            <LogOut className="w-4 h-4" />
+            Выйти из аккаунта
+          </button>
+        </div>
       </motion.div>
     </div>
   );

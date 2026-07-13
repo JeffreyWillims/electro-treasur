@@ -19,6 +19,7 @@ Zero-Friction: советы приходят сами, без захода в п
 from __future__ import annotations
 
 import logging
+from dataclasses import asdict
 from datetime import date
 from decimal import Decimal
 from typing import Any
@@ -30,13 +31,14 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
-from src.domain.models import Budget, Category, Transaction, User
+from src.domain.models import Budget, Category, CategoryType, Transaction, User
 from src.services.cashflow_prep import get_active_user_ids, upsert_insight
 from src.services.insight_engine import (
     BudgetData,
     RuleBasedInsightEngine,
     TransactionData,
 )
+from src.services.psychopassport import build_psychopassport
 
 logger = logging.getLogger(__name__)
 
@@ -145,6 +147,24 @@ async def calculate_static_insights(
             session, user_id, period_start, period_end
         )
 
+        # Расход по названию категории за период (только expense-транзакции) →
+        # детерминированный психопаспорт поведения.
+        expense_stmt = (
+            select(Category.name, func.sum(Transaction.amount))
+            .join(Category, Transaction.category_id == Category.id)
+            .where(
+                Transaction.user_id == user_id,
+                Category.type == CategoryType.expense,
+                func.date(Transaction.executed_at) >= period_start,
+                func.date(Transaction.executed_at) <= period_end,
+            )
+            .group_by(Category.name)
+        )
+        category_expense = {
+            name: total for name, total in (await session.execute(expense_stmt)).all()
+        }
+        pp = build_psychopassport(category_expense, income, expense)
+
         await upsert_insight(
             session,
             user_id=user_id,
@@ -155,6 +175,7 @@ async def calculate_static_insights(
                 "total_income": str(income),
                 "total_expense": str(expense),
                 "saved": str(income - expense),
+                "psychopassport": asdict(pp),
             },
             model_used=MODEL_NAME,
         )

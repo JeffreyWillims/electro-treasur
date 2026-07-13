@@ -2,18 +2,27 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Target, Trash2, Plus } from 'lucide-react';
-import { fetchGoals, contributeGoal, deleteGoal, type GoalDto } from '@/api/client';
+import { fetchGoals, contributeGoal, deleteGoal, fetchDashboard, type GoalDto } from '@/api/client';
+import { getLocalDateString, getMoscowDate } from '@/lib/dateUtils';
 
 const fmt = (v: string) => Number(v).toLocaleString('ru-RU', { maximumFractionDigits: 0 });
 
-function GoalCard({ goal }: { goal: GoalDto }) {
+function GoalCard({ goal, recommended }: { goal: GoalDto; recommended: number }) {
   const queryClient = useQueryClient();
-  const [amount, setAmount] = useState('');
+  // null = пользователь ещё не трогал поле → автоподстановка рекомендуемой суммы.
+  const [amount, setAmount] = useState<string | null>(null);
+  const value = amount ?? (recommended > 0 ? String(recommended) : '');
+  const isRecommended = amount === null && recommended > 0;
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['goals'] });
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['goals'] });
+    // Взнос создаёт расходную транзакцию «Цель: …» — обновляем расходы и операции.
+    queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    queryClient.invalidateQueries({ queryKey: ['transactions'] });
+  };
 
   const contribute = useMutation({
-    mutationFn: () => contributeGoal(goal.id, amount),
+    mutationFn: () => contributeGoal(goal.id, value),
     onSuccess: () => {
       setAmount('');
       invalidate();
@@ -68,30 +77,37 @@ function GoalCard({ goal }: { goal: GoalDto }) {
       </div>
 
       {!done && (
-        <form
-          className="flex items-center gap-2 mt-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!amount) return toast.error('Введите сумму пополнения');
-            contribute.mutate();
-          }}
-        >
-          <input
-            type="text"
-            inputMode="numeric"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value.replace(/\D/g, ''))}
-            placeholder="Пополнить, ₽"
-            className="flex-1 min-w-0 rounded-full bg-black/5 dark:bg-white/10 px-4 py-2 text-sm outline-none focus:ring-2 ring-[#FF7A00]/40"
-          />
-          <button
-            type="submit"
-            disabled={contribute.isPending}
-            className="flex items-center gap-1 bg-[#1C3F35] dark:bg-[#FF7A00] text-white text-sm font-semibold py-2 px-4 rounded-full active:scale-[0.98] transition-transform disabled:opacity-50"
+        <>
+          <form
+            className="flex items-center gap-2 mt-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!value) return toast.error('Введите сумму пополнения');
+              contribute.mutate();
+            }}
           >
-            <Plus className="w-4 h-4" /> Внести
-          </button>
-        </form>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={value}
+              onChange={(e) => setAmount(e.target.value.replace(/\D/g, ''))}
+              placeholder="Пополнить, ₽"
+              className="flex-1 min-w-0 rounded-full bg-black/5 dark:bg-white/10 px-4 py-2 text-sm outline-none focus:ring-2 ring-[#FF7A00]/40"
+            />
+            <button
+              type="submit"
+              disabled={contribute.isPending}
+              className="flex items-center gap-1 bg-[#1C3F35] dark:bg-[#FF7A00] text-white text-sm font-semibold py-2 px-4 rounded-full active:scale-[0.98] transition-transform disabled:opacity-50"
+            >
+              <Plus className="w-4 h-4" /> Внести
+            </button>
+          </form>
+          {isRecommended && (
+            <p className="mt-1.5 ml-4 text-[10px] font-bold uppercase tracking-wide text-[#FF7A00]/80">
+              рекомендовано от свободных средств
+            </p>
+          )}
+        </>
       )}
     </div>
   );
@@ -103,6 +119,21 @@ export function GoalsProgress() {
     queryFn: fetchGoals,
     staleTime: 60_000,
   });
+
+  // Свободные средства месяца (МСК-границы, общий кеш ['dashboard', start, end]).
+  const d = getMoscowDate();
+  const start = getLocalDateString(new Date(d.getFullYear(), d.getMonth(), 1));
+  const end = getLocalDateString(new Date(d.getFullYear(), d.getMonth() + 1, 0));
+  const { data: dashboard } = useQuery({
+    queryKey: ['dashboard', start, end],
+    queryFn: () => fetchDashboard(start, end),
+  });
+
+  // Рекомендуемый взнос: 10% от свободных денег месяца, не меньше 0, до сотен.
+  const free =
+    (parseFloat(dashboard?.period_income ?? '0') || 0) -
+    (parseFloat(dashboard?.period_expense ?? '0') || 0);
+  const recommended = Math.max(0, Math.round((free * 0.1) / 100) * 100);
 
   if (isLoading || goals.length === 0) return null; // hidden until the user sets a goal
 
@@ -116,7 +147,7 @@ export function GoalsProgress() {
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         {goals.map((g) => (
-          <GoalCard key={g.id} goal={g} />
+          <GoalCard key={g.id} goal={g} recommended={recommended} />
         ))}
       </div>
     </section>

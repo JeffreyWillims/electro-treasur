@@ -8,13 +8,13 @@ route:
 receivers:
   - name: telegram
     telegram_configs:
-      # Secret-free: the bot token is read from a FILE, never committed.
-      # By default the compose overlay mounts bot_token.example (a dummy) here,
-      # so Alertmanager starts but delivery is effectively OFF. To ENABLE real
-      # alerts, point ONE env var at a file holding your token, e.g.
+      # Без секрета в git: токен бота читается из ФАЙЛА, никогда не коммитится.
+      # По умолчанию compose-оверлей монтирует сюда bot_token.example (заглушку),
+      # поэтому Alertmanager стартует, но доставка фактически ВЫКЛЮЧЕНА. Чтобы ВКЛЮЧИТЬ
+      # реальные алерты, укажи ОДНУ переменную окружения на файл со своим токеном, например
       #   ALERTMANAGER_BOT_TOKEN_FILE=./monitoring/alertmanager/bot_token
-      # (see monitoring/README.md) and set the numeric chat_id below.
+      # (см. monitoring/README.md) и задай числовой chat_id ниже.
       - bot_token_file: /etc/alertmanager/bot_token
-        chat_id: 123456789  # ← your Telegram chat/channel id (not a secret)
+        chat_id: 123456789  # ← id твоего Telegram-чата/канала (не секрет)
         parse_mode: HTML
         send_resolved: true

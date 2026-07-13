@@ -1,4 +1,4 @@
-"""Initial schema: Users, Categories, BudgetPlans, Transactions
+"""Начальная схема: Users, Categories, BudgetPlans, Transactions
 
 Revision ID: 001_initial_schema
 Revises:
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-# revision identifiers, used by Alembic.
+# идентификаторы ревизии, используются Alembic.
 revision: str = "001_initial_schema"
 down_revision: str | None = None
 branch_labels: str | Sequence[str] | None = None

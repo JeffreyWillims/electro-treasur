@@ -8,6 +8,29 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { Sparkles, X, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// Деньги и проценты в тексте анализа подсвечиваются акцентом — цифры читаются
+// с одного взгляда, не выискиваясь в абзаце.
+const MONEY_RE = /(\d[\d\s\u00A0\u202F]*(?:[.,]\d+)?[\s\u00A0\u202F]?(?:₽|руб\.?|%))/g;
+
+function HighlightedText({ text }: { text: string }) {
+  // split с капчур-группой кладёт совпадения на нечётные индексы —
+  // надёжнее, чем стейтфул re.test() с флагом g.
+  const parts = text.split(MONEY_RE);
+  return (
+    <>
+      {parts.map((part, i) =>
+        i % 2 === 1 ? (
+          <span key={i} className="font-extrabold text-[#FF7A00] whitespace-nowrap">
+            {part}
+          </span>
+        ) : (
+          <span key={i}>{part}</span>
+        ),
+      )}
+    </>
+  );
+}
+
 export function InsightModal({
   isOpen,
   onClose,
@@ -116,9 +139,26 @@ export function InsightModal({
 
                 {data && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
-                    <p className="text-base md:text-lg font-medium text-[#1C3F35]/80 dark:text-white/80 leading-relaxed">
-                      {data.insight}
-                    </p>
+                    <div className="space-y-4">
+                      {data.insight
+                        .split(/\n+/)
+                        .filter((p) => p.trim().length > 0)
+                        .map((paragraph, i) => (
+                          <motion.p
+                            key={i}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: i * 0.12, duration: 0.4, ease: 'easeOut' }}
+                            className={
+                              i === 0
+                                ? 'text-base md:text-lg font-semibold text-[#1C3F35] dark:text-white leading-relaxed'
+                                : 'text-sm md:text-base font-medium text-[#1C3F35]/70 dark:text-white/70 leading-relaxed'
+                            }
+                          >
+                            <HighlightedText text={paragraph} />
+                          </motion.p>
+                        ))}
+                    </div>
 
                     {/* Summary cards */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

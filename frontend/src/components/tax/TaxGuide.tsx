@@ -22,10 +22,11 @@ function useDebounced<T>(value: T, ms: number): T {
   return v;
 }
 
-export function TaxGuide() {
+export function TaxGuide({ embedded = false }: { embedded?: boolean }) {
   const [query, setQuery] = useState('');
   const [activeCat, setActiveCat] = useState<string | null>(null);
   const debounced = useDebounced(query, 300);
+  const hasQuery = debounced.trim().length > 0;
   const searchRef = useRef<HTMLDivElement>(null);
 
   const explain = (q: string) => {
@@ -40,10 +41,13 @@ export function TaxGuide() {
     staleTime: 10 * 60_000,
   });
 
+  // Поиск запускается только по непустому запросу — «полезная информация»
+  // появляется динамически, а не висит открытой.
   const { data: rules = [], isFetching } = useQuery({
     queryKey: ['taxSearch', debounced],
     queryFn: () => searchTaxRules(debounced),
     staleTime: 60_000,
+    enabled: hasQuery,
   });
 
   const visible = useMemo(
@@ -52,42 +56,43 @@ export function TaxGuide() {
   );
 
   return (
-    <div className="max-w-4xl mx-auto pt-12 pb-24 px-4">
-      {/* Hero */}
-      <div className="flex items-center gap-4 mb-2">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FF7A00] to-[#FFB020] flex items-center justify-center shadow-lg shadow-[#FF7A00]/20">
-          <Scale className="w-7 h-7 text-white" />
+    <div className={embedded ? '' : 'max-w-4xl mx-auto pt-12 pb-24 px-4'}>
+      {!embedded && (
+        <div className="flex items-center gap-4 mb-2">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FF7A00] to-[#FFB020] flex items-center justify-center shadow-lg shadow-[#FF7A00]/20">
+            <Scale className="w-7 h-7 text-white" />
+          </div>
+          <div>
+            <h1 className="text-[2rem] font-extrabold tracking-tight text-[#1C3F35] dark:text-white leading-none">
+              Налоги и вычеты
+            </h1>
+            <p className="text-xs font-sans text-[#1C3F35]/50 dark:text-white/40 mt-1.5">
+              Бесплатный справочник · верните деньги, которые вам положены
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-[2rem] font-extrabold tracking-tight text-[#1C3F35] dark:text-white leading-none">
-            Налоги и вычеты
-          </h1>
-          <p className="text-xs font-sans text-[#1C3F35]/50 dark:text-white/40 mt-1.5">
-            Бесплатный справочник · верните деньги, которые вам положены
-          </p>
-        </div>
-      </div>
+      )}
 
       {/* Калькулятор вычета */}
-      <div className="mt-8">
+      <div className={embedded ? '' : 'mt-8'}>
         <DeductionCalculator onExplain={explain} />
       </div>
 
       {/* Search */}
-      <div ref={searchRef} className="mt-8 relative scroll-mt-6">
+      <div ref={searchRef} className="mt-6 relative scroll-mt-6">
         <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-[#1C3F35]/40 dark:text-white/40" />
         <input
-          autoFocus
+          autoFocus={!embedded}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Спросите: «вычет за обучение», «продажа квартиры»…"
-          className="w-full rounded-2xl bg-white/70 dark:bg-white/5 border border-black/10 dark:border-white/10 pl-13 pr-5 py-4 text-base outline-none focus:ring-2 ring-[#FF7A00]/40 text-[#1C3F35] dark:text-white"
+          className="w-full rounded-2xl bg-white/70 dark:bg-white/5 border border-black/10 dark:border-white/10 pr-5 py-4 text-base outline-none focus:ring-2 ring-[#FF7A00]/40 text-[#1C3F35] dark:text-white"
           style={{ paddingLeft: '3.25rem' }}
         />
       </div>
 
-      {/* Suggestions (when empty) */}
-      {!query && (
+      {/* Suggestions (пока нет запроса) */}
+      {!hasQuery && (
         <div className="mt-4 flex flex-wrap gap-2">
           <span className="text-xs font-bold text-[#1C3F35]/40 dark:text-white/40 self-center flex items-center gap-1">
             <Sparkles className="w-3.5 h-3.5" /> Популярное:
@@ -104,29 +109,32 @@ export function TaxGuide() {
         </div>
       )}
 
-      {/* Category filter */}
-      {categories.length > 0 && (
-        <div className="mt-5 flex flex-wrap gap-2">
-          <Chip label="Все" active={activeCat === null} onClick={() => setActiveCat(null)} />
-          {categories.map((c) => (
-            <Chip key={c} label={c} active={activeCat === c} onClick={() => setActiveCat(c)} />
-          ))}
-        </div>
-      )}
+      {/* Результаты — только по запросу */}
+      {hasQuery && (
+        <>
+          {categories.length > 0 && (
+            <div className="mt-5 flex flex-wrap gap-2">
+              <Chip label="Все" active={activeCat === null} onClick={() => setActiveCat(null)} />
+              {categories.map((c) => (
+                <Chip key={c} label={c} active={activeCat === c} onClick={() => setActiveCat(c)} />
+              ))}
+            </div>
+          )}
 
-      {/* Results */}
-      <div className="mt-6 space-y-3">
-        {visible.length === 0 && !isFetching && (
-          <div className="py-16 text-center text-[#1C3F35]/50 dark:text-white/40">
-            <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-50" />
-            <p className="font-bold">Ничего не нашлось</p>
-            <p className="text-sm mt-1">Попробуйте переформулировать запрос</p>
+          <div className="mt-6 space-y-3">
+            {visible.length === 0 && !isFetching && (
+              <div className="py-16 text-center text-[#1C3F35]/50 dark:text-white/40">
+                <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-50" />
+                <p className="font-bold">Ничего не нашлось</p>
+                <p className="text-sm mt-1">Попробуйте переформулировать запрос</p>
+              </div>
+            )}
+            {visible.map((rule, i) => (
+              <RuleCard key={rule.id} rule={rule} index={i} />
+            ))}
           </div>
-        )}
-        {visible.map((rule, i) => (
-          <RuleCard key={rule.id} rule={rule} index={i} />
-        ))}
-      </div>
+        </>
+      )}
 
       <p className="mt-10 text-[11px] text-[#1C3F35]/40 dark:text-white/30 text-center">
         Справочно, не индивидуальная консультация. Актуальные лимиты — на nalog.gov.ru

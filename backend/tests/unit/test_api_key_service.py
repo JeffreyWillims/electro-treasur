@@ -1,4 +1,4 @@
-"""Unit tests for api_key_service pure helpers (no DB)."""
+"""Юнит-тесты чистых хелперов api_key_service (без БД)."""
 
 from __future__ import annotations
 

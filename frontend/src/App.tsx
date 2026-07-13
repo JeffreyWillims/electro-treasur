@@ -1,11 +1,9 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { BalanceCards } from '@/components/dashboard/BalanceCards';
 import { QuickEntry } from '@/components/dashboard/QuickEntry';
-import { GoalsProgress } from '@/components/dashboard/GoalsProgress';
-import { HealthScoreCard } from '@/components/dashboard/HealthScoreCard';
 import { TransactionList } from '@/components/dashboard/TransactionList';
 import { Sparkles } from 'lucide-react';
 import { FeedbackWidget } from '@/components/layout/FeedbackWidget';
@@ -16,15 +14,9 @@ import { getLocalDateString, getMoscowDate } from '@/lib/dateUtils';
 import { motion } from 'framer-motion';
 import { GlassDateRangePicker } from '@/components/ui/GlassDateRangePicker';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 2,
-      staleTime: 30_000,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+// Единый инстанс с AuthContext: логин/логаут чистят именно этот кеш,
+// иначе данные (цели, транзакции) прошлого аккаунта переживают смену пользователя.
+import { queryClient } from '@/lib/queryClient';
 
 function DashboardLayout() {
   return (
@@ -36,6 +28,7 @@ function DashboardLayout() {
         <Suspense fallback={<div className="flex items-center justify-center min-h-[50vh] font-sans font-bold text-[#FF7A00] animate-pulse text-xl">Загрузка...</div>}>
           <Outlet />
         </Suspense>
+
       </main>
     </div>
   );
@@ -123,8 +116,6 @@ function Overview() {
 
         <div className="flex flex-col items-stretch w-full max-w-[1400px] mx-auto gap-8 px-4 lg:px-8">
           <BalanceCards startDate={startDate} endDate={endDate} />
-          <HealthScoreCard />
-          <GoalsProgress />
           <QuickEntry />
         </div>
       </div>
@@ -144,9 +135,6 @@ const MyClients = lazy(() =>
 );
 const GamesHub = lazy(() =>
   import('@/components/games/GamesHub').then((m) => ({ default: m.GamesHub }))
-);
-const TaxGuide = lazy(() =>
-  import('@/components/tax/TaxGuide').then((m) => ({ default: m.TaxGuide }))
 );
 import { BudgetList } from '@/components/budgets/BudgetList';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
@@ -210,7 +198,6 @@ export default function App() {
                 <Route path="/budgets" element={<BudgetList />} />
                 <Route path="/analytics" element={<MainAnalytics />} />
                 <Route path="/savings-navigator" element={<SavingsNavigator />} />
-                <Route path="/tax" element={<TaxGuide />} />
                 <Route path="/consultant" element={<MyClients />} />
                 <Route path="/games" element={<GamesHub />} />
                 <Route path="/settings/profile" element={<ProfileSettings />} />

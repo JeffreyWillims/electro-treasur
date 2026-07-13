@@ -30,10 +30,10 @@ export function LoginForm() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#FDFBF7] dark:bg-[#050505] relative overflow-hidden px-4">
-      {/* Background atmosphere */}
+      {/* Атмосферный фон */}
       <div className="absolute -top-10 -right-20 w-[420px] h-[420px] bg-[#FF7A00]/40 rounded-full mix-blend-multiply filter blur-[100px] animate-blob z-0 pointer-events-none" />
 
-      {/* THE GLASS MONOLITH */}
+      {/* СТЕКЛЯННЫЙ МОНОЛИТ */}
       <motion.div
         initial={{ opacity: 0, y: 32 }}
         animate={{ opacity: 1, y: 0 }}
@@ -46,7 +46,7 @@ export function LoginForm() {
           dark:bg-gradient-to-br dark:from-[#1a1a1a]/60 dark:via-[#111]/30 dark:to-[#FF7A00]/5
           dark:shadow-[inset_0_-20px_40px_-20px_rgba(255,122,0,0.12),inset_0_20px_40px_-20px_rgba(15,23,42,0.2),0_20px_60px_-12px_rgba(0,0,0,0.5)]"
       >
-        {/* ── Glowing Edges (Vision OS Style) ── */}
+        {/* ── Светящиеся края (в стиле Vision OS) ── */}
         <div className="absolute inset-0 rounded-[2.8rem] pointer-events-none p-[2px] z-50"
              style={{
                background: "linear-gradient(135deg, rgba(28,63,53,0.8) 0%, rgba(255,255,255,0.1) 50%, rgba(255,122,0,0.8) 100%)",
@@ -55,7 +55,7 @@ export function LoginForm() {
                maskComposite: "exclude",
              }}>
         </div>
-        {/* ── Brand Badge (3D Candy Gem) ── */}
+        {/* ── Бейдж бренда (3D-леденец) ── */}
         <div className="flex justify-center pt-8 pb-6 z-20 relative">
           <div className="inline-flex items-center justify-center gap-3 px-8 py-3 rounded-full transition-all duration-500
             bg-gradient-to-b from-[#FFA011]/95 to-[#FF7A00]/95
@@ -68,16 +68,16 @@ export function LoginForm() {
           </div>
         </div>
 
-        {/* ── Shared Tab Navigation (Quantum Toggle) ── */}
+        {/* ── Общая навигация по вкладкам (квантовый переключатель) ── */}
         <div className="px-8 pb-0 z-20 relative">
           <div className="relative flex items-center bg-slate-900/10 dark:bg-black/20 shadow-inner rounded-2xl p-1 mb-8">
-              {/* Active tab indicator */}
+              {/* Индикатор активной вкладки */}
               <motion.div
                 layoutId="auth-tab-indicator"
                 className="absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-xl bg-white/80 dark:bg-white/10 backdrop-blur-md shadow-sm"
                 transition={{ type: 'spring', stiffness: 400, damping: 35 }}
               />
-              {/* Login tab — active */}
+              {/* Вкладка «Вход» — активна */}
               <AnimatePresence mode="wait">
                 <motion.span
                   key="login-active"
@@ -89,7 +89,7 @@ export function LoginForm() {
                   Вход
                 </motion.span>
               </AnimatePresence>
-              {/* Register tab */}
+              {/* Вкладка «Регистрация» */}
               <Link
                 to="/register"
                 className="relative flex-1 py-2.5 text-center text-sm font-semibold tracking-wide text-slate-500 dark:text-white/40 z-10 hover:text-slate-700 dark:hover:text-white/70 transition-colors"
@@ -99,7 +99,7 @@ export function LoginForm() {
             </div>
           </div>
 
-          {/* ── Form Fields ── */}
+          {/* ── Поля формы ── */}
           <div className="px-8 pb-10">
           <form onSubmit={handleSubmit} className="space-y-3">
             <AnimatePresence mode="wait">
@@ -150,7 +150,7 @@ export function LoginForm() {
               </motion.div>
             </AnimatePresence>
 
-            {/* ── CTA Button ── */}
+            {/* ── Кнопка призыва к действию ── */}
             <div className="pt-2">
               <motion.button
                 whileHover={{ scale: 1.015, y: -1 }}
@@ -169,14 +169,14 @@ export function LoginForm() {
                 </span>
               </motion.button>
             </div>
-          {/* ── SSO Divider ── */}
+          {/* ── Разделитель SSO ── */}
           <div className="relative flex items-center py-6 w-full">
             <div className="flex-grow border-t border-slate-200 dark:border-white/10"></div>
             <span className="flex-shrink-0 mx-4 text-xs font-medium text-slate-400 uppercase tracking-widest">Или продолжите через</span>
             <div className="flex-grow border-t border-slate-200 dark:border-white/10"></div>
           </div>
 
-          {/* ── SSO Buttons ── */}
+          {/* ── Кнопки SSO ── */}
           <div className="flex justify-center gap-4 w-full mb-4">
             {/* Google */}
             <button

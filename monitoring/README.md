@@ -56,3 +56,12 @@ docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d aler
 `monitoring/alertmanager/bot_token` is gitignored — only `bot_token.example`
 is tracked. Alert rules live in `prometheus/alerts.yml`; routing in
 `alertmanager/alertmanager.yml`.
+
+## Структура папки
+
+Прямых конфигурационных файлов в `monitoring/` нет — только этот README и три подпапки,
+у каждой свой `README.md` со списком файлов:
+
+- `alertmanager/` — конфиг Alertmanager и Telegram-роутинг алертов.
+- `grafana/` — provisioning Grafana (датасорсы).
+- `prometheus/` — конфиг Prometheus и правила алертов.

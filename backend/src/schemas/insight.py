@@ -32,6 +32,15 @@ class InsightResultResponse(BaseModel):
     result: dict[str, Any] | None = None
 
 
+class PsychopassportSchema(BaseModel):
+    """Детерминированный психопаспорт поведения (лежит в summary.psychopassport)."""
+
+    persona_code: str
+    persona_title: str
+    traits: list[str]
+    recommendations: list[str]
+
+
 class LatestInsightResponse(BaseModel):
     """GET /api/v1/insights/latest — newest persisted monthly insight."""
 
@@ -43,3 +52,4 @@ class LatestInsightResponse(BaseModel):
     summary: dict[str, Any]
     model_used: str
     created_at: datetime
+    psychopassport: PsychopassportSchema | None = None

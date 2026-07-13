@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Save } from 'lucide-react';
 import { toast } from 'sonner';
@@ -122,7 +123,10 @@ export function BudgetConfigModal({ isOpen, onClose, row }: BudgetConfigModalPro
       : "hover:bg-black/10 dark:hover:bg-white/5"
   );
 
-  return (
+  // Портал в body: предки со свойством backdrop-filter/transform (стеклянное окно
+  // конвертов, framer-обёртки) становятся containing block для fixed — без портала
+  // модалка позиционируется внутри окна конвертов и обрезается его overflow-hidden.
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
@@ -139,7 +143,7 @@ export function BudgetConfigModal({ isOpen, onClose, row }: BudgetConfigModalPro
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 40 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="relative w-full max-w-[440px] bg-white/90 dark:bg-[#111111]/95 backdrop-blur-3xl border border-black/5 dark:border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-[0_32px_80px_rgba(0,0,0,0.15)] dark:shadow-[0_32px_80px_rgba(0,0,0,0.6)] flex flex-col z-10"
+            className="relative w-full max-w-[440px] max-h-[90vh] overflow-y-auto bg-white/90 dark:bg-[#111111]/95 backdrop-blur-3xl border border-black/5 dark:border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-[0_32px_80px_rgba(0,0,0,0.15)] dark:shadow-[0_32px_80px_rgba(0,0,0,0.6)] flex flex-col z-10"
           >
             <div className="flex justify-between items-start mb-8">
               <div className="flex flex-col gap-1.5">
@@ -159,7 +163,7 @@ export function BudgetConfigModal({ isOpen, onClose, row }: BudgetConfigModalPro
             </div>
 
             <div className="flex-1 flex flex-col items-center justify-center space-y-6">
-              {/* Category dropdown */}
+              {/* Выпадающий список категорий */}
               <div className="w-full relative z-[70]">
                 <div className={dropdownWrapperStyle} onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
                   <span className={!selectedCat ? "opacity-50" : ""}>
@@ -202,7 +206,7 @@ export function BudgetConfigModal({ isOpen, onClose, row }: BudgetConfigModalPro
                 </AnimatePresence>
               </div>
 
-              {/* Amount Input */}
+              {/* Поле ввода суммы */}
               <div className="flex items-baseline justify-center gap-2 mb-2 w-full mt-2">
                 <input
                   type="text"
@@ -214,7 +218,7 @@ export function BudgetConfigModal({ isOpen, onClose, row }: BudgetConfigModalPro
                 <span className="text-xl md:text-2xl font-bold text-[#1C3F35] dark:text-white opacity-40">₽</span>
               </div>
 
-              {/* Slider */}
+              {/* Слайдер */}
               <div className="w-full space-y-4">
                 <input
                   type="range"
@@ -263,6 +267,7 @@ export function BudgetConfigModal({ isOpen, onClose, row }: BudgetConfigModalPro
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

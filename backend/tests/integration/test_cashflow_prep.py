@@ -11,7 +11,7 @@ import pytest_asyncio
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.domain.models import Category, Insight, Transaction, User
+from src.domain.models import Budget, Category, Insight, Transaction, User
 from src.infrastructure.workers.insight_scheduler import (
     generate_period_insight,
     schedule_monthly_analysis,
@@ -19,6 +19,8 @@ from src.infrastructure.workers.insight_scheduler import (
 from src.infrastructure.workers.insight_worker import calculate_static_insights
 from src.services.cashflow_prep import (
     get_active_user_ids,
+    get_free_funds,
+    get_linked_users_without_tx_on,
     previous_month_range,
     upsert_insight,
 )
@@ -119,7 +121,9 @@ async def test_calculate_static_insights_persists_row(
     assert row.period_start == date(2026, 6, 1)
     assert row.summary["total_income"] == "10000.00"
     assert row.summary["total_expense"] == "3500.00"
-    assert "📊" in row.advice or "⚠️" in row.advice or "🕵️" in row.advice
+    # Текст собран движком: план всегда начинается с итога и кончается советом.
+    assert row.advice.startswith("Итог периода")
+    assert "Совет:" in row.advice
 
 
 async def test_generate_period_insight_returns_real_numbers(
@@ -153,3 +157,78 @@ async def test_schedule_monthly_analysis_fans_out(db_session: AsyncSession) -> N
     fake_pool.enqueue_job.assert_any_await(
         "calculate_static_insights", u1.id, start.isoformat(), end.isoformat()
     )
+
+
+# ── get_linked_users_without_tx_on ──────────────────────────────────────────
+async def _make_linked_user(session: AsyncSession, email: str, chat_id: int) -> User:
+    user = User(email=email, hashed_password="x", telegram_chat_id=chat_id)
+    session.add(user)
+    await session.flush()
+    return user
+
+
+async def test_get_linked_users_without_tx_on_filters(db_session: AsyncSession) -> None:
+    today = date.today()
+
+    # Привязан, без транзакций сегодня → попадает.
+    inactive = await _make_linked_user(db_session, "inactive@t.dev", 111)
+    # Привязан, но с транзакцией сегодня → НЕ попадает.
+    active = await _make_linked_user(db_session, "active@t.dev", 222)
+    await _add_transaction(db_session, active, today, "500.00", "expense")
+    # Без chat_id и без транзакций → НЕ попадает.
+    await _make_user(db_session, "nochat@t.dev")
+
+    targets = await get_linked_users_without_tx_on(db_session, today)
+
+    assert targets == [(inactive.id, 111)]
+
+
+# ── get_free_funds ──────────────────────────────────────────────────────────
+async def test_get_free_funds_arithmetic_and_envelopes(db_session: AsyncSession) -> None:
+    start = date(2026, 6, 1)
+    end = date(2026, 6, 30)
+    user = await _make_user(db_session, "funds@t.dev")
+
+    income_cat = Category(user_id=user.id, name="Зарплата", type="income")
+    food_cat = Category(user_id=user.id, name="Еда", type="expense")
+    db_session.add_all([income_cat, food_cat])
+    await db_session.flush()
+
+    def _tx(cat_id: int, amount: str) -> Transaction:
+        return Transaction(
+            user_id=user.id,
+            category_id=cat_id,
+            amount=Decimal(amount),
+            executed_at=datetime(2026, 6, 10, 12, 0, tzinfo=UTC),
+        )
+
+    db_session.add_all(
+        [_tx(income_cat.id, "10000.00"), _tx(food_cat.id, "3000.00"), _tx(food_cat.id, "500.00")]
+    )
+    db_session.add(
+        Budget(
+            user_id=user.id,
+            category_id=food_cat.id,
+            month=6,
+            year=2026,
+            amount_limit=Decimal("5000.00"),
+        )
+    )
+    await db_session.flush()
+
+    funds = await get_free_funds(db_session, user.id, start, end)
+
+    assert funds["income"] == Decimal("10000.00")
+    assert funds["expense"] == Decimal("3500.00")
+    assert funds["free"] == Decimal("6500.00")
+    assert funds["envelopes"] == [{"name": "Еда", "remaining": Decimal("1500.00")}]
+
+
+async def test_get_free_funds_empty_user(db_session: AsyncSession) -> None:
+    user = await _make_user(db_session, "empty-funds@t.dev")
+    funds = await get_free_funds(db_session, user.id, date(2026, 6, 1), date(2026, 6, 30))
+
+    assert funds["income"] == Decimal("0")
+    assert funds["expense"] == Decimal("0")
+    assert funds["free"] == Decimal("0")
+    assert funds["envelopes"] == []

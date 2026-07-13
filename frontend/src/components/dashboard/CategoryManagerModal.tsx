@@ -1,5 +1,5 @@
 /**
- * CategoryManagerModal — Premium Full CRUD panel for user categories.
+ * CategoryManagerModal — Премиальная панель полного CRUD для категорий пользователя.
  */
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -49,7 +49,7 @@ interface CategoryManagerModalProps {
   onClose: () => void;
 }
 
-// ── Single Category Row ──────────────────────────────────────────────────
+// ── Строка одной категории ──────────────────────────────────────────────────
 interface CategoryRowProps {
   cat: CategoryRead;
   editState: EditState | null;
@@ -147,7 +147,7 @@ function CategoryRow({ cat, editState, onEditStart, onEditNameChange, onEditIcon
   );
 }
 
-// ── Main Modal ───────────────────────────────────────────────────────────
+// ── Основное модальное окно ───────────────────────────────────────────────────────────
 export function CategoryManagerModal({ isOpen, onClose }: CategoryManagerModalProps) {
   const queryClient = useQueryClient();
 

@@ -1,5 +1,5 @@
 ---
-# PgBouncer Deployment
+# Deployment для PgBouncer
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -29,7 +29,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: electro-secrets
-                  key: upstream-database-url  # Points to Cloud SQL
+                  key: upstream-database-url  # Указывает на Cloud SQL
             - name: POOL_MODE
               value: "transaction"
             - name: MAX_CLIENT_CONN
@@ -49,7 +49,7 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 10
 ---
-# PgBouncer Service used by FastAPI/ARQ
+# Service PgBouncer, используемый FastAPI/ARQ
 apiVersion: v1
 kind: Service
 metadata:
@@ -67,7 +67,7 @@ spec:
     component: pooler
   type: ClusterIP
 ---
-# ExternalName Service for Managed Cloud SQL (Placeholder)
+# ExternalName Service для managed Cloud SQL (заглушка)
 apiVersion: v1
 kind: Service
 metadata:
@@ -78,7 +78,7 @@ spec:
   ports:
     - port: 5432
 ---
-# ExternalName Service for Managed MemoryStore/Redis (Placeholder)
+# ExternalName Service для managed MemoryStore/Redis (заглушка)
 apiVersion: v1
 kind: Service
 metadata:

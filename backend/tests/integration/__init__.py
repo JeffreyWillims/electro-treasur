@@ -1,1 +1,1 @@
-# Integration tests — real PostgreSQL with transaction rollback isolation
+# Интеграционные тесты — реальный PostgreSQL с изоляцией через откат транзакций

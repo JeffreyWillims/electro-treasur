@@ -1,4 +1,4 @@
-"""add merchant_rules table
+"""добавление таблицы merchant_rules
 
 Revision ID: f3b4c5d6e7a8
 Revises: e7a8b9c0d1f2
@@ -10,7 +10,7 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-# revision identifiers, used by Alembic.
+# идентификаторы ревизии, используются Alembic.
 revision: str = 'f3b4c5d6e7a8'
 down_revision: str | None = 'e7a8b9c0d1f2'
 branch_labels: str | Sequence[str] | None = None

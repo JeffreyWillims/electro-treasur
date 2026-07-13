@@ -1,18 +1,18 @@
 """
-Electro-Treasur Configuration.
+Конфигурация Electro-Treasur.
 
-Centralized settings via pydantic-settings.
-Environment variables override defaults → 12-Factor compliant.
+Централизованные настройки через pydantic-settings.
+Переменные окружения переопределяют значения по умолчанию → соответствие 12-Factor.
 """
 
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    """Application-wide configuration loaded from environment / .env file."""
+    """Общая конфигурация приложения, загружаемая из окружения / .env файла."""
 
-    # ── JWT Security ─────────────────────────────────────────────────────
-    # No default — must be set via ET_SECRET_KEY env var. Fails fast on startup.
+    # ── Безопасность JWT ─────────────────────────────────────────────────
+    # Значения по умолчанию нет — должен быть задан через ET_SECRET_KEY. Иначе быстрый фейл при старте.
     secret_key: str
     algorithm: str = "HS256"
     refresh_token_expire_days: int = 7  # TTL refresh-токена в Redis
@@ -21,24 +21,24 @@ class Settings(BaseSettings):
     # не отправит cookie.
     cookie_secure: bool = True
 
-    # ── PostgreSQL (via PgBouncer) ──────────────────────────────────────
+    # ── PostgreSQL (через PgBouncer) ──────────────────────────────────────
     database_url: str = (
         "postgresql+asyncpg://electro:electro_secret@localhost:5432/electro_treasur"
     )
     db_pool_size: int = 20
     db_max_overflow: int = 10
     db_pool_timeout: int = 30
-    db_pool_recycle: int = 1800  # seconds — PgBouncer compatible
+    db_pool_recycle: int = 1800  # секунд — совместимо с PgBouncer
 
     # ── Redis ───────────────────────────────────────────────────────────
     redis_url: str = "redis://localhost:6379/0"
-    redis_idempotency_ttl: int = 86400  # 24 h
+    redis_idempotency_ttl: int = 86400  # 24 часа
 
     # Хранилище счётчиков rate-limiter. Пусто → берётся redis_url (общие счётчики
     # для всех воркеров/реплик). Тесты переопределяют на "memory://" (без Redis).
     ratelimit_storage_uri: str = ""
 
-    # ── arq Worker ──────────────────────────────────────────────────────
+    # ── Воркер arq ──────────────────────────────────────────────────────
     arq_redis_url: str = "redis://localhost:6379/1"
 
     # ── Email / SMTP ────────────────────────────────────────────────────
@@ -48,12 +48,12 @@ class Settings(BaseSettings):
     smtp_port: int = 1025
     smtp_from: str = "noreply@citrine-vault.local"
 
-    # ── Telegram Bot ─────────────────────────────────────────────────────
+    # ── Telegram-бот ─────────────────────────────────────────────────────
     telegram_bot_token: str = ""
     telegram_proxy_url: str | None = None
 
-    # ── Admin Panel (SQLAdmin) ──────────────────────────────────────────
-    # Login is disabled while admin_password is empty — set ET_ADMIN_PASSWORD to enable.
+    # ── Админ-панель (SQLAdmin) ──────────────────────────────────────────
+    # Вход отключён, пока admin_password пуст — задайте ET_ADMIN_PASSWORD для включения.
     admin_username: str = "admin"
     admin_password: str = ""
 

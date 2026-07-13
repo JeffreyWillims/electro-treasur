@@ -1,1 +1,1 @@
-# Factory Boy factories for domain model generation
+# Фабрики Factory Boy для генерации доменных моделей

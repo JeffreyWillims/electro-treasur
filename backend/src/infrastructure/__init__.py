@@ -1,1 +1,1 @@
-"""Infrastructure package."""
+"""Пакет инфраструктуры."""

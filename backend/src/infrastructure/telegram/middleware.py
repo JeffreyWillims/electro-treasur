@@ -1,10 +1,10 @@
 """
-Telegram Bot Middleware — DB Session & User Resolution.
+Middleware Telegram-бота — сессия БД и определение пользователя.
 
-Injects an async SQLAlchemy session and the current authenticated User
-(resolved by telegram_chat_id) into aiogram handler data dict.
+Внедряет асинхронную SQLAlchemy-сессию и текущего аутентифицированного User
+(определяется по telegram_chat_id) в словарь данных хендлера aiogram.
 
-Complexity: O(1) per session acquisition. O(1) user lookup via UNIQUE index.
+Сложность: O(1) на получение сессии. O(1) поиск пользователя через UNIQUE-индекс.
 """
 
 from __future__ import annotations
@@ -26,13 +26,13 @@ logger = logging.getLogger(__name__)
 
 class DbSessionMiddleware(BaseMiddleware):
     """
-    Outer middleware that provides DB session + resolved User to all handlers.
+    Внешний middleware, предоставляющий сессию БД + определённого User всем хендлерам.
 
-    Lifecycle:
-      1. Open async session via async_session_factory context manager.
-      2. Attempt to resolve User by telegram_chat_id (UNIQUE index hit → O(1)).
-      3. Inject `session` and `current_user` (may be None if unlinked) into data.
-      4. Call next handler. Session auto-committed/rolled-back on exit.
+    Жизненный цикл:
+      1. Открыть асинхронную сессию через контекстный менеджер async_session_factory.
+      2. Попытаться определить User по telegram_chat_id (попадание в UNIQUE-индекс → O(1)).
+      3. Внедрить `session` и `current_user` (может быть None, если не привязан) в data.
+      4. Вызвать следующий хендлер. Сессия автоматически коммитится/откатывается при выходе.
     """
 
     async def __call__(

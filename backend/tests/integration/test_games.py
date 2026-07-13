@@ -44,13 +44,13 @@ async def test_submit_keeps_best_score(
     test_user: User,
     db_session: AsyncSession,
 ) -> None:
-    await _submit(async_client, auth_headers, "snake", 500)
-    await _submit(async_client, auth_headers, "snake", 100)  # хуже — игнор
+    await _submit(async_client, auth_headers, "piggy", 500)
+    await _submit(async_client, auth_headers, "piggy", 100)  # хуже — игнор
 
     row = await db_session.scalar(select(GameScore).where(GameScore.user_id == test_user.id))
     assert row is not None and row.score == 500
 
-    await _submit(async_client, auth_headers, "snake", 900)  # лучше — обновление
+    await _submit(async_client, auth_headers, "piggy", 900)  # лучше — обновление
     await db_session.refresh(row)
     assert row.score == 900
 

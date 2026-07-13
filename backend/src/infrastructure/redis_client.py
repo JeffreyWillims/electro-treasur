@@ -1,11 +1,11 @@
 """
-Async Redis Client Utility.
+Утилита асинхронного Redis-клиента.
 
-Provides a managed async Redis connection pool for the FastAPI application.
-Used for:
-  • Idempotency-Key caching (transaction dedup)
-  • LLM insight result storage
-  • arq task result polling
+Предоставляет управляемый асинхронный пул соединений Redis для FastAPI-приложения.
+Используется для:
+  • кеширования Idempotency-Key (дедупликация транзакций)
+  • хранения результатов LLM-инсайтов
+  • опроса результатов arq-задач
 """
 
 from __future__ import annotations
@@ -19,10 +19,10 @@ _pool: ConnectionPool | None = None
 
 async def get_redis() -> Redis:
     """
-    Return an async Redis client backed by a shared connection pool.
+    Возвращает асинхронный Redis-клиент на основе общего пула соединений.
 
-    The pool is lazily created on first call and reused across the app lifetime.
-    Call `close_redis()` on shutdown to release connections.
+    Пул создаётся лениво при первом вызове и переиспользуется всё время работы приложения.
+    Вызовите `close_redis()` при остановке, чтобы освободить соединения.
     """
     global _pool
     if _pool is None:
@@ -31,7 +31,7 @@ async def get_redis() -> Redis:
 
 
 async def close_redis() -> None:
-    """Gracefully close the Redis connection pool."""
+    """Аккуратно закрывает пул соединений Redis."""
     global _pool
     if _pool is not None:
         await _pool.disconnect()

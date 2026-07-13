@@ -1,4 +1,4 @@
-"""add feedback table
+"""добавление таблицы feedback
 
 Revision ID: c1d2e3f4a5b6
 Revises: 87839f63308a
@@ -10,7 +10,7 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-# revision identifiers, used by Alembic.
+# идентификаторы ревизии, используются Alembic.
 revision: str = 'c1d2e3f4a5b6'
 down_revision: str | None = '87839f63308a'
 branch_labels: str | Sequence[str] | None = None

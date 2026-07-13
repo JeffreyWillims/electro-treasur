@@ -1,16 +1,16 @@
 """
-tests/unit/test_auth_service.py — Auth Service Unit Tests.
+tests/unit/test_auth_service.py — юнит-тесты сервиса аутентификации.
 
-Tests JWT creation/decoding and Argon2 password hashing.
-Pure unit tests — no DB, no Redis, no I/O.
+Тестируют создание/декодирование JWT и хеширование паролей Argon2.
+Чистые юнит-тесты — без БД, без Redis, без I/O.
 
-Architecture:
+Архитектура:
   ┌─────────────────────────────────────────────────┐
   │  test_auth_service.py                           │
   │                                                 │
-  │  create_access_token() ──→ JWT string           │
+  │  create_access_token() ──→ строка JWT           │
   │  decode_access_token() ──→ TokenData            │
-  │  get_password_hash()   ──→ argon2 hash string   │
+  │  get_password_hash()   ──→ строка argon2-хеша   │
   │  verify_password()     ──→ bool                 │
   └─────────────────────────────────────────────────┘
 """
@@ -35,60 +35,60 @@ from src.services.auth_service import (
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# JWT Token Creation
+# Создание JWT-токена
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 class TestCreateAccessToken:
-    """JWT creation: payload encoding, expiry, structure."""
+    """Создание JWT: кодирование payload, срок действия, структура."""
 
     def test_returns_string(self) -> None:
-        """Token is a non-empty string."""
+        """Токен — непустая строка."""
         token = create_access_token({"sub": "user@test.com"})
         assert isinstance(token, str)
         assert len(token) > 0
 
     def test_token_contains_subject(self) -> None:
-        """Decoding the token should reveal the 'sub' claim."""
+        """Декодирование токена должно раскрывать claim 'sub'."""
         email = "john@citrinevault.ru"
         token = create_access_token({"sub": email})
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
         assert payload["sub"] == email
 
     def test_token_has_expiry(self) -> None:
-        """Token must have an 'exp' claim."""
+        """У токена должен быть claim 'exp'."""
         token = create_access_token({"sub": "x@x.com"})
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
         assert "exp" in payload
 
     def test_custom_expiry_delta(self) -> None:
-        """Custom expires_delta should override the default 15-minute fallback."""
+        """Кастомный expires_delta должен переопределять дефолтные 15 минут."""
         delta = timedelta(hours=48)
         token = create_access_token({"sub": "x@x.com"}, expires_delta=delta)
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
-        # exp should be ~48h from now, not 15m
+        # exp должен быть ~48ч от текущего момента, а не 15м
         assert "exp" in payload
 
     def test_default_expiry_is_15_minutes(self) -> None:
-        """Without expires_delta, token expires in 15 minutes (fallback)."""
+        """Без expires_delta токен истекает через 15 минут (значение по умолчанию)."""
         import time
 
         token = create_access_token({"sub": "x@x.com"})
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
-        # exp should be within ~16 minutes from now (15m + clock drift)
+        # exp должен быть в пределах ~16 минут от текущего момента (15м + дрейф часов)
         assert payload["exp"] - time.time() <= 16 * 60
 
     def test_extra_claims_preserved(self) -> None:
-        """Additional claims in the data dict should be preserved."""
+        """Дополнительные claims в словаре data должны сохраняться."""
         token = create_access_token({"sub": "a@b.com", "role": "admin", "tier": "premium"})
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
         assert payload["role"] == "admin"
         assert payload["tier"] == "premium"
 
     def test_data_dict_not_mutated(self) -> None:
-        """create_access_token should not mutate the input dict."""
+        """create_access_token не должен мутировать входной словарь."""
         data: dict[str, Any] = {"sub": "user@test.com"}
         original = data.copy()
         create_access_token(data)
-        assert data == original  # 'exp' should NOT leak into original
+        assert data == original  # 'exp' НЕ должен просочиться в оригинал
 
     def test_access_token_expire_constant(self) -> None:
         """Access-токен короткоживущий (15 мин) — пара к refresh-токену в Redis."""

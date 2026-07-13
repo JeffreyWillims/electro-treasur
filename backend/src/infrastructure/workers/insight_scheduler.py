@@ -32,6 +32,10 @@ from src.infrastructure.workers.insight_worker import (
     calculate_static_insights,
     schedule_weekly_push,
 )
+from src.infrastructure.workers.reminder_worker import (
+    push_free_funds,
+    remind_inactive_users,
+)
 from src.services.cashflow_prep import (
     get_active_user_ids,
     previous_month_range,
@@ -123,11 +127,21 @@ async def shutdown(ctx: dict[str, Any]) -> None:
 class WorkerSettings:
     """arq worker configuration — importable as module path."""
 
-    functions = [generate_period_insight, calculate_static_insights, parse_statement]
+    functions = [
+        generate_period_insight,
+        calculate_static_insights,
+        parse_statement,
+        remind_inactive_users,
+        push_free_funds,
+    ]
     cron_jobs = [
         cron(schedule_monthly_analysis, day=1, hour=3, minute=0),
         # Воскресенье (weekday=6, как в datetime.weekday()), 18:00 UTC = 21:00 МСК.
         cron(schedule_weekly_push, weekday=6, hour=18, minute=0),
+        # 10:00 и 19:00 UTC = 13:00 и 22:00 МСК.
+        cron(remind_inactive_users, hour={10, 19}, minute=0),
+        # Понедельник (weekday=0), 06:00 UTC = 09:00 МСК.
+        cron(push_free_funds, weekday=0, hour=6, minute=0),
     ]
     on_startup = startup
     on_shutdown = shutdown

@@ -19,6 +19,7 @@ from src.schemas.insight import (
     InsightRequest,
     InsightResultResponse,
     LatestInsightResponse,
+    PsychopassportSchema,
 )
 
 router = APIRouter(tags=["LLM Insights"])
@@ -72,7 +73,7 @@ async def enqueue_insight(
 async def latest_insight(
     db: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
-) -> Insight | None:
+) -> LatestInsightResponse | None:
     stmt = (
         select(Insight)
         .where(Insight.user_id == current_user.id)
@@ -80,7 +81,15 @@ async def latest_insight(
         .limit(1)
     )
     result = await db.execute(stmt)
-    return result.scalar_one_or_none()
+    row = result.scalar_one_or_none()
+    if row is None:
+        return None
+    # psychopassport лежит внутри summary (JSONB) — поднимаем в отдельное поле.
+    response = LatestInsightResponse.model_validate(row)
+    pp = row.summary.get("psychopassport")
+    if pp is not None:
+        response.psychopassport = PsychopassportSchema.model_validate(pp)
+    return response
 
 
 @router.get(

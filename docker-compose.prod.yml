@@ -1,4 +1,4 @@
-# Production overlay — GHCR-образы вместо сборки из исходников + SSL-nginx.
+# Продовый оверлей — GHCR-образы вместо сборки из исходников + SSL-nginx.
 #
 # Local:  docker compose up -d
 # Prod:   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d

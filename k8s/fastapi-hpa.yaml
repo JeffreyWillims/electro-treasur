@@ -1,5 +1,5 @@
 ---
-# Horizontal Pod Autoscaler for FastAPI
+# Horizontal Pod Autoscaler для FastAPI
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:

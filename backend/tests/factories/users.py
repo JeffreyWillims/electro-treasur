@@ -1,15 +1,15 @@
 """
-tests/factories/users.py — User Data Factories.
+tests/factories/users.py — Фабрики Данных Пользователя.
 
-Generates test data for User domain model using factory_boy + Faker.
-Works with Pydantic schemas (dict output) — NOT direct ORM persistence,
-because factory_boy's .create() is synchronous and incompatible with
-async SQLAlchemy. Instead, use .build() to get a dict, then persist
-via db_session in the test.
+Генерирует тестовые данные для доменной модели User с помощью factory_boy + Faker.
+Работает с Pydantic-схемами (вывод в виде dict) — а НЕ с прямым сохранением в ORM,
+потому что .create() у factory_boy синхронный и несовместим с
+async SQLAlchemy. Вместо этого используйте .build(), чтобы получить dict, а затем
+сохраняйте его через db_session в тесте.
 
-Usage:
-    # In a test:
-    data = UserFactory.build()          # → dict with random email, name, income
+Использование:
+    # В тесте:
+    data = UserFactory.build()          # → dict со случайным email, именем, доходом
     user = User(**data)
     db_session.add(user)
     await db_session.flush()
@@ -23,14 +23,14 @@ from factory import fuzzy
 
 class UserFactory(factory.Factory):
     """
-    Generates User-compatible dicts with realistic random data.
+    Генерирует совместимые с User словари с реалистичными случайными данными.
 
-    Output fields match src.domain.models.User constructor kwargs.
-    Password is pre-hashed with argon2 for DB insertion.
+    Поля вывода соответствуют именованным аргументам конструктора src.domain.models.User.
+    Пароль заранее хешируется через argon2 для вставки в БД.
     """
 
     class Meta:
-        model = dict  # Output plain dicts, not ORM instances
+        model = dict  # Вывод обычных словарей, а не экземпляров ORM
         exclude = []
 
     email = factory.LazyAttribute(
@@ -47,8 +47,8 @@ class UserFactory(factory.Factory):
     @factory.lazy_attribute
     def hashed_password(self) -> str:
         """
-        Pre-compute an argon2 hash for 'TestPass123!'.
-        Synchronous — safe in factory context (not in event loop).
+        Заранее вычисляет argon2-хеш для 'TestPass123!'.
+        Синхронно — безопасно в контексте фабрики (не в event loop).
         """
         from argon2 import PasswordHasher
 

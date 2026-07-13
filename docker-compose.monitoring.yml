@@ -1,6 +1,6 @@
-# Monitoring overlay — Prometheus + Grafana + cAdvisor + exporters + Alertmanager.
-# Usage: docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
-# Grafana:      http://localhost:3000  (login: admin / admin on first start)
+# Оверлей мониторинга — Prometheus + Grafana + cAdvisor + экспортеры + Alertmanager.
+# Использование: docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+# Grafana:      http://localhost:3000  (логин: admin / admin при первом запуске)
 # Prometheus:   http://localhost:9090
 # Alertmanager: http://localhost:9093
 services:
@@ -22,8 +22,8 @@ services:
     image: prom/alertmanager:v0.27.0
     volumes:
       - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
-      # Secret-free token injection: defaults to the committed dummy (alerts OFF).
-      # Enable real delivery with ONE env var pointing at your token file:
+      # Подстановка токена без секрета в git: по умолчанию — закоммиченная заглушка (алерты ВЫКЛ).
+      # Включить реальную доставку одной переменной окружения, указывающей на файл с токеном:
       #   ALERTMANAGER_BOT_TOKEN_FILE=./monitoring/alertmanager/bot_token
       - ${ALERTMANAGER_BOT_TOKEN_FILE:-./monitoring/alertmanager/bot_token.example}:/etc/alertmanager/bot_token:ro
     command:

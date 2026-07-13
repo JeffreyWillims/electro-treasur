@@ -47,15 +47,10 @@ export function CategoryPieChart({ categoryTotals }: CategoryPieChartProps) {
   const [isLegendOpen, setIsLegendOpen] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
-  const eaterInsight = useMemo(() => {
-    if (!categoryTotals.length) return null;
-    const total = categoryTotals.reduce((s, c) => s + c.value, 0);
-    const top = categoryTotals[0];
-    if (!top) return null;
-    const pct = total > 0 ? Math.round((top.value / total) * 100) : 0;
-
-    return { name: top.name, pct, amount: top.value };
-  }, [categoryTotals]);
+  const grandTotal = useMemo(
+    () => categoryTotals.reduce((s, c) => s + c.value, 0),
+    [categoryTotals],
+  );
 
   return (
     <div className="bg-white/40 dark:bg-[#111111]/40 backdrop-blur-3xl border border-black/5 dark:border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-2xl transition-all duration-700 relative overflow-hidden">
@@ -107,33 +102,33 @@ export function CategoryPieChart({ categoryTotals }: CategoryPieChartProps) {
               </PieChart>
             </ResponsiveContainer>
 
-            {eaterInsight && (() => {
-              const active = hoveredIndex !== null ? categoryTotals[hoveredIndex] : null;
-              const total = categoryTotals.reduce((s, c) => s + c.value, 0);
-              const displayPct = active ? (total > 0 ? Math.round((active.value / total) * 100) : 0) : eaterInsight.pct;
-              const displayName = active ? active.name : eaterInsight.name;
-              const displayAmount = active ? active.value : eaterInsight.amount;
-
-              return (
-                <motion.div
-                  key={hoveredIndex ?? 'default'}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.2, ease: 'easeOut' }}
-                  className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-0"
-                >
-                  <p className="text-5xl font-sans font-black tabular-nums tracking-tighter text-[#1C3F35] dark:text-white leading-none drop-shadow-sm">
-                    {displayPct}%
-                  </p>
-                  <p className="text-[10px] font-mono font-bold uppercase tracking-[0.25em] text-[#1C3F35]/50 dark:text-white/40 mt-3 max-w-[120px] text-center leading-tight truncate px-2">
-                    {getRussianCategoryName(displayName)}
-                  </p>
-                  <p className="text-sm font-sans font-extrabold tabular-nums tracking-tight text-[#FF7A00] mt-1">
-                    {displayAmount.toLocaleString('ru-RU')} ₽
-                  </p>
-                </motion.div>
-              );
-            })()}
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-0">
+              <AnimatePresence mode="wait">
+                {hoveredIndex !== null && categoryTotals[hoveredIndex] && (
+                  <motion.div
+                    key={hoveredIndex}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                    className="flex flex-col items-center"
+                  >
+                    <p className="text-4xl font-sans font-black tabular-nums tracking-tighter text-[#1C3F35] dark:text-white leading-none drop-shadow-sm">
+                      {grandTotal > 0
+                        ? Math.round((categoryTotals[hoveredIndex].value / grandTotal) * 100)
+                        : 0}
+                      %
+                    </p>
+                    <p className="text-[10px] font-mono font-bold uppercase tracking-[0.25em] text-[#1C3F35]/50 dark:text-white/40 mt-3 max-w-[120px] text-center leading-tight truncate px-2">
+                      {getRussianCategoryName(categoryTotals[hoveredIndex].name)}
+                    </p>
+                    <p className="text-sm font-sans font-extrabold tabular-nums tracking-tight text-[#FF7A00] mt-1">
+                      {categoryTotals[hoveredIndex].value.toLocaleString('ru-RU')} ₽
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </>
         )}
       </div>
