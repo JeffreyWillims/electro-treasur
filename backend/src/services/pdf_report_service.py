@@ -59,18 +59,30 @@ def build_financial_plan_pdf(
         s = insight.summary
         period = f"{insight.period_start} — {insight.period_end}"
         pdf.cell(0, 7, f"Период: {period}", new_x="LMARGIN", new_y="NEXT")
-        pdf.cell(0, 7, f"Доходы: {_money(str(s.get('total_income', '0')))}", new_x="LMARGIN", new_y="NEXT")
-        pdf.cell(0, 7, f"Расходы: {_money(str(s.get('total_expense', '0')))}", new_x="LMARGIN", new_y="NEXT")
-        pdf.cell(0, 7, f"Отложено: {_money(str(s.get('saved', '0')))}", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(
+            0,
+            7,
+            f"Доходы: {_money(str(s.get('total_income', '0')))}",
+            new_x="LMARGIN",
+            new_y="NEXT",
+        )
+        pdf.cell(
+            0,
+            7,
+            f"Расходы: {_money(str(s.get('total_expense', '0')))}",
+            new_x="LMARGIN",
+            new_y="NEXT",
+        )
+        pdf.cell(
+            0, 7, f"Отложено: {_money(str(s.get('saved', '0')))}", new_x="LMARGIN", new_y="NEXT"
+        )
         pdf.ln(3)
         _heading(pdf, "Рекомендации")
         pdf.set_font("DejaVu", "", 11)
         pdf.set_text_color(*_DARK)
         pdf.multi_cell(0, 7, insight.advice)
     else:
-        pdf.multi_cell(
-            0, 7, "Пока недостаточно данных для анализа. Добавьте транзакции за месяц."
-        )
+        pdf.multi_cell(0, 7, "Пока недостаточно данных для анализа. Добавьте транзакции за месяц.")
     pdf.ln(4)
 
     # ── Цели ────────────────────────────────────────────────────────────
@@ -94,7 +106,9 @@ def build_financial_plan_pdf(
     pdf.ln(8)
     pdf.set_font("DejaVu", "", 8)
     pdf.set_text_color(160, 160, 160)
-    pdf.cell(0, 6, "Citrine Vault · отчёт носит информационный характер", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(
+        0, 6, "Citrine Vault · отчёт носит информационный характер", new_x="LMARGIN", new_y="NEXT"
+    )
 
     return bytes(pdf.output())
 

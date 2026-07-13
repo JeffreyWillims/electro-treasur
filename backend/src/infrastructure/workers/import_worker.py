@@ -24,5 +24,7 @@ async def parse_statement(
     """arq task: разобрать выписку → кандидаты транзакций (превью, без записи в БД)."""
     content = base64.b64decode(content_b64)
     candidates = await parse_document_bytes(content, file_name) or []
-    logger.info("Parsed statement user=%d file=%s candidates=%d", user_id, file_name, len(candidates))
+    logger.info(
+        "Parsed statement user=%d file=%s candidates=%d", user_id, file_name, len(candidates)
+    )
     return {"file_name": file_name, "candidates": candidates, "count": len(candidates)}

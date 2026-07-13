@@ -46,9 +46,7 @@ def _budget(limit: str, category_id: int = FOOD, name: str = "Еда") -> Budget
 
 
 def test_summary_always_present_with_savings_rate() -> None:
-    text = ENGINE.generate(
-        [_tx("150000.00", SALARY, CategoryType.income), _tx("42500.50")], []
-    )
+    text = ENGINE.generate([_tx("150000.00", SALARY, CategoryType.income), _tx("42500.50")], [])
     assert (
         "Итог периода: вы заработали 150 000.00 ₽ и потратили 42 500.50 ₽. "
         "Отложить удалось 107 499.50 ₽ — это 72% дохода." in text
@@ -66,9 +64,7 @@ def test_summary_on_empty_month_has_no_rate() -> None:
 
 
 def test_deficit_line_when_expense_exceeds_income() -> None:
-    text = ENGINE.generate(
-        [_tx("15600", SALARY, CategoryType.income), _tx("57910")], []
-    )
+    text = ENGINE.generate([_tx("15600", SALARY, CategoryType.income), _tx("57910")], [])
     assert "Расходы превысили доходы на 42 310.00 ₽ — период уходит в минус." in text
 
 
@@ -146,16 +142,12 @@ def test_recommendation_deficit_points_to_worst_category() -> None:
 
 
 def test_recommendation_low_savings_rate() -> None:
-    text = ENGINE.generate(
-        [_tx("10000", SALARY, CategoryType.income), _tx("9500")], []
-    )
+    text = ENGINE.generate([_tx("10000", SALARY, CategoryType.income), _tx("9500")], [])
     assert "попробуйте откладывать хотя бы 10% дохода — это около 1 000.00 ₽ в месяц." in text
 
 
 def test_recommendation_surplus() -> None:
-    text = ENGINE.generate(
-        [_tx("150000", SALARY, CategoryType.income), _tx("42500")], []
-    )
+    text = ENGINE.generate([_tx("150000", SALARY, CategoryType.income), _tx("42500")], [])
     assert "у вас профицит 107 500.00 ₽. Пусть эти деньги работают" in text
 
 

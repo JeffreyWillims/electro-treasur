@@ -34,12 +34,16 @@ async def financial_plan_pdf(
         )
     ).scalar_one_or_none()
     goals = (
-        await session.execute(
-            select(SavingsGoal)
-            .where(SavingsGoal.user_id == current_user.id)
-            .order_by(SavingsGoal.created_at.desc())
+        (
+            await session.execute(
+                select(SavingsGoal)
+                .where(SavingsGoal.user_id == current_user.id)
+                .order_by(SavingsGoal.created_at.desc())
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     pdf_bytes = build_financial_plan_pdf(
         full_name=current_user.full_name,

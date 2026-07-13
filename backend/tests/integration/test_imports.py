@@ -64,10 +64,18 @@ async def test_confirm_imports_and_dedupes(
 ) -> None:
     payload = {
         "items": [
-            {"amount": "1500.00", "type": "expense", "description": "Пятёрочка",
-             "category": "Operations (Rent/Utility)"},
-            {"amount": "90000.00", "type": "income", "description": "Зарплата",
-             "category": "Propulsion (Income)"},
+            {
+                "amount": "1500.00",
+                "type": "expense",
+                "description": "Пятёрочка",
+                "category": "Operations (Rent/Utility)",
+            },
+            {
+                "amount": "90000.00",
+                "type": "income",
+                "description": "Зарплата",
+                "category": "Propulsion (Income)",
+            },
         ]
     }
     resp = await async_client.post("/v1/imports/confirm", json=payload, headers=auth_headers)

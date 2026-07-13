@@ -59,9 +59,7 @@ async def list_notifications(
         stmt = pg_insert(Notification).values(
             user_id=current_user.id, type="update", title=title, body=body, dedup_key=key
         )
-        await db.execute(
-            stmt.on_conflict_do_nothing(constraint="uq_notifications_user_dedup")
-        )
+        await db.execute(stmt.on_conflict_do_nothing(constraint="uq_notifications_user_dedup"))
     await db.commit()
 
     rows = await db.execute(

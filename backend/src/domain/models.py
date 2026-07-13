@@ -397,9 +397,7 @@ class TaxRule(Base):
     """
 
     __tablename__ = "tax_rules"
-    __table_args__ = (
-        Index("ix_tax_rules_tsv", "tsv", postgresql_using="gin"),
-    )
+    __table_args__ = (Index("ix_tax_rules_tsv", "tsv", postgresql_using="gin"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     category: Mapped[str] = mapped_column(String(64), nullable=False, index=True)

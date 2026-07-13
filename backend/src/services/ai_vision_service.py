@@ -315,9 +315,7 @@ async def parse_document_bytes(
         processed_img = await asyncio.to_thread(_preprocess_image, content)
         try:
             text = str(
-                await asyncio.to_thread(
-                    pytesseract.image_to_string, processed_img, lang="rus+eng"
-                )
+                await asyncio.to_thread(pytesseract.image_to_string, processed_img, lang="rus+eng")
             )
         finally:
             processed_img.close()

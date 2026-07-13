@@ -18,9 +18,7 @@ from src.domain.models import Budget, Category, CategoryType, Transaction, User
 
 
 @pytest.fixture
-async def dashboard_data(
-    db_session: AsyncSession, test_user: User
-) -> tuple[Category, Category]:
+async def dashboard_data(db_session: AsyncSession, test_user: User) -> tuple[Category, Category]:
     """Seed one expense + one income category, a May-2026 budget plan and
     transactions on known days, so the matrix assertions are deterministic."""
     expense = Category(

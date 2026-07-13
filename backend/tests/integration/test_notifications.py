@@ -76,6 +76,7 @@ async def test_total_leaderboard_sums_games(
     assert scores == sorted(scores, reverse=True)
     assert max(scores) >= 1000  # 300 + 700 у test_user
 
+
 async def test_notifications_require_auth(async_client: AsyncClient) -> None:
     assert (await async_client.get("/v1/notifications/")).status_code == 401
     assert (await async_client.post("/v1/notifications/read-all")).status_code == 401

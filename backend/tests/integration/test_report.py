@@ -35,11 +35,17 @@ async def test_report_pdf_with_insight_and_goal(
                 period_start=date(2026, 6, 1),
                 period_end=date(2026, 6, 30),
                 advice="📊 Итог месяца: всё под контролем.\n👉 Рекомендация: копите 10%.",
-                summary={"total_income": "50000.00", "total_expense": "30000.00", "saved": "20000.00"},
+                summary={
+                    "total_income": "50000.00",
+                    "total_expense": "30000.00",
+                    "saved": "20000.00",
+                },
                 model_used="rule-based-v1",
             ),
             SavingsGoal(
-                user_id=test_user.id, name="Подушка", target_amount="100000.00",
+                user_id=test_user.id,
+                name="Подушка",
+                target_amount="100000.00",
                 current_amount="25000.00",
             ),
         ]

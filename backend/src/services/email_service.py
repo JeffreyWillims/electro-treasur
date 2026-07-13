@@ -46,7 +46,9 @@ class EmailService:
         try:
             # smtplib синхронный — уводим в поток, чтобы не блокировать event loop.
             await asyncio.to_thread(EmailService._smtp_send, msg)
-            logger.info("FEEDBACK EMAIL sent via SMTP %s:%s", settings.smtp_host, settings.smtp_port)
+            logger.info(
+                "FEEDBACK EMAIL sent via SMTP %s:%s", settings.smtp_host, settings.smtp_port
+            )
         except Exception:
             # Письмо не критично (сообщение уже в БД) — логируем и не роняем фон.
             logger.exception(

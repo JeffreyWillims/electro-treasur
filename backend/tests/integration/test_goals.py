@@ -49,7 +49,9 @@ async def test_list_goals_scoped_to_user(
     )
     await db_session.flush()
 
-    names = [g["name"] for g in (await async_client.get("/v1/goals/", headers=auth_headers)).json()]
+    names = [
+        g["name"] for g in (await async_client.get("/v1/goals/", headers=auth_headers)).json()
+    ]
     assert names == ["Mine"]  # ownership isolation
 
 
@@ -97,9 +99,7 @@ async def test_contribute_creates_expense_transaction(
     assert resp.status_code == 200
 
     category = await db_session.scalar(
-        select(Category).where(
-            Category.user_id == test_user.id, Category.name == "Цель: Ноутбук"
-        )
+        select(Category).where(Category.user_id == test_user.id, Category.name == "Цель: Ноутбук")
     )
     assert category is not None
     assert category.type == CategoryType.expense
@@ -186,7 +186,5 @@ async def test_delete_goal(
     resp = await async_client.delete(f"/v1/goals/{goal.id}", headers=auth_headers)
     assert resp.status_code == 204
 
-    remaining = await db_session.scalar(
-        select(SavingsGoal).where(SavingsGoal.id == goal.id)
-    )
+    remaining = await db_session.scalar(select(SavingsGoal).where(SavingsGoal.id == goal.id))
     assert remaining is None

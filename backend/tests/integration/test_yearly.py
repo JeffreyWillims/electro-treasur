@@ -23,9 +23,7 @@ async def test_yearly_enqueues_full_date_range(
 
     monkeypatch.setattr("src.api.analytics.yearly._get_arq_pool", _fake_pool)
 
-    resp = await async_client.post(
-        "/analytics/yearly", json={"year": 2026}, headers=auth_headers
-    )
+    resp = await async_client.post("/analytics/yearly", json={"year": 2026}, headers=auth_headers)
     assert resp.status_code == 202
 
     fake_pool.enqueue_job.assert_awaited_once()

@@ -9,6 +9,9 @@ GET /v1/tax/categories    — список категорий (для фильт
 
 from __future__ import annotations
 
+from decimal import Decimal
+from typing import cast
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -66,7 +69,12 @@ async def list_categories(
 @router.get("/deductions", response_model=list[DeductionKind], summary="Deduction kinds")
 async def list_deduction_kinds(_: User = Depends(get_current_user)) -> list[DeductionKind]:
     return [
-        DeductionKind(kind=k, label=str(v["label"]), base_limit=v["base_limit"], note=str(v["note"]))  # type: ignore[arg-type]
+        DeductionKind(
+            kind=k,
+            label=str(v["label"]),
+            base_limit=cast(Decimal, v["base_limit"]),
+            note=str(v["note"]),
+        )
         for k, v in DEDUCTION_KINDS.items()
     ]
 

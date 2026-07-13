@@ -59,9 +59,7 @@ async def submit_score(
             body=f"Личный рекорд обновлён: {payload.score:,} очков.".replace(",", " "),
             dedup_key=f"record:{payload.game}:{payload.score}",
         )
-        await db.execute(
-            note.on_conflict_do_nothing(constraint="uq_notifications_user_dedup")
-        )
+        await db.execute(note.on_conflict_do_nothing(constraint="uq_notifications_user_dedup"))
 
     await db.commit()
     return {"status": "ok"}

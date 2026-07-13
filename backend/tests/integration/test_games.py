@@ -20,7 +20,9 @@ from src.domain.models import GameScore, User
 
 
 async def _submit(client: AsyncClient, headers: dict[str, str], game: str, score: int) -> int:
-    resp = await client.post("/v1/games/score", json={"game": game, "score": score}, headers=headers)
+    resp = await client.post(
+        "/v1/games/score", json={"game": game, "score": score}, headers=headers
+    )
     return resp.status_code
 
 
@@ -72,7 +74,9 @@ async def test_leaderboard_sorted_desc(
 
 
 async def test_games_require_auth(async_client: AsyncClient) -> None:
-    assert (await async_client.post("/v1/games/score", json={"game": "match", "score": 1})).status_code == 401
+    assert (
+        await async_client.post("/v1/games/score", json={"game": "match", "score": 1})
+    ).status_code == 401
     assert (await async_client.get("/v1/games/leaderboard?game=match")).status_code == 401
 
 
