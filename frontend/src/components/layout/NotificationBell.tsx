@@ -3,10 +3,15 @@
  * итоги фоновых воркеров). Поллинг раз в минуту через refetchInterval; при открытии
  * панели всё помечается прочитанным. Записи раскрываются аккордеоном —
  * полный текст, дата целиком и цветовой акцент по типу.
+ *
+ * Панель рендерится ПОРТАЛОМ в document.body: сайдбар — backdrop-blur-контейнер,
+ * то есть собственный контекст наложения, и панель внутри него уезжала под
+ * карточки главной, какой бы z-index ей ни ставили.
  */
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell } from 'lucide-react';
+import { Bell, FileText, Sparkles, X } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchNotifications, markNotificationsRead } from '@/api/client';
 import { cn } from '@/lib/utils';
@@ -22,19 +27,28 @@ function timeAgo(iso: string): string {
   return `${days} дн назад`;
 }
 
-// Цветная полоса-акцент слева: report (итог воркера) → изумруд,
-// update (и прочее) → оранжевый.
-function accentClass(type: string): string {
+/** Визуальный язык записи: report (итог воркера) — изумруд, update — оранжевый. */
+function styleFor(type: string) {
   return type === 'report'
-    ? 'bg-gradient-to-b from-[#10B981] to-[#059669]'
-    : 'bg-gradient-to-b from-[#FF7A00] to-[#FFA011]';
+    ? {
+        Icon: FileText,
+        accent: 'bg-gradient-to-b from-[#10B981] to-[#059669]',
+        chip: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+        label: 'Отчёт',
+      }
+    : {
+        Icon: Sparkles,
+        accent: 'bg-gradient-to-b from-[#FF7A00] to-[#FFA011]',
+        chip: 'bg-[#FF7A00]/10 text-[#FF7A00]',
+        label: 'Обновление',
+      };
 }
 
 export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   // Аккордеон: раскрыта максимум одна запись
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const queryClient = useQueryClient();
 
   const { data } = useQuery({
@@ -49,17 +63,16 @@ export function NotificationBell() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
   });
 
+  // Esc закрывает панель — привычный жест для оверлея.
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setIsOpen(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen]);
 
   const unread = data?.unread ?? 0;
+  const items = data?.items ?? [];
 
   const toggle = () => {
     const next = !isOpen;
@@ -69,12 +82,9 @@ export function NotificationBell() {
   };
 
   return (
-    // Панель открывается СПРАВА от сайдбара (fixed, вертикально по центру
-    // экрана) и не перекрывает его; на мобиле, где сайдбар скрыт, — по центру.
-    // Позиционирует внешний div (Tailwind), анимирует внутренний motion.div —
-    // framer перезаписывает transform, поэтому translate им отдавать нельзя.
-    <div ref={panelRef}>
+    <>
       <button
+        ref={buttonRef}
         onClick={toggle}
         aria-label="Уведомления"
         className="relative w-10 h-10 rounded-full flex items-center justify-center cursor-pointer transition-transform hover:scale-105 bg-black/5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.1),0_1px_0_rgba(255,255,255,0.8)] border border-black/5 dark:bg-black/40 dark:shadow-[inset_0_2px_6px_rgba(0,0,0,0.5),0_1px_0_rgba(255,255,255,0.05)] dark:border-white/5"
@@ -93,98 +103,134 @@ export function NotificationBell() {
         )}
       </button>
 
-      <AnimatePresence>
-        {isOpen && (
-          <div className="fixed z-50 top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 lg:left-[20rem] lg:translate-x-0">
-          <motion.div
-            initial={{ opacity: 0, x: -12, scale: 0.97 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: -12, scale: 0.97 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-            className="w-80 bg-white/90 dark:bg-[#121212]/90 backdrop-blur-3xl border border-white/40 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden origin-left"
-          >
-            <div className="px-4 pt-4 pb-2 flex items-start justify-between">
-              <div>
-                <p className="text-sm font-extrabold text-vault-pine dark:text-white">Уведомления</p>
-                <p className="text-[10px] font-medium text-vault-pine/45 dark:text-white/35 mt-0.5">
-                  Новости · выписки · документы
-                </p>
-              </div>
-              <span className="text-[9px] font-mono font-bold uppercase tracking-[0.2em] text-[#FF7A00] mt-0.5">
-                Citrine Vault
-              </span>
-            </div>
+      {createPortal(
+        <AnimatePresence>
+          {isOpen && (
+            <>
+              {/* Затемнение: панель читается поверх любой страницы, клик — закрыть */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => setIsOpen(false)}
+                className="fixed inset-0 z-[900] bg-black/30 dark:bg-black/50 backdrop-blur-[2px]"
+              />
 
-            <div className="max-h-96 overflow-y-auto px-2 pb-2">
-              {(data?.items ?? []).length === 0 && (
-                <p className="py-8 text-center text-xs text-vault-pine/50 dark:text-white/40">
-                  Пока тихо — уведомления появятся здесь.
-                </p>
-              )}
-              {(data?.items ?? []).map((n) => {
-                const expanded = expandedId === n.id;
-                return (
-                  <button
-                    key={n.id}
-                    type="button"
-                    onClick={() => setExpandedId(expanded ? null : n.id)}
-                    className={cn(
-                      'relative w-full text-left pl-4 pr-3 py-2.5 rounded-xl mb-1 transition-colors',
-                      n.is_read
-                        ? 'hover:bg-black/[0.03] dark:hover:bg-white/[0.04]'
-                        : 'bg-[#FF7A00]/[0.06] dark:bg-[#FF7A00]/10',
-                      expanded && 'bg-black/[0.03] dark:bg-white/[0.05]',
-                    )}
-                  >
-                    {/* Полоса-акцент по типу записи */}
-                    <span
-                      className={cn(
-                        'absolute left-1.5 top-3 bottom-3 w-[3px] rounded-full',
-                        accentClass(n.type),
-                      )}
-                    />
-                    <p className="text-[13px] font-bold text-vault-pine dark:text-white leading-snug">
-                      {n.title}
+              {/* Панель: у левого края рядом с сайдбаром на десктопе, по центру — на мобиле */}
+              <motion.div
+                role="dialog"
+                aria-label="Уведомления"
+                initial={{ opacity: 0, y: 12, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 12, scale: 0.97 }}
+                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                className={cn(
+                  'fixed z-[901] flex flex-col overflow-hidden',
+                  'w-[min(26rem,calc(100vw-2rem))] max-h-[min(34rem,calc(100vh-6rem))]',
+                  'left-1/2 -translate-x-1/2 top-[max(4.5rem,env(safe-area-inset-top))]',
+                  'lg:left-[19.5rem] lg:translate-x-0 lg:top-1/2 lg:-translate-y-1/2',
+                  'bg-white/95 dark:bg-[#12100E]/95 backdrop-blur-3xl',
+                  'border border-black/10 dark:border-white/10 rounded-[1.75rem]',
+                  'shadow-[0_30px_70px_-15px_rgba(0,0,0,0.35)]',
+                )}
+              >
+                {/* Шапка */}
+                <div className="flex items-center justify-between gap-3 px-6 pt-5 pb-4 border-b border-black/5 dark:border-white/5">
+                  <div>
+                    <h2 className="text-lg font-sans font-extrabold tracking-tight text-vault-pine dark:text-white leading-none">
+                      Уведомления
+                    </h2>
+                    <p className="text-[12px] font-sans font-semibold text-vault-pine/50 dark:text-white/45 mt-1.5">
+                      Отчёты воркеров и что нового в проекте
                     </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsOpen(false)}
+                    aria-label="Закрыть уведомления"
+                    className="w-9 h-9 shrink-0 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-vault-pine/50 dark:text-white/50 hover:text-vault-pine dark:hover:text-white transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
 
-                    {!expanded && (
-                      <>
-                        <p className="text-[11px] text-vault-pine/60 dark:text-white/50 leading-snug mt-1 line-clamp-2">
-                          {n.body}
-                        </p>
-                        <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-vault-pine/35 dark:text-white/30 mt-1.5">
-                          {timeAgo(n.created_at)}
-                        </p>
-                      </>
-                    )}
+                {/* Лента */}
+                <div className="flex-1 overflow-y-auto px-3 py-3">
+                  {items.length === 0 && (
+                    <p className="py-12 text-center text-sm font-semibold text-vault-pine/50 dark:text-white/40">
+                      Пока тихо — уведомления появятся здесь.
+                    </p>
+                  )}
 
-                    {/* Плавное раскрытие: полный текст просторнее + дата целиком */}
-                    <AnimatePresence initial={false}>
-                      {expanded && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.3, ease: 'easeInOut' }}
-                          className="overflow-hidden"
-                        >
-                          <p className="text-[13px] text-vault-pine/75 dark:text-white/70 leading-relaxed whitespace-pre-line pt-2">
+                  {items.map((n) => {
+                    const expanded = expandedId === n.id;
+                    const { Icon, accent, chip, label } = styleFor(n.type);
+                    return (
+                      <button
+                        key={n.id}
+                        type="button"
+                        onClick={() => setExpandedId(expanded ? null : n.id)}
+                        className={cn(
+                          'relative w-full text-left pl-5 pr-4 py-4 rounded-2xl mb-1.5 transition-colors',
+                          n.is_read
+                            ? 'hover:bg-black/[0.04] dark:hover:bg-white/[0.05]'
+                            : 'bg-[#FF7A00]/[0.07] dark:bg-[#FF7A00]/10',
+                          expanded && 'bg-black/[0.04] dark:bg-white/[0.06]',
+                        )}
+                      >
+                        {/* Полоса-акцент по типу записи */}
+                        <span className={cn('absolute left-1.5 top-4 bottom-4 w-[3px] rounded-full', accent)} />
+
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className={cn('inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-sans font-black uppercase tracking-wider', chip)}>
+                            <Icon className="w-3 h-3" />
+                            {label}
+                          </span>
+                          <span className="text-[11px] font-sans font-semibold text-vault-pine/40 dark:text-white/35">
+                            {timeAgo(n.created_at)}
+                          </span>
+                        </div>
+
+                        <p className="text-[15px] font-sans font-extrabold text-vault-pine dark:text-white leading-snug">
+                          {n.title}
+                        </p>
+
+                        {!expanded && (
+                          <p className="text-[13px] font-sans font-medium text-vault-pine/65 dark:text-white/60 leading-relaxed mt-1 line-clamp-2">
                             {n.body}
                           </p>
-                          <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-vault-pine/40 dark:text-white/35 mt-2.5">
-                            {new Date(n.created_at).toLocaleString('ru-RU')}
-                          </p>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </button>
-                );
-              })}
-            </div>
-          </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-    </div>
+                        )}
+
+                        {/* Плавное раскрытие: полный текст просторнее + дата целиком */}
+                        <AnimatePresence initial={false}>
+                          {expanded && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.3, ease: 'easeInOut' }}
+                              className="overflow-hidden"
+                            >
+                              <p className="text-[14px] font-sans font-medium text-vault-pine/80 dark:text-white/75 leading-relaxed whitespace-pre-line pt-2">
+                                {n.body}
+                              </p>
+                              <p className="text-[11px] font-sans font-semibold text-vault-pine/40 dark:text-white/35 mt-3">
+                                {new Date(n.created_at).toLocaleString('ru-RU')}
+                              </p>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </button>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>,
+        document.body,
+      )}
+    </>
   );
 }
