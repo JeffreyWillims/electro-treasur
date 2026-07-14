@@ -63,12 +63,18 @@ export function NotificationBell() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
   });
 
-  // Esc закрывает панель — привычный жест для оверлея.
+  // Esc закрывает панель; фон не скроллится под открытым окном (иначе колесо
+  // мыши двигает страницу за панелью — читается как рывки интерфейса).
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setIsOpen(false);
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
   }, [isOpen]);
 
   const unread = data?.unread ?? 0;
@@ -106,33 +112,35 @@ export function NotificationBell() {
       {createPortal(
         <AnimatePresence>
           {isOpen && (
-            <>
-              {/* Затемнение: панель читается поверх любой страницы, клик — закрыть */}
+            // Центрирование флексом, а не translate: transform остаётся свободным
+            // для анимации — браузер не пересчитывает layout ни на одном кадре.
+            <div className="fixed inset-0 z-[900] flex items-center justify-center p-4">
+              {/* Затемнение без backdrop-blur: размытие всего экрана — главный
+                  источник лагов на слабых машинах, а панель и так читается. */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
+                transition={{ duration: 0.18, ease: 'easeOut' }}
                 onClick={() => setIsOpen(false)}
-                className="fixed inset-0 z-[900] bg-black/30 dark:bg-black/50 backdrop-blur-[2px]"
+                className="absolute inset-0 bg-black/45 dark:bg-black/65"
               />
 
-              {/* Панель: у левого края рядом с сайдбаром на десктопе, по центру — на мобиле */}
+              {/* Панель — строго по центру экрана на всех разрешениях */}
               <motion.div
                 role="dialog"
                 aria-label="Уведомления"
-                initial={{ opacity: 0, y: 12, scale: 0.97 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 12, scale: 0.97 }}
-                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                initial={{ opacity: 0, scale: 0.96, y: 8 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.98, y: 4 }}
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                style={{ willChange: 'transform, opacity' }}
                 className={cn(
-                  'fixed z-[901] flex flex-col overflow-hidden',
-                  'w-[min(26rem,calc(100vw-2rem))] max-h-[min(34rem,calc(100vh-6rem))]',
-                  'left-1/2 -translate-x-1/2 top-[max(4.5rem,env(safe-area-inset-top))]',
-                  'lg:left-[19.5rem] lg:translate-x-0 lg:top-1/2 lg:-translate-y-1/2',
-                  'bg-white/95 dark:bg-[#12100E]/95 backdrop-blur-3xl',
+                  'relative flex flex-col overflow-hidden',
+                  'w-[min(28rem,100%)] max-h-[min(34rem,calc(100vh-5rem))]',
+                  'bg-white/95 dark:bg-[#12100E]/95 backdrop-blur-xl',
                   'border border-black/10 dark:border-white/10 rounded-[1.75rem]',
-                  'shadow-[0_30px_70px_-15px_rgba(0,0,0,0.35)]',
+                  'shadow-[0_30px_70px_-15px_rgba(0,0,0,0.45)]',
                 )}
               >
                 {/* Шапка */}
@@ -202,31 +210,28 @@ export function NotificationBell() {
                           </p>
                         )}
 
-                        {/* Плавное раскрытие: полный текст просторнее + дата целиком */}
-                        <AnimatePresence initial={false}>
-                          {expanded && (
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: 'auto', opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.3, ease: 'easeInOut' }}
-                              className="overflow-hidden"
-                            >
-                              <p className="text-[14px] font-sans font-medium text-vault-pine/80 dark:text-white/75 leading-relaxed whitespace-pre-line pt-2">
-                                {n.body}
-                              </p>
-                              <p className="text-[11px] font-sans font-semibold text-vault-pine/40 dark:text-white/35 mt-3">
-                                {new Date(n.created_at).toLocaleString('ru-RU')}
-                              </p>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                        {/* Раскрытие: анимируем только opacity — height:auto заставлял
+                            браузер мерить layout каждый кадр и подёргивал ленту. */}
+                        {expanded && (
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.2, ease: 'easeOut' }}
+                          >
+                            <p className="text-[14px] font-sans font-medium text-vault-pine/80 dark:text-white/75 leading-relaxed whitespace-pre-line pt-2">
+                              {n.body}
+                            </p>
+                            <p className="text-[11px] font-sans font-semibold text-vault-pine/40 dark:text-white/35 mt-3">
+                              {new Date(n.created_at).toLocaleString('ru-RU')}
+                            </p>
+                          </motion.div>
+                        )}
                       </button>
                     );
                   })}
                 </div>
               </motion.div>
-            </>
+            </div>
           )}
         </AnimatePresence>,
         document.body,
