@@ -7,8 +7,10 @@ import { getBest, submitScore } from '@/lib/gameRecords';
  * «Копилка» — тематическая аркада Citrine Vault вместо змейки.
  * Сверху падают деньги и соблазны: монета +25 ₽, купюра +100 ₽,
  * импульсивная трата (🛍️/💳/🧋) — минус одно из трёх «терпений».
- * Поймал три траты — капитал разбит. Темп растёт с капиталом.
- * Управление: стрелки / A-D / перетаскивание пальцем / экранные кнопки.
+ * Поймал три траты — капитал разбит.
+ * Уровни: каждые 500 ₽ капитала — новый уровень, темп и доля соблазнов растут,
+ * в HUD виден текущий уровень, левел-ап отмечается баннером и вибрацией.
+ * Управление: стрелки / A-D / перетаскивание пальцем / крупные кнопки внизу.
  */
 
 type ItemKind = 'coin' | 'bill' | 'trap';
@@ -28,13 +30,19 @@ const MAX_LIVES = 3;
 const PADDLE_WIDTH = 14; // % ширины поля
 const CATCH_ZONE_Y = 88; // % высоты, где стоит копилка
 const TRAP_EMOJIS = ['🛍️', '💳', '🧋'];
+const LEVEL_STEP = 500; // ₽ капитала на уровень
+
+export function levelFor(capital: number): number {
+  return Math.floor(capital / LEVEL_STEP) + 1;
+}
 
 function spawnItem(id: number, capital: number): FallingItem {
-  // Чем больше капитал, тем чаще соблазны и быстрее падение.
-  const trapChance = Math.min(0.42, 0.22 + capital / 4000);
+  // Чем выше уровень, тем чаще соблазны и быстрее падение.
+  const level = levelFor(capital);
+  const trapChance = Math.min(0.45, 0.2 + level * 0.035);
   const roll = Math.random();
   const kind: ItemKind = roll < trapChance ? 'trap' : roll < trapChance + 0.12 ? 'bill' : 'coin';
-  const baseSpeed = 26 + Math.min(30, capital / 60);
+  const baseSpeed = 24 + Math.min(34, (level - 1) * 4.5);
   return {
     id,
     kind,
@@ -57,6 +65,8 @@ export function PiggyBank({ onClose }: { onClose: () => void }) {
   const [items, setItems] = useState<FallingItem[]>([]);
   const [paddleX, setPaddleX] = useState(50);
   const [lastGain, setLastGain] = useState<{ amount: number; key: number } | null>(null);
+  const [level, setLevel] = useState(1);
+  const [levelFlash, setLevelFlash] = useState<{ level: number; key: number } | null>(null);
 
   const fieldRef = useRef<HTMLDivElement>(null);
   const keysRef = useRef({ left: false, right: false });
@@ -82,6 +92,8 @@ export function PiggyBank({ onClose }: { onClose: () => void }) {
     setOver(false);
     setPaused(false);
     setLastGain(null);
+    setLevel(1);
+    setLevelFlash(null);
     setRunning(true);
   };
 
@@ -145,6 +157,16 @@ export function PiggyBank({ onClose }: { onClose: () => void }) {
 
       // Улетевшие за низ поля просто исчезают.
       itemsRef.current = next.filter((it) => it.y < 108);
+
+      // Левел-ап: баннер + вибрация, темп подрастает через spawnItem/levelFor.
+      const currentLevel = levelFor(capitalRef.current);
+      setLevel((prevLevel) => {
+        if (currentLevel > prevLevel) {
+          setLevelFlash({ level: currentLevel, key: Date.now() });
+          navigator.vibrate?.([20, 40, 20]);
+        }
+        return currentLevel;
+      });
 
       setItems(itemsRef.current);
       setPaddleX(paddleXRef.current);
@@ -269,6 +291,14 @@ export function PiggyBank({ onClose }: { onClose: () => void }) {
           </div>
           <div className="flex-1 rounded-2xl bg-white/10 px-4 py-2.5 text-center">
             <p className="text-[9px] font-mono font-bold uppercase tracking-[0.2em] text-white/50">
+              Уровень
+            </p>
+            <p className="text-lg font-sans font-extrabold text-[#FFD75E] leading-tight">
+              {level}
+            </p>
+          </div>
+          <div className="flex-1 rounded-2xl bg-white/10 px-4 py-2.5 text-center">
+            <p className="text-[9px] font-mono font-bold uppercase tracking-[0.2em] text-white/50">
               Терпение
             </p>
             <p className="text-lg leading-tight tracking-wider">
@@ -300,6 +330,24 @@ export function PiggyBank({ onClose }: { onClose: () => void }) {
               {it.emoji}
             </span>
           ))}
+
+          {/* Баннер левел-апа — вспыхивает по центру поля и тает */}
+          <AnimatePresence>
+            {levelFlash && (
+              <motion.div
+                key={levelFlash.key}
+                initial={{ opacity: 0, scale: 0.7, y: 10 }}
+                animate={{ opacity: [0, 1, 1, 0], scale: [0.7, 1.08, 1, 1], y: [10, 0, 0, -14] }}
+                transition={{ duration: 1.6, times: [0, 0.2, 0.75, 1], ease: 'easeOut' }}
+                onAnimationComplete={() => setLevelFlash(null)}
+                className="absolute inset-x-0 top-1/3 z-20 flex justify-center pointer-events-none"
+              >
+                <span className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-[#FF7A00] to-[#FFD75E] text-[#0A1A12] text-lg font-sans font-black uppercase tracking-widest shadow-[0_0_30px_rgba(255,215,94,0.6)]">
+                  Уровень {levelFlash.level}!
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Копилка */}
           <div
@@ -346,19 +394,24 @@ export function PiggyBank({ onClose }: { onClose: () => void }) {
           </AnimatePresence>
         </div>
 
-        {/* Экранные кнопки — управление пальцем на телефоне */}
-        <div className="flex justify-center gap-3 mt-5 md:hidden">
+        {/* Экранные стрелки — во всю ширину внизу, под большие пальцы;
+            учитывают безопасную зону айфона (home-индикатор) */}
+        <div
+          className="grid grid-cols-2 gap-3 mt-4 md:hidden"
+          style={{ paddingBottom: 'max(0px, env(safe-area-inset-bottom))' }}
+        >
           {(['left', 'right'] as const).map((side) => (
             <button
               key={side}
               type="button"
               aria-label={side === 'left' ? 'Влево' : 'Вправо'}
-              className="h-14 w-24 rounded-2xl bg-white/10 text-white flex items-center justify-center active:bg-[#FF7A00] active:scale-95 transition-all"
-              onPointerDown={() => holdPad(side, true)}
+              className="h-16 rounded-2xl bg-white/10 border border-white/10 text-white flex items-center justify-center active:bg-[#FF7A00] active:scale-95 transition-all touch-none select-none"
+              onPointerDown={(e) => { e.preventDefault(); holdPad(side, true); }}
               onPointerUp={() => holdPad(side, false)}
+              onPointerCancel={() => holdPad(side, false)}
               onPointerLeave={() => holdPad(side, false)}
             >
-              {side === 'left' ? <ChevronLeft className="w-6 h-6" /> : <ChevronRight className="w-6 h-6" />}
+              {side === 'left' ? <ChevronLeft className="w-8 h-8" /> : <ChevronRight className="w-8 h-8" />}
             </button>
           ))}
         </div>

@@ -175,7 +175,36 @@ function AutoBudgets8020({ income, expense, monthKey }: { income: number; expens
   const saved = Math.max(income - expense, 0);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+    <div className="flex flex-col gap-4 w-full">
+      {/* Заголовок-инструкция: правило одной строкой, живыми цифрами месяца */}
+      <div className="px-2">
+        <h2 className="text-xl md:text-2xl font-sans font-extrabold tracking-tight text-[#1C3F35] dark:text-white leading-none">
+          Правило 80/20
+        </h2>
+        <p className="mt-2 text-[13px] font-sans font-semibold leading-relaxed text-[#1C3F35]/60 dark:text-white/50 max-w-2xl">
+          {income > 0 ? (
+            <>
+              Из дохода {Math.round(income).toLocaleString('ru-RU')} ₽ этот месяц живёт на{' '}
+              <span className="text-[#FF7A00] font-extrabold">
+                {Math.round(income * 0.8).toLocaleString('ru-RU')} ₽
+              </span>
+              , а{' '}
+              <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">
+                {Math.round(income * 0.2).toLocaleString('ru-RU')} ₽
+              </span>{' '}
+              уходит в сбережения. Лимиты пересчитываются сами; клик по сумме — свой лимит,
+              кнопка «↺ авто» вернёт расчётный.
+            </>
+          ) : (
+            <>
+              Добавьте доход этого месяца — и лимиты «на жизнь» и «на сбережения» посчитаются
+              сами. Или задайте суммы вручную кликом по «0 ₽».
+            </>
+          )}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
       <AutoBudgetCard
         storageKey={`cv_budget8020_life:${monthKey}`}
         title="Бюджет на жизнь · 80%"
@@ -193,6 +222,7 @@ function AutoBudgets8020({ income, expense, monthKey }: { income: number; expens
         accent="#10B981"
         overIsGood
       />
+      </div>
     </div>
   );
 }

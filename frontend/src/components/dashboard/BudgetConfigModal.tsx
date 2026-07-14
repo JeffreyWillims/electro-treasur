@@ -29,7 +29,9 @@ export function BudgetConfigModal({ isOpen, onClose, row }: BudgetConfigModalPro
     enabled: isOpen,
   });
 
-  const availableCategories = categories || [];
+  // Конверт — это лимит ТРАТ: доходные категории ломают механику
+  // (лимит на «Зарплату» бессмысленен и портит индекс дисциплины).
+  const availableCategories = (categories || []).filter((c) => c.type === 'expense');
 
   useEffect(() => {
     if (isOpen) {

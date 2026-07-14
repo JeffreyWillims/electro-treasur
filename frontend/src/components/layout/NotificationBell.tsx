@@ -1,6 +1,6 @@
 /**
  * NotificationBell — колокольчик с лентой уведомлений (обновления проекта,
- * личные рекорды). Поллинг раз в минуту через refetchInterval; при открытии
+ * итоги фоновых воркеров). Поллинг раз в минуту через refetchInterval; при открытии
  * панели всё помечается прочитанным. Записи раскрываются аккордеоном —
  * полный текст, дата целиком и цветовой акцент по типу.
  */
@@ -22,10 +22,11 @@ function timeAgo(iso: string): string {
   return `${days} дн назад`;
 }
 
-// Цветная полоса-акцент слева: record → золото, update (и прочее) → оранжевый.
+// Цветная полоса-акцент слева: report (итог воркера) → изумруд,
+// update (и прочее) → оранжевый.
 function accentClass(type: string): string {
-  return type === 'record'
-    ? 'bg-gradient-to-b from-[#FFD75E] to-[#D9A400]'
+  return type === 'report'
+    ? 'bg-gradient-to-b from-[#10B981] to-[#059669]'
     : 'bg-gradient-to-b from-[#FF7A00] to-[#FFA011]';
 }
 

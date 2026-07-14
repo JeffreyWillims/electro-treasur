@@ -1,11 +1,13 @@
 /**
- * InsightModal — "AI Анализ года" modal with skeleton loader during polling.
- * Renders useLLMInsight hook state: loading → skeleton, complete → data.
+ * InsightModal — окно «AI Анализ»: скелетон на время расчёта, затем разбор,
+ * разложенный на смысловые карточки (итог → наблюдения → совет-каллаут),
+ * сводка доход/расход/норма и действия: скопировать текст, скачать PDF-план.
  */
 import { useLLMInsight } from '@/api/useLLMInsight';
 import { useEffect } from 'react';
+import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { Sparkles, X, AlertCircle } from 'lucide-react';
+import { Sparkles, X, AlertCircle, Copy, FileDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Деньги и проценты в тексте анализа подсвечиваются акцентом — цифры читаются
@@ -73,7 +75,7 @@ export function InsightModal({
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 40, scale: 0.95 }}
               transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-              className="relative w-full max-w-2xl bg-white/90 dark:bg-[#111111]/95 backdrop-blur-3xl border border-black/5 dark:border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-[0_32px_80px_rgba(0,0,0,0.15)] dark:shadow-[0_32px_80px_rgba(0,0,0,0.6)]"
+              className="relative w-full max-w-2xl max-h-[88vh] overflow-y-auto bg-white/90 dark:bg-[#111111]/95 backdrop-blur-3xl border border-black/5 dark:border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-[0_32px_80px_rgba(0,0,0,0.15)] dark:shadow-[0_32px_80px_rgba(0,0,0,0.6)]"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Close button */}
@@ -139,26 +141,61 @@ export function InsightModal({
 
                 {data && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
-                    <div className="space-y-4">
-                      {data.insight
+                    {(() => {
+                      const paragraphs = data.insight
                         .split(/\n+/)
-                        .filter((p) => p.trim().length > 0)
-                        .map((paragraph, i) => (
-                          <motion.p
-                            key={i}
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.12, duration: 0.4, ease: 'easeOut' }}
-                            className={
-                              i === 0
-                                ? 'text-base md:text-lg font-semibold text-[#1C3F35] dark:text-white leading-relaxed'
-                                : 'text-sm md:text-base font-medium text-[#1C3F35]/70 dark:text-white/70 leading-relaxed'
-                            }
-                          >
-                            <HighlightedText text={paragraph} />
-                          </motion.p>
-                        ))}
-                    </div>
+                        .filter((p) => p.trim().length > 0);
+                      const advice = paragraphs.filter((p) => p.startsWith('Совет:'));
+                      const facts = paragraphs.filter((p) => !p.startsWith('Совет:'));
+                      return (
+                        <div className="space-y-4">
+                          {/* Наблюдения: ведущий итог + строки с маркером-акцентом */}
+                          {facts.map((paragraph, i) => {
+                            const negative = /превысили|минус|перерасход/.test(paragraph);
+                            return (
+                              <motion.div
+                                key={i}
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: i * 0.12, duration: 0.4, ease: 'easeOut' }}
+                                className={
+                                  i === 0
+                                    ? 'text-base md:text-lg font-semibold text-[#1C3F35] dark:text-white leading-relaxed'
+                                    : 'flex items-start gap-3 text-sm md:text-base font-medium text-[#1C3F35]/75 dark:text-white/75 leading-relaxed'
+                                }
+                              >
+                                {i > 0 && (
+                                  <span
+                                    className={`mt-2 w-2 h-2 rounded-full shrink-0 ${
+                                      negative ? 'bg-rose-500' : 'bg-emerald-500'
+                                    }`}
+                                  />
+                                )}
+                                <span>
+                                  <HighlightedText text={paragraph} />
+                                </span>
+                              </motion.div>
+                            );
+                          })}
+
+                          {/* Совет — каллаут с оранжевой полосой, главная выжимка анализа */}
+                          {advice.map((paragraph, i) => (
+                            <motion.div
+                              key={`advice-${i}`}
+                              initial={{ opacity: 0, y: 8 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: (facts.length + i) * 0.12, duration: 0.4, ease: 'easeOut' }}
+                              className="relative rounded-2xl bg-[#FF7A00]/[0.07] dark:bg-[#FF7A00]/10 border border-[#FF7A00]/20 pl-5 pr-4 py-4 overflow-hidden"
+                            >
+                              <span className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-[#FF7A00] to-[#FFA011]" />
+                              <p className="text-sm md:text-base font-semibold text-[#1C3F35] dark:text-white leading-relaxed">
+                                💡 <HighlightedText text={paragraph.replace(/^Совет:\s*/, '')} />
+                              </p>
+                            </motion.div>
+                          ))}
+                        </div>
+                      );
+                    })()}
 
                     {/* Summary cards */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -182,6 +219,29 @@ export function InsightModal({
                           {data.summary.savings_rate}
                         </p>
                       </div>
+                    </div>
+
+                    {/* Действия: разбор можно унести с собой */}
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard
+                            .writeText(data.insight)
+                            .then(() => toast.success('Разбор скопирован'))
+                            .catch(() => toast.error('Не удалось скопировать'));
+                        }}
+                        className="flex-1 h-12 rounded-2xl bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 text-[#1C3F35] dark:text-white text-sm font-bold flex items-center justify-center gap-2.5 transition-colors active:scale-[0.98]"
+                      >
+                        <Copy className="w-4 h-4" /> Скопировать разбор
+                      </button>
+                      <a
+                        href="/api/v1/reports/financial-plan.pdf"
+                        download
+                        className="flex-1 h-12 rounded-2xl bg-gradient-to-r from-[#FF7A00] to-[#FFA011] text-white text-sm font-bold flex items-center justify-center gap-2.5 shadow-[0_10px_20px_-5px_rgba(255,122,0,0.4)] active:scale-[0.98] transition-transform"
+                      >
+                        <FileDown className="w-4 h-4" /> Скачать PDF-план
+                      </a>
                     </div>
 
                     <div className="pt-4 border-t border-black/5 dark:border-white/5">

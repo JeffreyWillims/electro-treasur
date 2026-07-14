@@ -88,9 +88,14 @@ export function SafeToSpend() {
           <span className="text-sm md:text-base font-sans font-extrabold uppercase tracking-widest text-[#1C3F35] dark:text-emerald-500">
             ₽ / День
           </span>
+          <p className="text-[13px] font-sans font-semibold text-[#1C3F35]/55 dark:text-white/45">
+            на каждый из {daysLeft} {daysLeft === 1 ? 'дня' : 'дней'} до конца месяца — трать
+            спокойно, план не пострадает 🛡️
+          </p>
         </div>
       </div>
 
+      {/* «Как это работает» — по наведению И по тапу (мобильный без hover) */}
       <div
         className="absolute bottom-6 right-6 z-50 flex items-center justify-end"
         onMouseEnter={() => setShowTooltip(true)}
@@ -103,19 +108,50 @@ export function SafeToSpend() {
               animate={{ opacity: 1, x: 0, scale: 1 }}
               exit={{ opacity: 0, x: 10, scale: 0.95 }}
               transition={{ duration: 0.15 }}
-              className="absolute bottom-0 right-14 w-64 p-5 bg-white/95 dark:bg-[#121212]/95 backdrop-blur-3xl border border-black/10 dark:border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.6)] pointer-events-none origin-bottom-right"
+              className="absolute bottom-12 right-0 sm:bottom-0 sm:right-14 w-[19rem] p-5 bg-white/95 dark:bg-[#16211d]/95 backdrop-blur-3xl border border-black/10 dark:border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.6)] pointer-events-none origin-bottom-right text-left"
             >
-              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.25em] text-[#FF7A00] mb-2.5">Как это работает?</p>
-              <p className="text-[11px] font-mono text-[#1C3F35] dark:text-white/80 leading-relaxed tracking-wide">
-                Это сумма, которую вы можете тратить каждый день до конца месяца, не нарушая свои планы. Она учитывает ваши доходы и лимиты в конвертах.
+              <p className="text-[11px] font-sans font-extrabold uppercase tracking-[0.18em] text-[#FF7A00] mb-3">
+                Как считается лимит
+              </p>
+              {/* Формула живыми цифрами пользователя — понятнее любой инструкции */}
+              <dl className="space-y-1.5 text-[13px] font-sans font-semibold text-[#1C3F35] dark:text-white/85 tabular-nums">
+                <div className="flex justify-between gap-3">
+                  <dt className="text-[#1C3F35]/60 dark:text-white/50 font-medium">Доход месяца</dt>
+                  <dd>{Math.round(monthlyIncome).toLocaleString('ru-RU')} ₽</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt className="text-[#1C3F35]/60 dark:text-white/50 font-medium">− лимиты конвертов</dt>
+                  <dd>−{Math.round(totalPlanned).toLocaleString('ru-RU')} ₽</dd>
+                </div>
+                {overspent > 0 && (
+                  <div className="flex justify-between gap-3 text-rose-600 dark:text-rose-400">
+                    <dt className="font-medium">− перерасходы</dt>
+                    <dd>−{Math.round(overspent).toLocaleString('ru-RU')} ₽</dd>
+                  </div>
+                )}
+                <div className="flex justify-between gap-3 border-t border-black/10 dark:border-white/10 pt-1.5">
+                  <dt className="text-[#1C3F35]/60 dark:text-white/50 font-medium">÷ {daysLeft} дн. до конца месяца</dt>
+                  <dd className="font-extrabold text-[#FF7A00]">
+                    {limit.toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₽/день
+                  </dd>
+                </div>
+              </dl>
+              <p className="mt-3 text-[12px] font-sans font-medium leading-relaxed text-[#1C3F35]/60 dark:text-white/55">
+                Держитесь под этой суммой — и к концу месяца конверты сойдутся, а сбережения
+                останутся целыми.
               </p>
             </motion.div>
           )}
         </AnimatePresence>
 
-        <div className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center cursor-help hover:bg-black/10 dark:hover:bg-white/10 transition-colors text-[#1C3F35]/50 dark:text-white/50">
+        <button
+          type="button"
+          aria-label="Как считается безопасный лимит"
+          onClick={() => setShowTooltip((v) => !v)}
+          className="w-11 h-11 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center cursor-help hover:bg-black/10 dark:hover:bg-white/10 transition-colors text-[#1C3F35]/50 dark:text-white/50"
+        >
           <Info className="w-5 h-5" />
-        </div>
+        </button>
       </div>
     </div>
   );

@@ -104,7 +104,7 @@ export function CategoryPieChart({ categoryTotals }: CategoryPieChartProps) {
 
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-0">
               <AnimatePresence mode="wait">
-                {hoveredIndex !== null && categoryTotals[hoveredIndex] && (
+                {hoveredIndex !== null && categoryTotals[hoveredIndex] ? (
                   <motion.div
                     key={hoveredIndex}
                     initial={{ opacity: 0, scale: 0.95 }}
@@ -119,11 +119,29 @@ export function CategoryPieChart({ categoryTotals }: CategoryPieChartProps) {
                         : 0}
                       %
                     </p>
-                    <p className="text-[10px] font-mono font-bold uppercase tracking-[0.25em] text-[#1C3F35]/50 dark:text-white/40 mt-3 max-w-[120px] text-center leading-tight truncate px-2">
+                    <p className="text-[13px] font-sans font-bold text-[#1C3F35]/75 dark:text-white/70 mt-2.5 max-w-[140px] text-center leading-tight px-2">
                       {getRussianCategoryName(categoryTotals[hoveredIndex].name)}
                     </p>
                     <p className="text-sm font-sans font-extrabold tabular-nums tracking-tight text-[#FF7A00] mt-1">
                       {categoryTotals[hoveredIndex].value.toLocaleString('ru-RU')} ₽
+                    </p>
+                  </motion.div>
+                ) : (
+                  /* Простой: итог месяца в центре кольца — цифра, ради которой открывают вкладку */
+                  <motion.div
+                    key="idle-total"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                    className="flex flex-col items-center"
+                  >
+                    <p className="text-3xl font-sans font-black tabular-nums tracking-tighter text-[#1C3F35] dark:text-white leading-none">
+                      {Math.round(grandTotal).toLocaleString('ru-RU')}
+                      <span className="text-base font-bold opacity-50 ml-1">₽</span>
+                    </p>
+                    <p className="text-[11px] font-sans font-bold uppercase tracking-[0.18em] text-[#1C3F35]/45 dark:text-white/40 mt-2">
+                      всего расходов
                     </p>
                   </motion.div>
                 )}
@@ -134,29 +152,37 @@ export function CategoryPieChart({ categoryTotals }: CategoryPieChartProps) {
       </div>
 
       <div className="mt-8 pt-6 border-t border-black/5 dark:border-white/5 relative z-10">
-        <ul className="grid grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-6">
+        {/* Легенда-рейтинг: цветной чип + имя полноценным шрифтом + сумма и доля.
+            Текст — чернилами интерфейса, идентичность несёт чип (не серый петит). */}
+        <ul className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-6">
           {categoryTotals.slice(0, 6).map((entry, index) => (
             <li
               key={`legend-${index}`}
               className={cn(
-                "flex items-center gap-3 group/legend cursor-pointer p-1.5 -m-1.5 rounded-lg transition-colors",
+                "flex items-center gap-3 group/legend cursor-pointer px-2.5 py-2 -mx-1 rounded-xl transition-colors",
                 hoveredIndex === index ? "bg-black/5 dark:bg-white/5" : "hover:bg-black/5 dark:hover:bg-white/5"
               )}
               onMouseEnter={() => setHoveredIndex(index)}
               onMouseLeave={() => setHoveredIndex(null)}
             >
               <span
-                className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm transition-transform duration-300"
+                className="w-3.5 h-3.5 rounded-[5px] flex-shrink-0 shadow-sm transition-transform duration-300"
                 style={{
                   backgroundColor: entry.color || RING_COLORS[index % RING_COLORS.length],
-                  transform: hoveredIndex === index ? 'scale(1.5)' : 'scale(1)'
+                  transform: hoveredIndex === index ? 'scale(1.25)' : 'scale(1)'
                 }}
               />
-              <span className={cn(
-                "text-[11px] md:text-xs font-bold truncate transition-colors",
-                hoveredIndex === index ? "text-[#1C3F35] dark:text-white" : "text-[#1C3F35]/70 dark:text-white/60"
-              )}>
+              <span className="flex-1 min-w-0 text-[13px] md:text-sm font-sans font-bold truncate text-[#1C3F35] dark:text-white/90">
                 {getRussianCategoryName(entry.name)}
+              </span>
+              <span className="text-[13px] font-sans font-extrabold tabular-nums text-[#1C3F35]/80 dark:text-white/75 shrink-0">
+                {Math.round(entry.value).toLocaleString('ru-RU')} ₽
+              </span>
+              <span
+                className="w-11 text-right text-[11px] font-sans font-black tabular-nums shrink-0"
+                style={{ color: entry.color || RING_COLORS[index % RING_COLORS.length] }}
+              >
+                {grandTotal > 0 ? Math.round((entry.value / grandTotal) * 100) : 0}%
               </span>
             </li>
           ))}

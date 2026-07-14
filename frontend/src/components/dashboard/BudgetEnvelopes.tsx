@@ -453,6 +453,22 @@ export function BudgetEnvelopes({
                 <span className="text-[10px] font-mono font-bold uppercase tracking-[0.25em] text-[#1C3F35]/40 dark:text-white/40 mt-2">
                   ИЗ {planned.toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₽
                 </span>
+                {/* Живой ритм конверта: сколько осталось и дневной темп до конца месяца */}
+                <span
+                  className={cn(
+                    'text-[11px] font-sans font-bold mt-2.5 px-3 py-1 rounded-full',
+                    isOver
+                      ? 'text-rose-600 dark:text-rose-400 bg-rose-500/10'
+                      : 'text-emerald-700 dark:text-emerald-400 bg-emerald-500/10',
+                  )}
+                >
+                  {isOver
+                    ? `перерасход ${Math.round(fact - planned).toLocaleString('ru-RU')} ₽`
+                    : `осталось ${Math.round(planned - fact).toLocaleString('ru-RU')} ₽ · ${Math.max(
+                        0,
+                        Math.floor((planned - fact) / Math.max(1, daysInMonth - todayDate + 1)),
+                      ).toLocaleString('ru-RU')} ₽/день`}
+                </span>
               </div>
             </div>
 

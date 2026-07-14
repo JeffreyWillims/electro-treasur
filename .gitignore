@@ -25,9 +25,8 @@ test-results.xml
 # ── Python build artifacts (pip install -e) ──
 *.egg-info/
 
-# ── Local-only: документация и агентная система (не выкатываем на сервер) ──
-/docs/
-/backend/src/agents/
+# Документация (/docs/) и агентная система (/backend/src/agents/) теперь в git:
+# сервер получает код копированием репозитория, база знаний нужна агентам там.
 
 # Local-only compose overlay (MailHog и пр.) — не выкатываем на сервер
 docker-compose.override.yml
