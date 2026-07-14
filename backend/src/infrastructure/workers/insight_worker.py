@@ -28,10 +28,11 @@ from aiogram import Bot
 from aiogram.client.session.aiohttp import AiohttpSession
 from arq.connections import ArqRedis
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
-from src.domain.models import Budget, Category, CategoryType, Transaction, User
+from src.domain.models import Budget, Category, CategoryType, Notification, Transaction, User
 from src.services.cashflow_prep import get_active_user_ids, upsert_insight
 from src.services.insight_engine import (
     BudgetData,
@@ -178,6 +179,21 @@ async def calculate_static_insights(
                 "psychopassport": asdict(pp),
             },
             model_used=MODEL_NAME,
+        )
+
+        # Итог работы воркера — в колокольчик (идемпотентно по (user, period)).
+        note = pg_insert(Notification).values(
+            user_id=user_id,
+            type="report",
+            title="Свежий отчёт готов",
+            body=(
+                f"Разбор за {period_start.strftime('%d.%m')}–{period_end.strftime('%d.%m.%Y')} "
+                "ждёт во вкладке «Аналитика»."
+            ),
+            dedup_key=f"report:{period_start.isoformat()}:{period_end.isoformat()}",
+        )
+        await session.execute(
+            note.on_conflict_do_nothing(constraint="uq_notifications_user_dedup")
         )
         await session.commit()
 

@@ -10,18 +10,27 @@ export function LoginForm() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError('');
     setIsSubmitting(true);
     try {
       await login(email, password);
       toast.success('Добро пожаловать в Citrine Vault');
       navigate('/');
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Ошибка входа';
+      // TypeError от fetch = сеть/сервер недоступны; ApiError уже человекочитаем.
+      const message =
+        err instanceof TypeError
+          ? 'Сервер недоступен. Проверьте соединение и попробуйте ещё раз.'
+          : err instanceof Error
+            ? err.message
+            : 'Ошибка входа';
+      setFormError(message);
       toast.error(message);
     } finally {
       setIsSubmitting(false);
@@ -148,6 +157,21 @@ export function LoginForm() {
                   </button>
                 </div>
               </motion.div>
+            </AnimatePresence>
+
+            {/* ── Инлайн-ошибка входа: видна прямо под полями, не только в тосте ── */}
+            <AnimatePresence>
+              {formError && (
+                <motion.p
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="text-sm font-semibold text-rose-600 dark:text-rose-400 px-2"
+                  role="alert"
+                >
+                  {formError}
+                </motion.p>
+              )}
             </AnimatePresence>
 
             {/* ── Кнопка призыва к действию ── */}

@@ -23,8 +23,10 @@ function DashboardLayout() {
     <div className="flex min-h-screen bg-[#FDFBF7] dark:bg-[#050505] relative overflow-hidden">
       <Sidebar />
 
-      {/* Main Content Area — accounts for floating sidebar margins */}
-      <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
+      {/* Main Content Area — accounts for floating sidebar margins.
+          pt-16 на мобильном: фиксированная кнопка-гамбургер (top-4, ~40px)
+          не должна перекрывать заголовки страниц; на десктопе её нет. */}
+      <main className="flex-1 p-4 pt-16 lg:p-8 lg:pt-8 overflow-y-auto">
         <Suspense fallback={<div className="flex items-center justify-center min-h-[50vh] font-sans font-bold text-[#FF7A00] animate-pulse text-xl">Загрузка...</div>}>
           <Outlet />
         </Suspense>

@@ -44,9 +44,13 @@ class Settings(BaseSettings):
     # ── Email / SMTP ────────────────────────────────────────────────────
     # Пустой host — письма уходят в структурный лог (поведение по умолчанию).
     # Локально: ET_SMTP_HOST=mailhog (см. docker-compose.yml), UI — :8025.
+    # Прод: реальный провайдер требует STARTTLS и логин/пароль (app password).
     smtp_host: str = ""
     smtp_port: int = 1025
     smtp_from: str = "noreply@citrine-vault.local"
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_starttls: bool = False
 
     # ── Telegram-бот ─────────────────────────────────────────────────────
     telegram_bot_token: str = ""

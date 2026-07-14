@@ -26,6 +26,10 @@ export function RegisterForm() {
       setPasswordError('⚠️ Пароли не совпадают');
       return;
     }
+    if (password.length < 8) {
+      setPasswordError('⚠️ Пароль слишком короткий — нужно не меньше 8 символов');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -33,7 +37,14 @@ export function RegisterForm() {
       toast.success('Аккаунт Citrine Vault создан');
       navigate('/');
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Ошибка регистрации';
+      // TypeError от fetch = сеть/сервер недоступны; ApiError уже человекочитаем.
+      const message =
+        err instanceof TypeError
+          ? 'Сервер недоступен. Проверьте соединение и попробуйте ещё раз.'
+          : err instanceof Error
+            ? err.message
+            : 'Ошибка регистрации';
+      setPasswordError(`⚠️ ${message}`);
       toast.error(message);
     } finally {
       setIsSubmitting(false);

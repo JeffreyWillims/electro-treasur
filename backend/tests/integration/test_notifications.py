@@ -4,7 +4,7 @@ tests/integration/test_notifications.py — колокольчик уведом�
 Проверяет:
   • GET /v1/notifications лениво досеивает записи «Что нового» (идемпотентно);
   • POST /v1/notifications/read-all обнуляет счётчик непрочитанного;
-  • новый рекорд в игре создаёт уведомление типа record (без дублей);
+  • рекорды игр НЕ создают уведомлений (в ленте только полезное);
   • GET /v1/games/leaderboard/total суммирует очки всех игр;
   • эндпоинты требуют auth.
 """
@@ -41,21 +41,16 @@ async def test_read_all_resets_unread(
     assert all(n["is_read"] for n in data["items"])
 
 
-async def test_new_record_creates_notification(
+async def test_game_records_do_not_notify(
     async_client: AsyncClient, auth_headers: dict[str, str]
 ) -> None:
-    await async_client.post(
+    resp = await async_client.post(
         "/v1/games/score", json={"game": "piggy", "score": 250}, headers=auth_headers
     )
-    # Повторная отправка того же счёта не должна дублировать уведомление
-    await async_client.post(
-        "/v1/games/score", json={"game": "piggy", "score": 250}, headers=auth_headers
-    )
+    assert resp.status_code == 200
 
     data = (await async_client.get("/v1/notifications/", headers=auth_headers)).json()
-    records = [n for n in data["items"] if n["type"] == "record"]
-    assert len(records) == 1
-    assert "Копилка" in records[0]["title"]
+    assert [n for n in data["items"] if n["type"] == "record"] == []
 
 
 async def test_total_leaderboard_sums_games(

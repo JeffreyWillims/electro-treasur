@@ -1,5 +1,7 @@
 """
-Уведомления колокольчика — «Что нового» в проекте + личные события (рекорды игр).
+Уведомления колокольчика — только полезное: «Что нового» в проекте и итоги
+фоновых воркеров (например, готовность месячного отчёта). Рекорды игр в ленту
+не пишутся, а старые записи type="record" отфильтровываются из выдачи.
 
 GET  /          — лента (лениво досеивает записи «Что нового») + счётчик непрочитанного.
 POST /read-all  — пометить все уведомления пользователя прочитанными.
@@ -23,6 +25,12 @@ FEED_LIMIT = 50
 # «Что нового» — обновления проекта. Ключ стабилен: каждая запись досеивается
 # пользователю ровно один раз (ON CONFLICT DO NOTHING по (user_id, dedup_key)).
 CHANGELOG: list[tuple[str, str, str]] = [
+    (
+        "upd:2026-07-coincatch",
+        "Копилка, советник и переезды",
+        "Вместо змейки — «Копилка»: лови монеты, уклоняйся от импульсивных трат. "
+        "«Стоит ли покупать?» переехал в Аналитику, «Мои цели» — в Бюджеты.",
+    ),
     (
         "upd:2026-07-arcade",
         "Большое обновление аркады",
@@ -64,7 +72,7 @@ async def list_notifications(
 
     rows = await db.execute(
         select(Notification)
-        .where(Notification.user_id == current_user.id)
+        .where(Notification.user_id == current_user.id, Notification.type != "record")
         .order_by(Notification.created_at.desc(), Notification.id.desc())
         .limit(FEED_LIMIT)
     )
@@ -73,7 +81,11 @@ async def list_notifications(
         await db.scalar(
             select(func.count())
             .select_from(Notification)
-            .where(Notification.user_id == current_user.id, Notification.is_read.is_(False))
+            .where(
+                Notification.user_id == current_user.id,
+                Notification.type != "record",
+                Notification.is_read.is_(False),
+            )
         )
         or 0
     )

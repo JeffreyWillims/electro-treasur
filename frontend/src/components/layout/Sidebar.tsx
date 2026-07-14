@@ -88,7 +88,7 @@ export function Sidebar() {
       {/* Mobile Toggle Button */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2.5 rounded-xl bg-white/80 dark:bg-vault-black/80 backdrop-blur-xl border border-vault-pine/10 dark:border-white/10 shadow-card"
+        className="lg:hidden fixed top-[max(1rem,env(safe-area-inset-top))] left-[max(1rem,env(safe-area-inset-left))] z-50 p-2.5 rounded-xl bg-white/80 dark:bg-vault-black/80 backdrop-blur-xl border border-vault-pine/10 dark:border-white/10 shadow-card"
         aria-label="Открыть меню"
       >
         <Menu size={20} className="text-vault-pine dark:text-white" />

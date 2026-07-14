@@ -35,11 +35,36 @@ import type {
 
 const API_BASE = '/api';
 
-class ApiError extends Error {
+export class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message);
     this.name = 'ApiError';
   }
+}
+
+/**
+ * Человекочитаемая ошибка API. FastAPI на 422 присылает массив объектов
+ * валидации, rate-limit — английскую строку («5 per 1 minute») — сводим
+ * всё к понятной русской фразе для тостов и инлайн-ошибок форм.
+ */
+function humanizeDetail(status: number, detail: unknown): string {
+  if (status === 429) return 'Слишком много попыток. Подождите минуту и попробуйте снова.';
+  if (Array.isArray(detail)) {
+    const msgs = detail.map((d: { loc?: unknown[]; type?: string; msg?: string }) => {
+      const loc = String(d?.loc?.[d.loc.length - 1] ?? '');
+      const type = String(d?.type ?? '');
+      if (loc === 'email' || type.includes('email')) {
+        return 'Проверьте формат email — например, name@example.com.';
+      }
+      if (loc === 'password' && type === 'string_too_short') {
+        return 'Пароль слишком короткий — нужно не меньше 8 символов.';
+      }
+      return d?.msg ? String(d.msg) : 'Проверьте правильность заполнения полей.';
+    });
+    return [...new Set(msgs)].join(' ');
+  }
+  if (typeof detail === 'string' && detail) return detail;
+  return `Ошибка запроса (${status})`;
 }
 
 function isAuthEndpoint(url: string): boolean {
@@ -105,7 +130,7 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({ detail: response.statusText }));
-    throw new ApiError(response.status, errorBody.detail || `API error: ${response.status}`);
+    throw new ApiError(response.status, humanizeDetail(response.status, errorBody.detail));
   }
 
   return response.json() as Promise<T>;
@@ -233,7 +258,7 @@ export async function login(username: string, password: string): Promise<void> {
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({ detail: response.statusText }));
-    throw new ApiError(response.status, err.detail || 'Ошибка аутентификации');
+    throw new ApiError(response.status, humanizeDetail(response.status, err.detail));
   }
 }
 

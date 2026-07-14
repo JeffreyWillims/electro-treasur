@@ -61,4 +61,10 @@ class EmailService:
     @staticmethod
     def _smtp_send(msg: EmailMessage) -> None:
         with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10) as smtp:
+            # Реальные провайдеры (Gmail/Yandex, порт 587) требуют STARTTLS и
+            # логин; MailHog — нет. Управляется через ET_SMTP_* в .env.
+            if settings.smtp_starttls:
+                smtp.starttls()
+            if settings.smtp_user:
+                smtp.login(settings.smtp_user, settings.smtp_password)
             smtp.send_message(msg)

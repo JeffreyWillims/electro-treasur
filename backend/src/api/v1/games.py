@@ -14,7 +14,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.dependencies import get_current_user, get_db
-from src.domain.models import GameScore, Notification, User
+from src.domain.models import GameScore, User
 from src.schemas.games import GameKey, GameScoreSubmit, LeaderboardEntry
 
 router = APIRouter(tags=["Games"])
@@ -34,12 +34,6 @@ async def submit_score(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict[str, str]:
-    prev = await db.scalar(
-        select(GameScore.score).where(
-            GameScore.user_id == current_user.id, GameScore.game == payload.game
-        )
-    )
-
     stmt = pg_insert(GameScore).values(
         user_id=current_user.id, game=payload.game, score=payload.score
     )
@@ -49,18 +43,8 @@ async def submit_score(
         where=stmt.excluded.score > GameScore.score,
     )
     await db.execute(stmt)
-
-    # Новый личный рекорд → уведомление в колокольчик (идемпотентно по dedup_key).
-    if prev is None or payload.score > prev:
-        note = pg_insert(Notification).values(
-            user_id=current_user.id,
-            type="record",
-            title=f"Новый рекорд — {GAME_TITLES[payload.game]}",
-            body=f"Личный рекорд обновлён: {payload.score:,} очков.".replace(",", " "),
-            dedup_key=f"record:{payload.game}:{payload.score}",
-        )
-        await db.execute(note.on_conflict_do_nothing(constraint="uq_notifications_user_dedup"))
-
+    # Рекорды в колокольчик не пишем: уведомления — только полезное
+    # (итоги воркеров и «Что нового»), рекорд и так виден на карточке игры.
     await db.commit()
     return {"status": "ok"}
 
