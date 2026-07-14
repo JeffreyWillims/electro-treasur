@@ -51,6 +51,8 @@ class Settings(BaseSettings):
     smtp_user: str = ""
     smtp_password: str = ""
     smtp_starttls: bool = False
+    # Адрес, куда уходит обратная связь (совпадает с адресом в FeedbackWidget).
+    feedback_email: str = "ninjacodex333@gmail.com"
 
     # ── Telegram-бот ─────────────────────────────────────────────────────
     telegram_bot_token: str = ""

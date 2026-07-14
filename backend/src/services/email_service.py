@@ -17,9 +17,6 @@ from src.config import settings
 
 logger = logging.getLogger("email")
 
-# Куда уходит обратная связь (совпадает с адресом в FeedbackWidget на фронте).
-FEEDBACK_RECIPIENT = "ninjacodex333@gmail.com"
-
 
 class EmailService:
     """Асинхронный фасад отправки писем: SMTP, при его отсутствии — лог."""
@@ -27,10 +24,11 @@ class EmailService:
     @staticmethod
     async def send_feedback(from_email: str, message: str) -> None:
         """Отправляет письмо обратной связи (лог, если SMTP не настроен)."""
+        recipient = settings.feedback_email
         if not settings.smtp_host:
             logger.info(
                 "FEEDBACK EMAIL (SMTP не настроен — только лог)\n  to:   %s\n  from: %s\n  body: %s",
-                FEEDBACK_RECIPIENT,
+                recipient,
                 from_email,
                 message,
             )
@@ -39,7 +37,7 @@ class EmailService:
         msg = EmailMessage()
         msg["Subject"] = f"Citrine Vault — обратная связь от {from_email}"
         msg["From"] = settings.smtp_from
-        msg["To"] = FEEDBACK_RECIPIENT
+        msg["To"] = recipient
         msg["Reply-To"] = from_email
         msg.set_content(message)
 
@@ -47,7 +45,18 @@ class EmailService:
             # smtplib синхронный — уводим в поток, чтобы не блокировать event loop.
             await asyncio.to_thread(EmailService._smtp_send, msg)
             logger.info(
-                "FEEDBACK EMAIL sent via SMTP %s:%s", settings.smtp_host, settings.smtp_port
+                "FEEDBACK EMAIL sent via SMTP %s:%s → %s",
+                settings.smtp_host,
+                settings.smtp_port,
+                recipient,
+            )
+        except smtplib.SMTPAuthenticationError:
+            # Самая частая причина: обычный пароль Google вместо app password.
+            logger.error(
+                "SMTP auth failed для %s — нужен app password (16 симв.), "
+                "см. https://myaccount.google.com/apppasswords. Письмо не отправлено:\n%s",
+                settings.smtp_user,
+                message,
             )
         except Exception:
             # Письмо не критично (сообщение уже в БД) — логируем и не роняем фон.

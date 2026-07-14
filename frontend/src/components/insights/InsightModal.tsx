@@ -5,10 +5,95 @@
  */
 import { useLLMInsight } from '@/api/useLLMInsight';
 import { useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { Sparkles, X, AlertCircle, Copy, FileDown } from 'lucide-react';
+import { Sparkles, X, AlertCircle, Copy, FileDown, ArrowDownRight, ArrowUpRight, Minus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { fetchInsightHistory, type LatestInsightDto } from '@/api/client';
+import { InsightHistory } from '@/components/insights/InsightHistory';
+
+const MONTHS_GENITIVE = [
+  'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+  'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря',
+];
+
+/** Название месяца периода в родительном падеже: «к июню» → берём предыдущий разбор. */
+function periodMonthName(iso: string): string {
+  const d = new Date(iso);
+  return MONTHS_GENITIVE[d.getMonth()] ?? '';
+}
+
+const num = (v: unknown): number => Number(String(v ?? '0').replace(/[\s_]/g, '')) || 0;
+
+/**
+ * PeriodComparison — «расходы −12% к июню». Берёт последний сохранённый разбор,
+ * который закончился ДО начала текущего периода, и сравнивает расходы.
+ * Отчёты в истории пишет воркер (calculate_static_insights) — без него блок молчит.
+ */
+function PeriodComparison({
+  currentExpense,
+  startDate,
+}: {
+  currentExpense: number;
+  startDate: string;
+}) {
+  const { data: history = [] } = useQuery({
+    queryKey: ['insightHistory'],
+    queryFn: () => fetchInsightHistory(12),
+    staleTime: 60_000,
+  });
+
+  const previous: LatestInsightDto | undefined = history
+    .filter((h) => h.period_end < startDate)
+    .sort((a, b) => (a.period_end < b.period_end ? 1 : -1))[0];
+
+  if (!previous) return null;
+
+  const prevExpense = num((previous.summary as Record<string, unknown>)?.total_expense);
+  if (prevExpense <= 0) return null;
+
+  const deltaPct = Math.round(((currentExpense - prevExpense) / prevExpense) * 100);
+  const spentLess = deltaPct < 0;
+  const flat = deltaPct === 0;
+
+  const tint = flat
+    ? 'text-[#1C3F35]/60 dark:text-white/50'
+    : spentLess
+      ? 'text-emerald-600 dark:text-emerald-400'
+      : 'text-rose-600 dark:text-rose-400';
+  const bg = flat
+    ? 'bg-black/[0.04] dark:bg-white/5 border-black/10 dark:border-white/10'
+    : spentLess
+      ? 'bg-emerald-500/[0.07] dark:bg-emerald-500/10 border-emerald-500/20'
+      : 'bg-rose-500/[0.07] dark:bg-rose-500/10 border-rose-500/20';
+  const Icon = flat ? Minus : spentLess ? ArrowDownRight : ArrowUpRight;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.25, duration: 0.4 }}
+      className={`flex items-center gap-3 rounded-2xl border px-5 py-4 ${bg}`}
+    >
+      <Icon className={`w-5 h-5 shrink-0 ${tint}`} />
+      <p className="text-sm md:text-base font-semibold text-[#1C3F35] dark:text-white leading-snug">
+        Расходы{' '}
+        <span className={`font-black tabular-nums ${tint}`}>
+          {flat ? 'без изменений' : `${deltaPct > 0 ? '+' : ''}${deltaPct}%`}
+        </span>{' '}
+        к {periodMonthName(previous.period_start)}
+        {!flat && (
+          <span className="text-[#1C3F35]/55 dark:text-white/45 font-medium">
+            {' '}
+            — было {Math.round(prevExpense).toLocaleString('ru-RU')} ₽,
+            стало {Math.round(currentExpense).toLocaleString('ru-RU')} ₽
+          </span>
+        )}
+      </p>
+    </motion.div>
+  );
+}
 
 // Деньги и проценты в тексте анализа подсвечиваются акцентом — цифры читаются
 // с одного взгляда, не выискиваясь в абзаце.
@@ -197,6 +282,12 @@ export function InsightModal({
                       );
                     })()}
 
+                    {/* «Расходы −12% к июню» — если воркер уже сохранял прошлый разбор */}
+                    <PeriodComparison
+                      currentExpense={Number(data.summary.total_expense.replace(/_/g, '')) || 0}
+                      startDate={startDate}
+                    />
+
                     {/* Summary cards */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="p-5 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 rounded-[1.5rem] flex flex-col items-center justify-center text-center">
@@ -220,6 +311,9 @@ export function InsightModal({
                         </p>
                       </div>
                     </div>
+
+                    {/* История прошлых разборов — тут же, без ухода со страницы */}
+                    <InsightHistory />
 
                     {/* Действия: разбор можно унести с собой */}
                     <div className="flex flex-col sm:flex-row gap-3">

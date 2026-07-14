@@ -23,45 +23,89 @@ interface CapitalGrowthChartProps {
   dailyFlows: DailyFlow[];
 }
 
-type PulsePoint = { day: number; net: number; capital: number };
+/** capital — факт (обрывается на сегодня), forecast — пунктир до конца месяца. */
+type PulsePoint = { day: number; net: number; capital: number | null; forecast: number | null };
 
 const PulseTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   const p: PulsePoint | undefined = payload[0]?.payload;
   if (!p) return null;
+  const isForecast = p.capital === null;
+  const total = p.capital ?? p.forecast ?? 0;
   const netPositive = p.net >= 0;
   return (
     <div className="bg-white/95 dark:bg-[#121212]/95 backdrop-blur-3xl border border-black/10 dark:border-white/10 p-5 rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.6)]">
       <p className="text-[11px] font-sans font-bold uppercase tracking-[0.18em] text-[#1C3F35]/50 dark:text-white/40 mb-2.5">
         День {label}
+        {isForecast && <span className="ml-2 text-[#FF7A00]">прогноз</span>}
       </p>
-      <p className={`text-lg font-sans font-black tabular-nums tracking-tight leading-none ${netPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-500'}`}>
-        {netPositive ? '+' : ''}{Math.round(p.net).toLocaleString('ru-RU')}
-        <span className="ml-1 text-xs font-bold opacity-60">₽ за день</span>
-      </p>
+      {!isForecast && (
+        <p className={`text-lg font-sans font-black tabular-nums tracking-tight leading-none ${netPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-500'}`}>
+          {netPositive ? '+' : ''}{Math.round(p.net).toLocaleString('ru-RU')}
+          <span className="ml-1 text-xs font-bold opacity-60">₽ за день</span>
+        </p>
+      )}
       <p className="mt-2 text-sm font-sans font-extrabold tabular-nums text-[#1C3F35] dark:text-white">
-        {p.capital >= 0 ? '+' : ''}{Math.round(p.capital).toLocaleString('ru-RU')}
-        <span className="ml-1 text-[11px] font-bold opacity-50">₽ с начала месяца</span>
+        {total >= 0 ? '+' : ''}{Math.round(total).toLocaleString('ru-RU')}
+        <span className="ml-1 text-[11px] font-bold opacity-50">
+          {isForecast ? '₽ ожидается к этому дню' : '₽ с начала месяца'}
+        </span>
       </p>
     </div>
   );
 };
 
 export function CapitalGrowthChart({ dailyFlows }: CapitalGrowthChartProps) {
-  const pulseData = useMemo<PulsePoint[]>(() => {
+  const { pulseData, projectedEnd } = useMemo<{
+    pulseData: PulsePoint[];
+    projectedEnd: number | null;
+  }>(() => {
+    // Последний день с операциями = «сегодня» периода: дальше факта нет, только прогноз.
+    const lastActive = dailyFlows.reduce(
+      (last, d) => (d.income !== 0 || d.expense !== 0 ? d.day : last),
+      0,
+    );
+
     let cumulative = 0;
-    return dailyFlows.map((d) => {
+    const factual = dailyFlows.map((d) => {
       const net = d.income - d.expense;
-      cumulative += net;
+      if (d.day <= lastActive) cumulative += net;
       return {
         day: d.day,
         net: Math.round(net * 100) / 100,
-        capital: Math.round(cumulative * 100) / 100,
+        capital: d.day <= lastActive ? Math.round(cumulative * 100) / 100 : null,
+        forecast: null as number | null,
       };
     });
+
+    // Средний дневной темп по прожитым дням → пунктир до конца периода.
+    const capitalNow = cumulative;
+    const avgPerDay = lastActive > 0 ? capitalNow / lastActive : 0;
+    const totalDays = dailyFlows.length;
+    const hasFuture = lastActive > 0 && lastActive < totalDays;
+
+    if (hasFuture) {
+      for (const p of factual) {
+        if (p.day === lastActive) {
+          // Стык: пунктир начинается ровно там, где обрывается факт.
+          p.forecast = Math.round(capitalNow * 100) / 100;
+        } else if (p.day > lastActive) {
+          p.forecast = Math.round((capitalNow + avgPerDay * (p.day - lastActive)) * 100) / 100;
+        }
+      }
+    }
+
+    const projected = hasFuture
+      ? Math.round(capitalNow + avgPerDay * (totalDays - lastActive))
+      : null;
+
+    return { pulseData: factual, projectedEnd: projected };
   }, [dailyFlows]);
 
-  const finalCapital = pulseData.length ? (pulseData[pulseData.length - 1]?.capital ?? 0) : 0;
+  const factualPoints = pulseData.filter((p) => p.capital !== null);
+  const finalCapital = factualPoints.length
+    ? (factualPoints[factualPoints.length - 1]?.capital ?? 0)
+    : 0;
   const activeDays = pulseData.filter((p) => p.net !== 0);
   const bestDay = activeDays.reduce<PulsePoint | null>(
     (best, p) => (best === null || p.net > best.net ? p : best), null,
@@ -88,6 +132,21 @@ export function CapitalGrowthChart({ dailyFlows }: CapitalGrowthChartProps) {
             <p className="text-[11px] md:text-[12px] font-sans font-extrabold uppercase tracking-wide text-[#FF7A00] dark:drop-shadow-[0_0_8px_rgba(255,122,0,0.5)] mt-1">
               Дни в плюс и в минус · линия — итог месяца
             </p>
+            {projectedEnd !== null && (
+              <p className="text-[13px] font-sans font-semibold text-[#1C3F35]/60 dark:text-white/50 mt-2">
+                При текущем темпе к концу месяца —{' '}
+                <span
+                  className={`font-black tabular-nums ${
+                    projectedEnd >= 0
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : 'text-rose-600 dark:text-rose-500'
+                  }`}
+                >
+                  {projectedEnd >= 0 ? '+' : ''}
+                  {projectedEnd.toLocaleString('ru-RU')} ₽
+                </span>
+              </p>
+            )}
           </div>
 
           <div className="flex items-center gap-3 bg-emerald-500/10 dark:bg-emerald-500/10 border border-emerald-500/20 px-5 py-3.5 rounded-2xl shadow-sm">
@@ -118,7 +177,9 @@ export function CapitalGrowthChart({ dailyFlows }: CapitalGrowthChartProps) {
                   <Cell key={p.day} fill={p.net >= 0 ? '#10B981' : '#F43F5E'} fillOpacity={0.75} />
                 ))}
               </Bar>
-              <Line type="monotone" dataKey="capital" stroke="#FF7A00" strokeWidth={2.5} dot={false} activeDot={{ r: 5, strokeWidth: 2, stroke: '#fff' }} animationDuration={1200} />
+              <Line type="monotone" dataKey="capital" stroke="#FF7A00" strokeWidth={2.5} dot={false} activeDot={{ r: 5, strokeWidth: 2, stroke: '#fff' }} animationDuration={1200} connectNulls={false} />
+              {/* Пунктир: тот же капитал, но по среднему темпу — до конца месяца */}
+              <Line type="monotone" dataKey="forecast" stroke="#FF7A00" strokeWidth={2} strokeDasharray="5 5" strokeOpacity={0.55} dot={false} activeDot={{ r: 4 }} animationDuration={1200} connectNulls={false} />
             </ComposedChart>
           </ResponsiveContainer>
         )}

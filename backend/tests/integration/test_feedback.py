@@ -5,13 +5,15 @@ tests/integration/test_feedback.py — Feedback endpoint + async email stub.
   • POST /v1/feedback с auth → 200 {"status": "ok"} (мгновенный ответ);
   • сообщение персистится в БД (save_feedback через savepoint-сессию);
   • без auth-cookie → 401;
-  • EmailService.send_feedback красиво логирует «письмо» (фоновая часть);
+  • EmailService.send_feedback красиво логирует «письмо» без SMTP (фоновая часть);
+  • с настроенным SMTP письмо уходит на ET_FEEDBACK_EMAIL (Reply-To = автор);
   • эндпоинт коммитит транзакцию — фидбек переживает закрытие сессии get_db.
 """
 
 from __future__ import annotations
 
 import logging
+from email.message import EmailMessage
 from unittest import mock
 
 import pytest
@@ -19,6 +21,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.config import settings
 from src.domain.models import Feedback, User
 from src.services.email_service import EmailService
 from src.services.feedback_service import save_feedback
@@ -79,9 +82,31 @@ async def test_submit_feedback_commits_transaction(
     commit_spy.assert_awaited()
 
 
-async def test_email_service_logs_feedback(caplog: pytest.LogCaptureFixture) -> None:
+async def test_email_service_logs_feedback(
+    caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Лог-режим = пустой smtp_host. Задаём явно: в .env может стоять боевой
+    # SMTP, и тогда тест ушёл бы в реальную отправку.
+    monkeypatch.setattr(settings, "smtp_host", "")
+
     with caplog.at_level(logging.INFO, logger="email"):
         await EmailService.send_feedback("user@example.com", "тестовое сообщение")
     assert "FEEDBACK EMAIL" in caplog.text
     assert "user@example.com" in caplog.text
     assert "тестовое сообщение" in caplog.text
+
+
+async def test_email_service_sends_via_smtp(monkeypatch: pytest.MonkeyPatch) -> None:
+    """С настроенным SMTP письмо уходит на адрес из ET_FEEDBACK_EMAIL."""
+    monkeypatch.setattr(settings, "smtp_host", "smtp.example.com")
+    monkeypatch.setattr(settings, "feedback_email", "owner@example.com")
+
+    sent: list[EmailMessage] = []
+    monkeypatch.setattr(EmailService, "_smtp_send", staticmethod(sent.append))
+
+    await EmailService.send_feedback("user@example.com", "письмо владельцу")
+
+    assert len(sent) == 1
+    assert sent[0]["To"] == "owner@example.com"
+    assert sent[0]["Reply-To"] == "user@example.com"
+    assert "письмо владельцу" in sent[0].get_content()

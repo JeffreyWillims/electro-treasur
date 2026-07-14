@@ -11,6 +11,10 @@ import { fetchInsightHistory } from '@/api/client';
 const money = (v: unknown) =>
   Number(v ?? 0).toLocaleString('ru-RU', { maximumFractionDigits: 0 });
 
+/** «2026-07-01» → «1 июля» (ISO в ленте выглядел казённо). */
+const day = (iso: string) =>
+  new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+
 export function InsightHistory() {
   const [open, setOpen] = useState(false);
   const { data: history = [] } = useQuery({
@@ -19,7 +23,7 @@ export function InsightHistory() {
     staleTime: 60_000,
   });
 
-  if (history.length <= 1) return null; // нечего показывать, пока нет истории
+  if (history.length === 0) return null; // сохранённых разборов ещё нет
 
   return (
     <div className="rounded-[2rem] border border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/5 overflow-hidden">
@@ -60,7 +64,7 @@ export function InsightHistory() {
                     <div className="absolute -left-[7px] top-1 w-3 h-3 rounded-full bg-[#FF7A00]" />
                     <div className="flex items-center justify-between gap-3">
                       <p className="text-xs font-bold text-[#1C3F35]/60 dark:text-white/50">
-                        {h.period_start} — {h.period_end}
+                        {day(h.period_start)} — {day(h.period_end)}
                       </p>
                       <span
                         className={`text-xs font-extrabold tabular-nums ${

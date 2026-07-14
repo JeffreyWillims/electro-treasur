@@ -389,6 +389,14 @@ export function BudgetEnvelopes({
         const percentTimeElapsed = (todayDate / daysInMonth) * 100;
         const isBurnWarning = percent > (percentTimeElapsed + 10) && !isOver;
 
+        // Прогноз закрытия: средний расход за прошедшие дни → день, когда
+        // остаток обнулится. null, если тратить ещё не начинали (темпа нет).
+        const dailyBurn = fact / Math.max(1, todayDate);
+        const runOutDay =
+          !isOver && dailyBurn > 0
+            ? todayDate + Math.ceil((planned - fact) / dailyBurn)
+            : null;
+
         const fillBgClasses = isGuiltFree
           ? "bg-gradient-to-t from-[#C5A059]/30 to-[#C5A059]/10"
           : isOver
@@ -469,6 +477,22 @@ export function BudgetEnvelopes({
                         Math.floor((planned - fact) / Math.max(1, daysInMonth - todayDate + 1)),
                       ).toLocaleString('ru-RU')} ₽/день`}
                 </span>
+
+                {/* Прогноз закрытия: при текущем темпе трат конверт кончится … */}
+                {!isOver && runOutDay !== null && (
+                  <span
+                    className={cn(
+                      'text-[11px] font-sans font-semibold mt-1.5',
+                      runOutDay <= daysInMonth
+                        ? 'text-[#FF7A00]'
+                        : 'text-[#1C3F35]/45 dark:text-white/40',
+                    )}
+                  >
+                    {runOutDay <= daysInMonth
+                      ? `⚡ при таком темпе кончится ${runOutDay}-го`
+                      : 'при таком темпе хватит до конца месяца'}
+                  </span>
+                )}
               </div>
             </div>
 
