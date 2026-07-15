@@ -177,35 +177,67 @@ function AutoBudgetCard({
  */
 function AutoBudgets8020({ income, expense, monthKey }: { income: number; expense: number; monthKey: string }) {
   const saved = Math.max(income - expense, 0);
+  const [ruleHintOpen, setRuleHintOpen] = useState(false);
 
   return (
     <div className="flex flex-col gap-4 w-full">
-      {/* Заголовок-инструкция: правило одной строкой, живыми цифрами месяца */}
-      <div className="px-2">
-        <h2 className="text-xl md:text-2xl font-sans font-extrabold tracking-tight text-[#1C3F35] dark:text-white leading-none">
-          Правило 80/20
-        </h2>
-        <p className="mt-2 text-[13px] font-sans font-semibold leading-relaxed text-[#1C3F35]/60 dark:text-white/50 max-w-2xl">
-          {income > 0 ? (
+      {/* Заголовок в компактной стеклянной плашке; «!» раскрывает подсказку с живыми цифрами месяца */}
+      <div className="relative self-start">
+        <div className="inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-white/40 dark:bg-[#111111]/40 backdrop-blur-3xl border border-black/5 dark:border-white/10 shadow-sm">
+          <h2 className="text-xl md:text-2xl font-sans font-extrabold tracking-tight text-[#1C3F35] dark:text-white leading-none">
+            Правило 80/20
+          </h2>
+          <button
+            type="button"
+            onClick={() => setRuleHintOpen((v) => !v)}
+            aria-label="Как работает правило 80/20"
+            className={cn(
+              'w-7 h-7 rounded-full flex items-center justify-center text-sm font-black transition-all active:scale-95 shrink-0',
+              ruleHintOpen
+                ? 'bg-[#FF7A00] text-white shadow-[0_4px_12px_rgba(255,122,0,0.4)]'
+                : 'bg-[#FF7A00]/15 text-[#FF7A00] hover:bg-[#FF7A00]/25',
+            )}
+          >
+            !
+          </button>
+        </div>
+
+        <AnimatePresence>
+          {ruleHintOpen && (
             <>
-              Из дохода {Math.round(income).toLocaleString('ru-RU')} ₽ этот месяц живёт на{' '}
-              <span className="text-[#FF7A00] font-extrabold">
-                {Math.round(income * 0.8).toLocaleString('ru-RU')} ₽
-              </span>
-              , а{' '}
-              <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">
-                {Math.round(income * 0.2).toLocaleString('ru-RU')} ₽
-              </span>{' '}
-              уходит в сбережения. Лимиты пересчитываются сами; клик по сумме — свой лимит,
-              кнопка «↺ авто» вернёт расчётный.
-            </>
-          ) : (
-            <>
-              Добавьте доход этого месяца — и лимиты «на жизнь» и «на сбережения» посчитаются
-              сами. Или задайте суммы вручную кликом по «0 ₽».
+              <div className="fixed inset-0 z-40" onClick={() => setRuleHintOpen(false)} />
+              <motion.div
+                initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+                className="absolute left-0 top-[110%] w-[calc(100vw-32px)] max-w-sm p-5 bg-white/95 dark:bg-[#121212]/95 backdrop-blur-3xl border border-black/10 dark:border-white/10 rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.6)] z-50"
+              >
+                <p className="text-[13px] font-sans font-semibold leading-relaxed text-[#1C3F35]/70 dark:text-white/60">
+                  {income > 0 ? (
+                    <>
+                      Из дохода {Math.round(income).toLocaleString('ru-RU')} ₽ этот месяц живёт на{' '}
+                      <span className="text-[#FF7A00] font-extrabold">
+                        {Math.round(income * 0.8).toLocaleString('ru-RU')} ₽
+                      </span>
+                      , а{' '}
+                      <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">
+                        {Math.round(income * 0.2).toLocaleString('ru-RU')} ₽
+                      </span>{' '}
+                      уходит в сбережения. Лимиты пересчитываются сами; клик по сумме — свой лимит,
+                      кнопка «↺ авто» вернёт расчётный.
+                    </>
+                  ) : (
+                    <>
+                      Добавьте доход этого месяца — и лимиты «на жизнь» и «на сбережения» посчитаются
+                      сами. Или задайте суммы вручную кликом по «0 ₽».
+                    </>
+                  )}
+                </p>
+              </motion.div>
             </>
           )}
-        </p>
+        </AnimatePresence>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">

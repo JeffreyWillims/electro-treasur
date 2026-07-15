@@ -24,6 +24,21 @@ function periodMonthName(iso: string): string {
   return MONTHS_GENITIVE[d.getMonth()] ?? '';
 }
 
+/** Период по-человечески: «1 — 31 июля 2026» вместо «01.07.26 — 31.07.26». */
+function periodHuman(startIso: string, endIso: string): string {
+  const s = new Date(startIso);
+  const e = new Date(endIso);
+  const sm = MONTHS_GENITIVE[s.getMonth()];
+  const em = MONTHS_GENITIVE[e.getMonth()];
+  if (s.getFullYear() === e.getFullYear() && s.getMonth() === e.getMonth()) {
+    return `${s.getDate()} — ${e.getDate()} ${em} ${e.getFullYear()}`;
+  }
+  if (s.getFullYear() === e.getFullYear()) {
+    return `${s.getDate()} ${sm} — ${e.getDate()} ${em} ${e.getFullYear()}`;
+  }
+  return `${s.getDate()} ${sm} ${s.getFullYear()} — ${e.getDate()} ${em} ${e.getFullYear()}`;
+}
+
 const num = (v: unknown): number => Number(String(v ?? '0').replace(/[\s_]/g, '')) || 0;
 
 /**
@@ -98,6 +113,72 @@ function PeriodComparison({
 // Деньги и проценты в тексте анализа подсвечиваются акцентом — цифры читаются
 // с одного взгляда, не выискиваясь в абзаце.
 const MONEY_RE = /(\d[\d\s\u00A0\u202F]*(?:[.,]\d+)?[\s\u00A0\u202F]?(?:₽|руб\.?|%))/g;
+
+// Первый абзац-итог разбирается на чипы-цифры «заработали / потратили /
+// отложили». Если текст не совпал с шаблоном — абзац рендерится как раньше.
+const SUM_SRC = String.raw`([\d\s\u00A0\u202F]+(?:[.,]\d+)?)\s*₽`;
+
+function parseSummaryChips(text: string) {
+  const grab = (re: RegExp) => {
+    const raw = text.match(re)?.[1];
+    if (!raw) return null;
+    const value = Number(raw.replace(/[\s\u00A0\u202F]/g, '').replace(',', '.'));
+    return Number.isFinite(value) ? value : null;
+  };
+  const earned = grab(new RegExp(`заработали?\\s+${SUM_SRC}`, 'i'));
+  const spent = grab(new RegExp(`потратили?\\s+${SUM_SRC}`, 'i'));
+  const saved =
+    grab(new RegExp(`отложить\\s+удалось\\s+${SUM_SRC}`, 'i')) ??
+    grab(new RegExp(`отложили?\\s+${SUM_SRC}`, 'i'));
+  const pct = text.match(/(\d+)\s*%/)?.[1] ?? null;
+  if (earned === null && spent === null && saved === null) return null;
+  return { earned, spent, saved, pct };
+}
+
+const fmtMoney = (v: number) => `${Math.round(v).toLocaleString('ru-RU')} ₽`;
+
+function SummaryChips({ chips }: { chips: NonNullable<ReturnType<typeof parseSummaryChips>> }) {
+  const items = [
+    chips.earned !== null && {
+      label: 'заработали',
+      value: fmtMoney(chips.earned),
+      accent: 'text-emerald-600 dark:text-emerald-400',
+    },
+    chips.spent !== null && {
+      label: 'потратили',
+      value: fmtMoney(chips.spent),
+      accent: 'text-[#1C3F35] dark:text-white',
+    },
+    chips.saved !== null && {
+      label: 'отложили',
+      value: fmtMoney(chips.saved),
+      accent: 'text-[#FF7A00]',
+      badge: chips.pct ? `${chips.pct}% дохода` : undefined,
+    },
+  ].filter(Boolean) as { label: string; value: string; accent: string; badge?: string }[];
+
+  return (
+    <div>
+      <p className="text-[11px] font-sans font-extrabold uppercase tracking-[0.2em] text-[#1C3F35]/50 dark:text-white/40 mb-3">
+        Итог периода
+      </p>
+      <div className="flex flex-wrap gap-2.5">
+        {items.map((it) => (
+          <span
+            key={it.label}
+            className="inline-flex items-baseline gap-2 px-3.5 py-2 rounded-full bg-black/[0.04] dark:bg-white/5 border border-black/5 dark:border-white/10"
+          >
+            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#1C3F35]/45 dark:text-white/40">
+              {it.label}
+            </span>
+            <span className={`font-sans font-black tabular-nums text-lg ${it.accent}`}>{it.value}</span>
+            {it.badge && <span className="text-xs font-bold text-[#FF7A00]/70">· {it.badge}</span>}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function HighlightedText({ text }: { text: string }) {
   // split с капчур-группой кладёт совпадения на нечётные индексы —
@@ -183,11 +264,11 @@ export function InsightModal({
                   <Sparkles className="w-7 h-7 text-white" />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <h2 className="text-3xl md:text-4xl font-serif font-bold italic text-[#1C3F35] dark:text-white tracking-tight leading-none">
+                  <h2 className="text-2xl md:text-3xl font-sans font-extrabold text-[#1C3F35] dark:text-white tracking-tight leading-none">
                     AI Анализ
                   </h2>
                   <p className="text-[11px] font-mono font-bold uppercase tracking-[0.25em] text-[#FF7A00]">
-                    {new Date(startDate).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' })} — {new Date(endDate).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                    {periodHuman(startDate, endDate)}
                   </p>
                 </div>
               </div>
@@ -240,9 +321,10 @@ export function InsightModal({
                       const facts = paragraphs.filter((p) => !p.startsWith('Совет:'));
                       return (
                         <div className="space-y-4">
-                          {/* Наблюдения: ведущий итог + строки с маркером-акцентом */}
+                          {/* Наблюдения: ведущий итог (чипы-цифры) + строки с маркером-акцентом */}
                           {facts.map((paragraph, i) => {
                             const negative = /больше, чем пришло|за лимит|на пределе|поправимо/.test(paragraph);
+                            const chips = i === 0 ? parseSummaryChips(paragraph) : null;
                             return (
                               <motion.div
                                 key={i}
@@ -251,20 +333,26 @@ export function InsightModal({
                                 transition={{ delay: i * 0.12, duration: 0.4, ease: 'easeOut' }}
                                 className={
                                   i === 0
-                                    ? 'font-serif text-xl md:text-2xl font-medium text-[#1C3F35] dark:text-white leading-snug'
+                                    ? 'text-base md:text-lg font-sans font-semibold text-[#1C3F35] dark:text-white leading-relaxed'
                                     : 'flex items-start gap-3 text-sm md:text-base font-medium text-[#1C3F35]/75 dark:text-white/75 leading-relaxed'
                                 }
                               >
-                                {i > 0 && (
-                                  <span
-                                    className={`mt-2 w-2 h-2 rounded-full shrink-0 ${
-                                      negative ? 'bg-amber-500' : 'bg-emerald-500'
-                                    }`}
-                                  />
+                                {chips ? (
+                                  <SummaryChips chips={chips} />
+                                ) : (
+                                  <>
+                                    {i > 0 && (
+                                      <span
+                                        className={`mt-2 w-2 h-2 rounded-full shrink-0 ${
+                                          negative ? 'bg-amber-500' : 'bg-emerald-500'
+                                        }`}
+                                      />
+                                    )}
+                                    <span>
+                                      <HighlightedText text={paragraph} />
+                                    </span>
+                                  </>
                                 )}
-                                <span>
-                                  <HighlightedText text={paragraph} />
-                                </span>
                               </motion.div>
                             );
                           })}

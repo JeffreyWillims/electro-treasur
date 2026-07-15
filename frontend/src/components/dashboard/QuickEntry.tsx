@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { PlusCircle, Search, Plus, Check, Settings } from 'lucide-react';
 import { createTransaction, fetchCategories, createCategory } from '@/api/client';
 import { VoiceInput } from '@/components/dashboard/VoiceInput';
+import { parseVoiceInput } from '@/lib/voiceParse';
 import type { CategoryRead } from '@/types';
 import { getLocalDateString } from '@/lib/dateUtils';
 import { cn } from '@/lib/utils';
@@ -154,17 +155,28 @@ export function QuickEntry() {
 
   const selectedCat = categories.find((c) => c.id === selectedCategoryId);
 
-  // Голосовой ввод: «500 кофе» → сумма 500, остальное — в «Детали».
+  // Голосовой ввод: «15000 зарплата» → сумма 15000 + категория «Зарплата»,
+  // лишние слова — в «Детали». Если категория не нашлась — текст в поле
+  // «Категория» с открытым списком (можно выбрать или создать).
   const handleVoiceResult = (text: string) => {
-    const match = text.match(/\d[\d\s]*(?:[.,]\d+)?/);
-    if (match) {
-      setAmount(match[0].replace(/\s/g, '').replace(',', '.'));
-      const rest = text.replace(match[0], '').trim();
-      if (rest) setSubcategory(rest.charAt(0).toUpperCase() + rest.slice(1));
-      toast.success('Распознано — проверьте сумму и детали перед сохранением');
+    const parsed = parseVoiceInput(text, categories);
+    if (parsed.amount) setAmount(parsed.amount);
+    if (parsed.category) {
+      const catType = parsed.category.type === 'income' ? 'income' : 'expense';
+      if (catType !== type) setType(catType);
+      setSelectedCategoryId(parsed.category.id);
+      setComboInput(getRussianCategoryName(parsed.category.name));
+      if (parsed.details) setSubcategory(parsed.details);
+      toast.success(`Распознано: «${getRussianCategoryName(parsed.category.name)}» — проверьте и сохраните`);
+    } else if (parsed.categoryQuery) {
+      setSelectedCategoryId(null);
+      setComboInput(parsed.categoryQuery);
+      setComboOpen(true);
+      toast.info('Такой категории пока нет — выберите из списка или создайте новую');
+    } else if (parsed.amount) {
+      toast.success('Сумму записал — осталось выбрать категорию');
     } else {
-      setSubcategory(text.charAt(0).toUpperCase() + text.slice(1));
-      toast.info('Сумму не расслышал — записал текст в детали');
+      toast.info('Не расслышал — попробуйте ещё раз.');
     }
   };
 

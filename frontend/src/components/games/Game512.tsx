@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, RotateCcw } from 'lucide-react';
 import { getBest, submitScore } from '@/lib/gameRecords';
+import { SunsetBackground } from '@/components/ui/PacificRide';
 
 /**
  * «Купюра 512 ₽» — 2048-механика в финансовой теме Citrine Vault.
@@ -226,7 +227,7 @@ export function Game512({ onClose }: { onClose: () => void }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[999] flex items-center justify-center bg-[#0A1A12]/95 backdrop-blur-xl p-4"
+      className="fixed inset-0 z-[999] flex items-center justify-center p-4"
       onTouchStart={(e) => {
         const t = e.touches[0];
         if (t) touchStart.current = { x: t.clientX, y: t.clientY };
@@ -241,7 +242,9 @@ export function Game512({ onClose }: { onClose: () => void }) {
         doMove(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up');
       }}
     >
-      <div className="w-full max-w-md">
+      {/* Единый фон Arcade — калифорнийский закат, как в «Десятке» */}
+      <SunsetBackground />
+      <div className="relative w-full max-w-md rounded-[2.5rem] bg-[#0A1A12]/80 backdrop-blur-2xl border border-white/10 p-5 sm:p-6 shadow-2xl">
         {/* Шапка */}
         <div className="flex items-center justify-between mb-5">
           <div>

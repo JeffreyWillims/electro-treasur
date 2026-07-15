@@ -108,20 +108,49 @@ export function TransactionList() {
     mutationFn: ({ id, payload }: { id: number; payload: TransactionUpdate }) => updateTransaction(id, payload),
     onMutate: async ({ id, payload }) => {
       await queryClient.cancelQueries({ queryKey: ['transactions'] });
+      // Снапшот кэша — для отката при ошибке; прежние значения — для «Отменить».
+      const snapshot = queryClient.getQueriesData({ queryKey: ['transactions'] });
+      const patch: Partial<TransactionResponse> = { ...payload } as Partial<TransactionResponse>;
+      if (payload.category_id) {
+        const cat = categories.find((c) => c.id === payload.category_id);
+        if (cat) patch.category_name = cat.name;
+      }
+      let previous: TransactionUpdate | undefined;
       queryClient.setQueriesData({ queryKey: ['transactions'] }, (old: any) => {
         if (!old) return old;
         return {
           ...old,
-          items: old.items.map((tx: TransactionResponse) => tx.id === id ? { ...tx, ...payload } : tx),
+          items: old.items.map((tx: TransactionResponse) => {
+            if (tx.id !== id) return tx;
+            previous = {
+              amount: tx.amount,
+              category_id: tx.category_id,
+              executed_at: tx.executed_at,
+              comment: tx.comment ?? '',
+            };
+            return { ...tx, ...patch };
+          }),
         };
       });
+      return { snapshot, previous };
     },
-    onError: () => toast.error('Не удалось обновить транзакцию'),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    onError: (_err, _vars, ctx) => {
+      ctx?.snapshot.forEach(([key, data]) => queryClient.setQueryData(key, data));
+      toast.error('Не удалось обновить — вернули как было');
+    },
+    onSuccess: (_data, { id }, ctx) => {
+      // Лента уже обновлена оптимистично: помечаем кэш устаревшим без
+      // немедленного рефетча — список не мигает и пагинация не прыгает.
+      queryClient.invalidateQueries({ queryKey: ['transactions'], refetchType: 'none' });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      const previous = ctx?.previous;
+      toast.success(
+        'Сохранено',
+        previous
+          ? { action: { label: 'Отменить', onClick: () => patchMutation.mutate({ id, payload: previous }) } }
+          : undefined,
+      );
     },
-    onSuccess: () => toast.success('Сумма обновлена'),
   });
 
   const deleteMutation = useMutation({
@@ -393,6 +422,7 @@ export function TransactionList() {
             >
               <DrawerContent
                 tx={drawerTx} categories={categories} onClose={() => setDrawerTx(null)} onDelete={(id) => deleteMutation.mutate(id)} isDeleting={deleteMutation.isPending}
+                onSave={(payload) => patchMutation.mutate({ id: drawerTx.id, payload })}
               />
             </motion.div>
           </>
@@ -410,14 +440,15 @@ function DrawerContent({
   onClose,
   onDelete,
   isDeleting,
+  onSave,
 }: {
   tx: TransactionResponse;
   categories: CategoryRead[];
   onClose: () => void;
   onDelete: (id: number) => void;
   isDeleting: boolean;
+  onSave: (payload: TransactionUpdate) => void;
 }) {
-  const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   // ИСПРАВЛЕНИЕ: Безопасный доступ к массиву после split() с помощью ??
@@ -449,19 +480,8 @@ function DrawerContent({
     setAmount(secondPart !== undefined ? `${integerPart}.${secondPart.slice(0, 2)}` : integerPart);
   };
 
-  const updateMutation = useMutation({
-    mutationFn: (payload: TransactionUpdate) => updateTransaction(tx.id, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      onClose();
-      toast.success('Транзакция обновлена');
-    },
-    onError: () => {
-      toast.error('Не удалось обновить транзакцию');
-    }
-  });
-
+  // Сохранение мгновенное: оптимистичная мутация родителя обновляет ленту
+  // сразу, шторка закрывается не дожидаясь сервера, в тосте есть «Отменить».
   const handleSave = () => {
     const parsedAmount = parseFloat(amount.replace(/\s/g, ''));
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
@@ -471,12 +491,13 @@ function DrawerContent({
 
     const executedAt = date ? `${date}T12:00:00Z` : tx.executed_at;
 
-    updateMutation.mutate({
+    onSave({
       amount: parsedAmount,
       category_id: categoryId,
       executed_at: executedAt,
       comment: comment || undefined
     });
+    onClose();
   };
 
   const inputWrapperStyle = cn(
@@ -578,14 +599,9 @@ function DrawerContent({
       <div className="mt-auto p-6 md:p-8 border-t border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]">
         <button
           onClick={handleSave}
-          disabled={updateMutation.isPending}
-          className="w-full bg-gradient-to-r from-[#FF7A00] to-[#FFA011] hover:from-[#EA6A00] hover:to-[#FF7A00] text-white rounded-2xl font-bold uppercase tracking-widest text-sm shadow-[0_10px_30px_-5px_rgba(255,122,0,0.4)] transition-all h-[64px] flex items-center justify-center active:scale-[0.98] disabled:opacity-70"
+          className="w-full bg-gradient-to-r from-[#FF7A00] to-[#FFA011] hover:from-[#EA6A00] hover:to-[#FF7A00] text-white rounded-2xl font-bold uppercase tracking-widest text-sm shadow-[0_10px_30px_-5px_rgba(255,122,0,0.4)] transition-all h-[64px] flex items-center justify-center active:scale-[0.98]"
         >
-          {updateMutation.isPending ? (
-             <motion.div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full" animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
-          ) : (
-            "Сохранить изменения"
-          )}
+          Сохранить изменения
         </button>
 
         <AnimatePresence mode="wait">

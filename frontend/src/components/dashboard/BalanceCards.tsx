@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 import { fetchDashboard } from '@/api/client';
-import { Info } from 'lucide-react';
+import { Info, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { getMoscowDate } from '@/lib/dateUtils'; // 🔥 ДОБАВЛЕН ИМПОРТ
@@ -15,6 +15,15 @@ export function BalanceCards({
 }) {
   const { user } = useAuth();
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+  // Свёрнутое состояние окна переживает перезагрузку страницы.
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('cv_balance_collapsed') === '1');
+
+  const toggleCollapsed = () => {
+    setCollapsed((c) => {
+      localStorage.setItem('cv_balance_collapsed', c ? '0' : '1');
+      return !c;
+    });
+  };
 
   const { data: dashboard } = useQuery({
     queryKey: ['dashboard', startDate, endDate],
@@ -49,18 +58,71 @@ export function BalanceCards({
   );
 
   return (
-    <div className="relative bg-white/40 dark:bg-[#111111]/40 backdrop-blur-3xl border border-black/5 dark:border-white/10 shadow-2xl rounded-[2.5rem] p-8 md:p-10 w-full flex flex-col min-h-[380px] overflow-hidden transition-all duration-500 z-10">
+    <div className={`relative bg-white/40 dark:bg-[#111111]/40 backdrop-blur-3xl border border-black/5 dark:border-white/10 shadow-2xl rounded-[2.5rem] w-full flex flex-col overflow-hidden transition-all duration-500 z-10 ${collapsed ? 'p-5 md:p-6' : 'p-8 md:p-10 min-h-[380px]'}`}>
 
-      {/* ── 1. ШАПКА ── */}
-      <div className="flex justify-between items-start w-full relative z-10 mb-8">
-        <h2 className="text-2xl md:text-3xl font-sans font-extrabold tracking-tight text-[#1C3F35] dark:text-white leading-none">
-          Общее состояние
-        </h2>
-        {/* 🔥 ИСПРАВЛЕНИЕ: МСК ВРЕМЯ ВМЕСТО new Date() */}
-        <p className="text-xs md:text-sm font-sans font-bold uppercase tracking-widest text-[#1C3F35] dark:text-white text-right mt-1.5">
-          {getMoscowDate().toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' }).replace(' г.', '')}
-        </p>
-      </div>
+      {/* ── 1. ШАПКА (клик — свернуть/развернуть) ── */}
+      <button
+        type="button"
+        onClick={toggleCollapsed}
+        aria-expanded={!collapsed}
+        className={`flex justify-between items-start w-full relative z-10 text-left group cursor-pointer ${collapsed ? '' : 'mb-8'}`}
+      >
+        <div className="flex items-baseline gap-4 min-w-0">
+          <h2 className="text-2xl md:text-3xl font-sans font-extrabold tracking-tight text-[#1C3F35] dark:text-white leading-none shrink-0">
+            Общее состояние
+          </h2>
+          {/* Компактная выжимка в свёрнутом виде */}
+          <AnimatePresence>
+            {collapsed && (
+              <motion.span
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -8 }}
+                className="hidden sm:flex items-baseline gap-3 min-w-0 truncate"
+              >
+                <motion.span className="text-xl md:text-2xl font-sans font-black tabular-nums tracking-tighter text-[#1C3F35] dark:text-white">
+                  {displayTotal}
+                </motion.span>
+                <span className="text-xs font-sans font-bold uppercase tracking-widest text-[#1C3F35] dark:text-white opacity-40">RUB</span>
+                {hasIncomeData && (
+                  <span className="text-sm font-sans font-black tabular-nums text-emerald-600 dark:text-emerald-400">
+                    +{Math.round(monthlyIncome).toLocaleString('ru-RU')}
+                  </span>
+                )}
+                {hasExpenseData && (
+                  <span className="text-sm font-sans font-black tabular-nums text-rose-600 dark:text-rose-500">
+                    -{Math.round(monthlyExpense).toLocaleString('ru-RU')}
+                  </span>
+                )}
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </div>
+        <span className="flex items-center gap-3 shrink-0 mt-1.5">
+          {/* 🔥 ИСПРАВЛЕНИЕ: МСК ВРЕМЯ ВМЕСТО new Date() */}
+          <span className="text-xs md:text-sm font-sans font-bold uppercase tracking-widest text-[#1C3F35] dark:text-white text-right">
+            {getMoscowDate().toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' }).replace(' г.', '')}
+          </span>
+          <motion.span
+            animate={{ rotate: collapsed ? 180 : 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 22 }}
+            className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-[#1C3F35]/50 dark:text-white/50 group-hover:bg-[#FF7A00]/15 group-hover:text-[#FF7A00] transition-colors"
+          >
+            <ChevronUp className="w-4 h-4" />
+          </motion.span>
+        </span>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {!collapsed && (
+          <motion.div
+            key="body"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.35, ease: 'easeInOut' }}
+            className="overflow-hidden flex flex-col flex-1 w-full"
+          >
 
       {/* ── 2. МАТРИЦА БАЛАНСОВ ── */}
       <div className="w-full mt-auto pt-4">
@@ -175,6 +237,9 @@ export function BalanceCards({
           </div>
         </div>
       </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
