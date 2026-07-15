@@ -92,9 +92,9 @@ async def get_transactions(
     )
 
 
-# ── Data Vault: Export / Import ────────────────────────────────────────────────
+# ── Data Vault: экспорт / импорт ────────────────────────────────────────────────
 
-_MAX_IMPORT_BYTES = 10 * 1024 * 1024  # 10 MB hard limit
+_MAX_IMPORT_BYTES = 10 * 1024 * 1024  # жёсткий лимит 10 МБ
 _ALLOWED_EXTENSIONS = {".csv", ".xlsx", ".xls"}
 
 
@@ -122,7 +122,7 @@ async def import_transactions_endpoint(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
 
-    # Validate extension
+    # Проверяем расширение
     filename = file.filename or "unknown.csv"
     ext = "." + filename.rsplit(".", maxsplit=1)[-1].lower() if "." in filename else ""
     if ext not in _ALLOWED_EXTENSIONS:

@@ -106,8 +106,8 @@ def _preprocess_image(image_bytes: bytes) -> Image.Image:
         img = img.resize((img.width * 2, img.height * 2), Image.Resampling.LANCZOS)
         return img
     finally:
-        # Close the original raw image to release BytesIO buffer.
-        # The returned `img` is a new object (grayscale copy).
+        # Закрываем исходное сырое изображение, чтобы освободить буфер BytesIO.
+        # Возвращаемый `img` — новый объект (копия в градациях серого).
         raw_img.close()
 
 

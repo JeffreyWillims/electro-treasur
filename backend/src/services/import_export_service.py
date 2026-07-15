@@ -36,7 +36,7 @@ from src.domain.models import Category, CategoryType, Transaction
 
 logger = logging.getLogger(__name__)
 
-# Column name aliases — case-insensitive matching for flexible imports.
+# Алиасы названий колонок — регистронезависимое сопоставление для гибкого импорта.
 _COL_ALIASES: dict[str, list[str]] = {
     "date": ["date", "дата", "executed_at", "datetime", "transaction_date"],
     "amount": ["amount", "сумма", "sum", "value"],
@@ -47,14 +47,14 @@ _COL_ALIASES: dict[str, list[str]] = {
 
 @dataclass
 class ImportResult:
-    """Statistics returned to the client after an import operation."""
+    """Статистика, возвращаемая клиенту после операции импорта."""
 
     created: int = 0
     skipped: int = 0
     errors: list[str] = field(default_factory=list)
 
 
-# ── EXPORT ─────────────────────────────────────────────────────────────────────
+# ── ЭКСПОРТ ────────────────────────────────────────────────────────────────────
 
 
 async def export_transactions_csv(
@@ -62,12 +62,12 @@ async def export_transactions_csv(
     user_id: int,
 ) -> io.BytesIO:
     """
-    Export all user transactions as a UTF-8 BOM CSV file.
+    Экспортирует все транзакции пользователя в CSV-файл с UTF-8 BOM.
 
-    BOM prefix (\\xef\\xbb\\xbf) guarantees Microsoft Excel auto-detects
-    UTF-8 encoding for Cyrillic content without manual import wizard.
+    Префикс BOM (\\xef\\xbb\\xbf) гарантирует, что Microsoft Excel автоматически
+    определит кодировку UTF-8 для кириллицы без ручного мастера импорта.
 
-    Returns a BytesIO buffer ready for StreamingResponse.
+    Возвращает буфер BytesIO, готовый для StreamingResponse.
     """
     stmt = (
         select(
@@ -88,13 +88,13 @@ async def export_transactions_csv(
     rows = result.all()
 
     buffer = io.BytesIO()
-    # UTF-8 BOM for Excel compatibility
+    # UTF-8 BOM для совместимости с Excel
     buffer.write(b"\xef\xbb\xbf")
 
     wrapper = io.TextIOWrapper(buffer, encoding="utf-8", newline="")
     writer = csv.writer(wrapper)
 
-    # Header row
+    # Строка заголовка
     writer.writerow(["Date", "Amount", "Category", "Type", "Currency", "Comment", "Entry Type"])
 
     for row in rows:
@@ -111,22 +111,22 @@ async def export_transactions_csv(
             ]
         )
 
-    wrapper.detach()  # Detach without closing the underlying BytesIO
+    wrapper.detach()  # Отсоединяем без закрытия исходного BytesIO
     buffer.seek(0)
     return buffer
 
 
-# ── IMPORT ─────────────────────────────────────────────────────────────────────
+# ── ИМПОРТ ─────────────────────────────────────────────────────────────────────
 
 
 def _resolve_columns(df: pd.DataFrame) -> dict[str, str]:
     """
-    Map required logical column names to actual DataFrame column names.
+    Сопоставляет требуемые логические названия колонок с реальными названиями в DataFrame.
 
-    Uses case-insensitive alias matching. Returns a dict:
-      {"date": "actual_col_name", "amount": "actual_col_name", ...}
+    Использует регистронезависимое сопоставление алиасов. Возвращает словарь:
+      {"date": "реальное_имя_колонки", "amount": "реальное_имя_колонки", ...}
 
-    Raises ValueError if a required column (date, amount) is not found.
+    Выбрасывает ValueError, если обязательная колонка (date, amount) не найдена.
     """
     df_cols_lower = {c.lower().strip(): c for c in df.columns}
     resolved: dict[str, str] = {}
@@ -137,7 +137,7 @@ def _resolve_columns(df: pd.DataFrame) -> dict[str, str]:
                 resolved[logical_name] = df_cols_lower[alias]
                 break
 
-    # Validate required columns
+    # Проверяем обязательные колонки
     for required in ("date", "amount"):
         if required not in resolved:
             available = ", ".join(df.columns.tolist())
@@ -152,12 +152,12 @@ def _resolve_columns(df: pd.DataFrame) -> dict[str, str]:
 
 
 def _parse_amount(raw: Any) -> Decimal:
-    """Parse a monetary value from various string/numeric formats."""
+    """Разбирает денежное значение из разных строковых/числовых форматов."""
     if isinstance(raw, (int, float)):
         return Decimal(str(raw))
     if isinstance(raw, Decimal):
         return raw
-    # String cleanup: remove spaces, replace comma decimal separator
+    # Очистка строки: убираем пробелы, заменяем запятую-разделитель на точку
     cleaned = str(raw).strip().replace(" ", "").replace(",", ".")
     return Decimal(cleaned)
 
@@ -169,32 +169,32 @@ async def import_transactions(
     filename: str,
 ) -> ImportResult:
     """
-    Import transactions from a CSV or Excel file.
+    Импортирует транзакции из CSV- или Excel-файла.
 
-    Algorithm:
-      1. Parse file via pandas (CSV or Excel, auto-detected by extension).
-      2. Resolve column names via case-insensitive alias matching.
-      3. Fetch existing user categories; auto-create missing ones.
-      4. Generate deterministic UUID idempotency keys from row content.
-      5. Batch INSERT with ON CONFLICT DO NOTHING — zero duplicates.
+    Алгоритм:
+      1. Разбор файла через pandas (CSV или Excel, автоопределение по расширению).
+      2. Сопоставление названий колонок через регистронезависимые алиасы.
+      3. Загрузка существующих категорий пользователя; недостающие создаются автоматически.
+      4. Генерация детерминированных UUID-ключей идемпотентности из содержимого строки.
+      5. Пакетный INSERT с ON CONFLICT DO NOTHING — без дублей.
 
-    Args:
-        session: Async SQLAlchemy session.
-        user_id: Authenticated user ID.
-        file_bytes: Raw file content.
-        filename: Original filename (for extension detection).
+    Аргументы:
+        session: асинхронная сессия SQLAlchemy.
+        user_id: ID аутентифицированного пользователя.
+        file_bytes: сырое содержимое файла.
+        filename: исходное имя файла (для определения расширения).
 
-    Returns:
-        ImportResult with created/skipped counts and error messages.
+    Возвращает:
+        ImportResult со счётчиками created/skipped и сообщениями об ошибках.
     """
     result = ImportResult()
 
-    # ── Step 1: Parse file ─────────────────────────────────────────────
+    # ── Шаг 1: разбор файла ─────────────────────────────────────────────
     ext = filename.rsplit(".", maxsplit=1)[-1].lower() if "." in filename else ""
 
     try:
         if ext == "csv":
-            # Try UTF-8 first, fall back to cp1251 (common Russian Windows encoding)
+            # Сначала пробуем UTF-8, затем cp1251 (частая кодировка русской Windows)
             try:
                 df = pd.read_csv(io.BytesIO(file_bytes), encoding="utf-8-sig")
             except UnicodeDecodeError:
@@ -213,10 +213,10 @@ async def import_transactions(
         result.errors.append("Файл не содержит данных.")
         return result
 
-    # Strip whitespace from column names
+    # Убираем пробелы из названий колонок
     df.columns = df.columns.str.strip()
 
-    # ── Step 2: Resolve columns ────────────────────────────────────────
+    # ── Шаг 2: сопоставление колонок ────────────────────────────────────
     try:
         col_map = _resolve_columns(df)
     except ValueError as exc:
@@ -228,13 +228,13 @@ async def import_transactions(
     category_col = col_map.get("category")
     comment_col = col_map.get("comment")
 
-    # ── Step 3: Load/create categories ─────────────────────────────────
+    # ── Шаг 3: загрузка/создание категорий ─────────────────────────────
     cat_result = await session.execute(select(Category).where(Category.user_id == user_id))
     existing_cats: dict[str, Category] = {
         c.name.lower().strip(): c for c in cat_result.scalars().all()
     }
 
-    # Collect unique category names from the file that don't exist yet
+    # Собираем уникальные названия категорий из файла, которых ещё нет
     new_cat_names: set[str] = set()
     if category_col is not None:
         for raw_name in df[category_col].dropna().unique():
@@ -242,12 +242,12 @@ async def import_transactions(
             if name_str and name_str.lower() not in existing_cats:
                 new_cat_names.add(name_str)
 
-    # Determine type heuristic: check the first row with this category
-    # to decide income vs expense based on amount sign
+    # Эвристика типа: смотрим первую строку с этой категорией,
+    # чтобы определить доход/расход по знаку суммы
     cat_type_hints: dict[str, CategoryType] = {}
     if category_col is not None:
         for name_str in new_cat_names:
-            # Find the first row with this category to peek at amount sign
+            # Находим первую строку с этой категорией, чтобы взглянуть на знак суммы
             mask = df[category_col].astype(str).str.strip().str.lower() == name_str.lower()
             first_match = df.loc[mask, amount_col].head(1)
             if not first_match.empty:
@@ -261,7 +261,7 @@ async def import_transactions(
             else:
                 cat_type_hints[name_str.lower()] = CategoryType.expense
 
-    # Bulk create missing categories
+    # Массовое создание недостающих категорий
     for name_str in new_cat_names:
         cat_type = cat_type_hints.get(name_str.lower(), CategoryType.expense)
         new_cat = Category(
@@ -274,7 +274,7 @@ async def import_transactions(
 
     if new_cat_names:
         await session.flush()
-        # Reload all categories after creation
+        # Перечитываем все категории после создания
         cat_result2 = await session.execute(select(Category).where(Category.user_id == user_id))
         existing_cats = {c.name.lower().strip(): c for c in cat_result2.scalars().all()}
         logger.info(
@@ -301,13 +301,13 @@ async def import_transactions(
         await session.flush()
         existing_cats["импорт"] = fallback_cat
 
-    # ── Step 4: Build transaction rows ─────────────────────────────────
+    # ── Шаг 4: формирование строк транзакций ─────────────────────────────
     insert_values: list[dict[str, Any]] = []
 
     for idx, row in df.iterrows():
-        row_num = int(idx) + 2  # +2: header row + 0-indexed → human row number
+        row_num = int(idx) + 2  # +2: строка заголовка + индексация с 0 → номер строки для человека
 
-        # Parse date
+        # Разбор даты
         raw_date = row.get(date_col)
         if pd.isna(raw_date):
             result.errors.append(f"Строка {row_num}: пустая дата — пропущена.")
@@ -327,7 +327,7 @@ async def import_transactions(
             result.skipped += 1
             continue
 
-        # Parse amount
+        # Разбор суммы
         raw_amount = row.get(amount_col)
         if pd.isna(raw_amount):
             result.errors.append(f"Строка {row_num}: пустая сумма — пропущена.")
@@ -346,7 +346,7 @@ async def import_transactions(
             result.skipped += 1
             continue
 
-        # Resolve category
+        # Определяем категорию
         cat_name_raw = row.get(category_col) if category_col else None
         if pd.notna(cat_name_raw) and str(cat_name_raw).strip():
             cat_key = str(cat_name_raw).strip().lower()
@@ -354,20 +354,20 @@ async def import_transactions(
         else:
             category = fallback_cat
 
-        # Parse comment
+        # Разбор комментария
         comment_raw = row.get(comment_col) if comment_col else None
         comment = str(comment_raw).strip() if pd.notna(comment_raw) else None
         if comment:
-            comment = comment[:255]  # Truncate to DB column limit
+            comment = comment[:255]  # Обрезаем до лимита колонки БД
 
-        # Generate deterministic UUID idempotency key
-        # Payload: user_id + date ISO + amount + comment
+        # Генерируем детерминированный UUID-ключ идемпотентности
+        # Из данных: user_id + дата ISO + сумма + комментарий
         date_iso = executed_at.strftime("%Y-%m-%dT%H:%M:%S")
         comment_for_key = comment or ""
         key_payload = f"import_{user_id}_{date_iso}_{amount}_{comment_for_key}"
         idempotency_key = str(uuid.uuid5(uuid.NAMESPACE_URL, key_payload))
 
-        # Use absolute amount — sign handled by category type
+        # Используем абсолютную сумму — знак определяется типом категории
         abs_amount = abs(amount)
 
         insert_values.append(
@@ -389,7 +389,7 @@ async def import_transactions(
             result.errors.append("Не найдено валидных строк для импорта.")
         return result
 
-    # ── Step 5: Batch INSERT with ON CONFLICT DO NOTHING ───────────────
+    # ── Шаг 5: пакетный INSERT с ON CONFLICT DO NOTHING ───────────────
     stmt = (
         pg_insert(Transaction)
         .values(insert_values)

@@ -1,7 +1,7 @@
 /**
- * RecurringReminders — Smart payment reminders with Edit/Delete/Done actions.
- * "Done" action auto-creates an expense transaction via POST API.
- * Uses localStorage for persistence.
+ * RecurringReminders — умные напоминания о платежах с действиями Изменить/Удалить/Готово.
+ * Действие «Готово» автоматически создаёт расходную транзакцию через POST API.
+ * Хранение — в localStorage.
  */
 import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';

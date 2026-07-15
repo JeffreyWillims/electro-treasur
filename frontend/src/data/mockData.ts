@@ -1,6 +1,6 @@
 /**
- * Mock data — simulates REST API responses for development.
- * All monetary values as strings (Decimal contract).
+ * Мок-данные — имитируют ответы REST API для локальной разработки.
+ * Все денежные суммы — строками (контракт Decimal).
  */
 import type { CategoryRowSchema, MonthlySummaryData, AccountBalance } from '@/types';
 

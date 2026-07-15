@@ -2,11 +2,11 @@ import asyncio
 import sys
 from pathlib import Path
 
-# Ensure backend/ is on sys.path so `src.*` imports resolve correctly
-# regardless of the working directory the script is launched from.
+# Добавляем backend/ в sys.path, чтобы импорты `src.*` резолвились корректно
+# независимо от рабочей директории, из которой запущен скрипт.
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-# Windows asyncio workaround (deprecated in 3.16 — will be removed later)
+# Обходной путь для asyncio на Windows (устарело в 3.16 — будет удалено позже)
 if sys.platform == "win32":
     asyncio.set_event_loop(asyncio.new_event_loop())
 

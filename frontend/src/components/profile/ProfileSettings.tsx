@@ -39,7 +39,7 @@ export function ProfileSettings() {
     }
   };
 
-  // ─── TELEGRAM DEEP LINK ────────────────────────────────────
+  // ─── DEEP LINK ДЛЯ TELEGRAM ────────────────────────────────────
   const [isTgLoading, setIsTgLoading] = useState(false);
   const TG_BOT_USERNAME = 'citrine_vault_bot';
 

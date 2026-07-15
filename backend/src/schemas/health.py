@@ -1,4 +1,4 @@
-"""Pydantic V2 schemas for the Financial Health Score."""
+"""Pydantic V2-схемы индекса финансового здоровья."""
 
 from __future__ import annotations
 

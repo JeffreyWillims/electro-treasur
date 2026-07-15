@@ -1,12 +1,12 @@
 /**
- * DataVaultModal — Glassmorphism Import Modal for Citrine Vault.
+ * DataVaultModal — стеклянная модалка импорта для Citrine Vault.
  *
- * Features:
- *   • Drag & Drop zone with glassmorphic backdrop-blur aesthetic.
- *   • File validation (.csv, .xlsx, .xls — max 10 MB).
- *   • Three visual states: idle → uploading → success/error.
- *   • Auto-closes 1.5s after successful import.
- *   • Invalidates ['transactions'] and ['dashboard'] query caches on success.
+ * Возможности:
+ *   • Зона Drag & Drop в стеклянной эстетике backdrop-blur.
+ *   • Валидация файла (.csv, .xlsx, .xls — максимум 10 МБ).
+ *   • Три визуальных состояния: ожидание → загрузка → успех/ошибка.
+ *   • Автозакрытие через 1.5с после успешного импорта.
+ *   • Инвалидирует кэши запросов ['transactions'] и ['dashboard'] при успехе.
  */
 import { useState, useCallback, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -43,7 +43,7 @@ export function DataVaultModal({ isOpen, onClose }: DataVaultModalProps) {
         toast.info('Все строки уже были импортированы ранее');
       }
 
-      // Auto-close after success
+      // Автозакрытие после успеха
       setTimeout(() => {
         handleClose();
       }, 1500);
@@ -77,7 +77,7 @@ export function DataVaultModal({ isOpen, onClose }: DataVaultModalProps) {
     [mutation],
   );
 
-  // ── Drag & Drop handlers ───────────────────────────────────────────
+  // ── Обработчики Drag & Drop ───────────────────────────────────────────
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -112,7 +112,7 @@ export function DataVaultModal({ isOpen, onClose }: DataVaultModalProps) {
       if (firstFile) {
         validateAndUpload(firstFile);
       }
-      // Reset input so the same file can be re-selected
+      // Сбрасываем input, чтобы можно было выбрать тот же файл повторно
       e.target.value = '';
     },
     [validateAndUpload],
@@ -311,7 +311,7 @@ export function DataVaultModal({ isOpen, onClose }: DataVaultModalProps) {
                         </div>
                       </div>
 
-                      {/* Hidden file input */}
+                      {/* Скрытый input файла */}
                       <input
                         ref={fileInputRef}
                         type="file"
@@ -320,7 +320,7 @@ export function DataVaultModal({ isOpen, onClose }: DataVaultModalProps) {
                         className="hidden"
                       />
 
-                      {/* Column hint */}
+                      {/* Подсказка по колонкам */}
                       <p className="text-center text-[10px] font-mono text-[#1C3F35]/30 dark:text-white/20 mt-4 leading-relaxed">
                         Ожидаемые колонки: <span className="font-bold">Date</span>, <span className="font-bold">Amount</span>, <span className="font-bold">Category</span>, <span className="font-bold">Comment</span>
                       </p>

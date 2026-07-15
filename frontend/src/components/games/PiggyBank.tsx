@@ -257,7 +257,7 @@ export function PiggyBank({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
-        {/* Score panel */}
+        {/* Панель счёта */}
         <div className="flex gap-3 mb-4">
           <div className="flex-1 rounded-2xl bg-white/10 px-4 py-2.5 text-center relative overflow-visible">
             <p className="text-[9px] font-mono font-bold uppercase tracking-[0.2em] text-white/50">

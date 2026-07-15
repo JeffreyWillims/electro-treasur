@@ -146,7 +146,7 @@ export function InsightModal({
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Modal Backdrop */}
+          {/* Затемнение под модалкой */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -163,7 +163,13 @@ export function InsightModal({
               className="relative w-full max-w-2xl max-h-[88vh] overflow-y-auto bg-white/90 dark:bg-[#111111]/95 backdrop-blur-3xl border border-black/5 dark:border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-[0_32px_80px_rgba(0,0,0,0.15)] dark:shadow-[0_32px_80px_rgba(0,0,0,0.6)]"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Close button */}
+              {/* Тёплое сияние сверху — окно встречает мягко, без тревожного холода */}
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[120%] h-48 bg-gradient-to-b from-[#FF7A00]/15 to-transparent blur-3xl"
+              />
+
+              {/* Кнопка закрытия */}
               <button
                 onClick={handleClose}
                 className="absolute top-6 right-6 w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-[#1C3F35]/50 dark:text-white/50 hover:bg-black/10 dark:hover:bg-white/10 hover:text-[#1C3F35] dark:hover:text-white transition-colors"
@@ -177,7 +183,7 @@ export function InsightModal({
                   <Sparkles className="w-7 h-7 text-white" />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <h2 className="text-2xl md:text-3xl font-sans font-extrabold text-[#1C3F35] dark:text-white tracking-tight leading-none">
+                  <h2 className="text-3xl md:text-4xl font-serif font-bold italic text-[#1C3F35] dark:text-white tracking-tight leading-none">
                     AI Анализ
                   </h2>
                   <p className="text-[11px] font-mono font-bold uppercase tracking-[0.25em] text-[#FF7A00]">
@@ -236,7 +242,7 @@ export function InsightModal({
                         <div className="space-y-4">
                           {/* Наблюдения: ведущий итог + строки с маркером-акцентом */}
                           {facts.map((paragraph, i) => {
-                            const negative = /превысили|минус|перерасход/.test(paragraph);
+                            const negative = /больше, чем пришло|за лимит|на пределе|поправимо/.test(paragraph);
                             return (
                               <motion.div
                                 key={i}
@@ -245,14 +251,14 @@ export function InsightModal({
                                 transition={{ delay: i * 0.12, duration: 0.4, ease: 'easeOut' }}
                                 className={
                                   i === 0
-                                    ? 'text-base md:text-lg font-semibold text-[#1C3F35] dark:text-white leading-relaxed'
+                                    ? 'font-serif text-xl md:text-2xl font-medium text-[#1C3F35] dark:text-white leading-snug'
                                     : 'flex items-start gap-3 text-sm md:text-base font-medium text-[#1C3F35]/75 dark:text-white/75 leading-relaxed'
                                 }
                               >
                                 {i > 0 && (
                                   <span
                                     className={`mt-2 w-2 h-2 rounded-full shrink-0 ${
-                                      negative ? 'bg-rose-500' : 'bg-emerald-500'
+                                      negative ? 'bg-amber-500' : 'bg-emerald-500'
                                     }`}
                                   />
                                 )}
@@ -274,7 +280,7 @@ export function InsightModal({
                             >
                               <span className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-[#FF7A00] to-[#FFA011]" />
                               <p className="text-sm md:text-base font-semibold text-[#1C3F35] dark:text-white leading-relaxed">
-                                💡 <HighlightedText text={paragraph.replace(/^Совет:\s*/, '')} />
+                                🌱 <HighlightedText text={paragraph.replace(/^Совет:\s*/, '')} />
                               </p>
                             </motion.div>
                           ))}
@@ -288,7 +294,7 @@ export function InsightModal({
                       startDate={startDate}
                     />
 
-                    {/* Summary cards */}
+                    {/* Карточки сводки */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="p-5 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 rounded-[1.5rem] flex flex-col items-center justify-center text-center">
                         <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 mb-2">Доход</p>
@@ -307,7 +313,9 @@ export function InsightModal({
                       <div className="p-5 bg-[#FF7A00]/5 dark:bg-[#FF7A00]/10 border border-[#FF7A00]/20 rounded-[1.5rem] flex flex-col items-center justify-center text-center">
                         <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#FF7A00] mb-2">Сбережения</p>
                         <p className="text-2xl font-sans font-black tracking-tighter tabular-nums text-[#FF7A00] leading-none">
-                          {data.summary.savings_rate}
+                          {/* Отрицательная норма («−700%») не несёт смысла и пугает —
+                              показываем спокойный 0%: в этом месяце отложить не вышло. */}
+                          {parseFloat(data.summary.savings_rate) < 0 ? '0%' : data.summary.savings_rate}
                         </p>
                       </div>
                     </div>

@@ -1,7 +1,7 @@
 # Продовый оверлей — GHCR-образы вместо сборки из исходников + SSL-nginx.
 #
-# Local:  docker compose up -d
-# Prod:   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# Локально: docker compose up -d
+# Прод:     docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 #
 # Immutable Infrastructure: три Python-сервиса используют ОДИН образ, собранный
 # CI и запушенный в GHCR (тегами :latest и :sha-XXXXXXX). Прод не компилирует

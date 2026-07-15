@@ -31,9 +31,9 @@ async def create_user(db: AsyncSession, user_in: dict[str, Any]) -> User:
         phone=user_in.get("phone"),
     )
     db.add(db_user)
-    await db.flush()  # Get db_user.id
+    await db.flush()  # получить db_user.id
 
-    # Seed Elite Categories
+    # Создаём стартовый набор категорий
     default_categories = [
         ("Propulsion (Income)", CategoryType.income, "rocket"),
         ("Operations (Rent/Utility)", CategoryType.expense, "settings"),
@@ -94,15 +94,15 @@ async def count_category_transactions(
     user_id: int,
 ) -> int:
     """
-    Pre-flight check: COUNT transactions linked to this category for this user.
+    Предварительная проверка: COUNT транзакций, привязанных к этой категории у этого пользователя.
 
-    Used by the frontend before rendering the ConfirmDeleteDialog.
-    Time Complexity: O(log N) — indexed FK scan on (category_id, user_id).
+    Используется фронтендом перед рендером ConfirmDeleteDialog.
+    Сложность: O(log N) — индексированный скан FK по (category_id, user_id).
 
-    Returns:
-        int — number of transactions that WILL be CASCADE-deleted.
+    Возвращает:
+        int — количество транзакций, которые БУДУТ удалены каскадно.
     """
-    # Validate ownership first — prevents data leakage across users
+    # Сначала проверяем принадлежность — предотвращает утечку данных между пользователями
     owner_stmt = select(Category.id).where(
         Category.id == category_id,
         Category.user_id == user_id,
@@ -176,16 +176,16 @@ async def delete_user_category(
     Ownership enforced: returns False if category not found or belongs to
     another user (prevents cross-user data leakage).
 
-    THIS ACTION IS IRREVERSIBLE — the caller (API route) must ensure
-    the user has explicitly confirmed deletion via the UI.
+    ЭТО ДЕЙСТВИЕ НЕОБРАТИМО — вызывающий код (роут API) обязан убедиться,
+    что пользователь явно подтвердил удаление через UI.
 
-    Time Complexity: O(log N) ownership SELECT + O(M) bulk DELETE
-                     where M = linked Transactions + Budgets.
+    Сложность: O(log N) SELECT на проверку принадлежности + O(M) массовый DELETE,
+                     где M = связанные транзакции + бюджеты.
 
-    Returns:
-        True on successful deletion, False if not found or not authorized.
+    Возвращает:
+        True при успешном удалении, False если не найдено или нет прав.
     """
-    # ── Step 0: Ownership guard ───────────────────────────────────────────
+    # ── Шаг 0: проверка принадлежности ──────────────────────────────────────
     stmt = select(Category).where(
         Category.id == category_id,
         Category.user_id == user_id,
@@ -194,13 +194,13 @@ async def delete_user_category(
     if cat is None:
         return False
 
-    # ── Step 1: Purge all linked Transactions ─────────────────────────────
+    # ── Шаг 1: удаляем все связанные транзакции ─────────────────────────────
     await session.execute(delete(Transaction).where(Transaction.category_id == category_id))
 
-    # ── Step 2: Purge all linked Budget limits ────────────────────────────
+    # ── Шаг 2: удаляем все связанные лимиты бюджета ─────────────────────────
     await session.execute(delete(Budget).where(Budget.category_id == category_id))
 
-    # ── Step 3: Delete the Category itself ───────────────────────────────
+    # ── Шаг 3: удаляем саму категорию ────────────────────────────────────────
     await session.delete(cat)
     await session.commit()
 

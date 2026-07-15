@@ -1,5 +1,5 @@
 /**
- * ConfirmDeleteDialog — Premium CASCADE-safe deletion guard for categories.
+ * ConfirmDeleteDialog — защита от каскадного удаления категорий.
  */
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -107,11 +107,11 @@ export function ConfirmDeleteDialog({ category, onClose, onDeleted }: ConfirmDel
             className="relative w-full max-w-md bg-white/95 dark:bg-[#111111]/95 backdrop-blur-3xl border border-black/5 dark:border-white/10 rounded-[2.5rem] shadow-[0_32px_80px_rgba(0,0,0,0.15)] dark:shadow-[0_32px_80px_rgba(0,0,0,0.6)] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Top danger stripe */}
+            {/* Верхняя полоса опасности */}
             <div className={cn("h-1.5 w-full", isHardDelete ? 'bg-gradient-to-r from-rose-500 to-rose-400' : 'bg-gradient-to-r from-amber-500 to-[#FF7A00]')} />
 
             <div className="p-8">
-              {/* Close button */}
+              {/* Кнопка закрытия */}
               <button
                 type="button"
                 onClick={onClose}
@@ -140,7 +140,7 @@ export function ConfirmDeleteDialog({ category, onClose, onDeleted }: ConfirmDel
                 <div className="h-20 rounded-2xl bg-black/5 dark:bg-white/5 animate-pulse mb-6" />
               ) : (
                 <>
-                  {/* Warning body */}
+                  {/* Текст предупреждения */}
                   {isHardDelete ? (
                     <div className="mb-8 p-5 rounded-[1.5rem] bg-rose-500/5 dark:bg-rose-500/10 border border-rose-500/20">
                       <p className="text-sm font-bold text-rose-600 dark:text-rose-400 mb-2">
@@ -158,7 +158,7 @@ export function ConfirmDeleteDialog({ category, onClose, onDeleted }: ConfirmDel
                     </div>
                   )}
 
-                  {/* Hard confirmation input */}
+                  {/* Поле жёсткого подтверждения */}
                   {isHardDelete && (
                     <div className="mb-10">
                       <label className="block text-[11px] font-mono font-bold uppercase tracking-[0.25em] text-[#1C3F35]/50 dark:text-white/50 mb-3 text-center">
@@ -184,7 +184,7 @@ export function ConfirmDeleteDialog({ category, onClose, onDeleted }: ConfirmDel
                           }
                         }}
                       />
-                      {/* Live match indicator */}
+                      {/* Индикатор совпадения в реальном времени */}
                       <div className="mt-4 flex items-center justify-center gap-2">
                         <div className={cn("w-2 h-2 rounded-full transition-colors duration-300 shadow-sm", confirmInput === CONFIRM_WORD ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]' : 'bg-black/10 dark:bg-white/20')} />
                         <span className="text-[10px] font-mono font-bold uppercase tracking-[0.25em] text-[#1C3F35]/40 dark:text-white/30">
@@ -196,7 +196,7 @@ export function ConfirmDeleteDialog({ category, onClose, onDeleted }: ConfirmDel
                 </>
               )}
 
-              {/* Action buttons */}
+              {/* Кнопки действий */}
               <div className="flex gap-4">
                 <button
                   type="button"

@@ -41,7 +41,7 @@ async def get_monthly_dashboard(
     if day_count <= 0:
         day_count = 1
 
-    # ── Step 0: Total Balance All Time ───────
+    # ── Шаг 0: общий баланс за всё время ───────
     stmt_all = (
         select(Category.type, func.sum(Transaction.amount))
         .join(Category, Transaction.category_id == Category.id)
@@ -54,7 +54,7 @@ async def get_monthly_dashboard(
         "expense", Decimal("0.00")
     )
 
-    # ── Step 1: Fetch aggregated transactions grouped by date ─────────
+    # ── Шаг 1: агрегированные транзакции, сгруппированные по дате ─────────
     # Sargable-фильтр по сырому executed_at: диапазон [start; end+1) в UTC
     # использует индекс (user_id, executed_at). Раньше здесь стоял
     # func.date(executed_at) в WHERE — функция над колонкой блокировала индекс
@@ -81,10 +81,10 @@ async def get_monthly_dashboard(
     tx_result = await session.execute(stmt_tx)
     tx_rows = tx_result.all()  # list[(category_id, type, exec_date, total)]
 
-    # ── Step 2: Fetch and aggregate budgets safely ──────────────────────
-    # GROUP BY category_id + SUM(amount_limit) so that multi-month ranges
-    # (e.g. Apr 01 – May 31) correctly accumulate limits instead of
-    # dict-overwriting the later month's value over the earlier one.
+    # ── Шаг 2: безопасно получаем и агрегируем бюджеты ──────────────────
+    # GROUP BY category_id + SUM(amount_limit), чтобы многомесячные диапазоны
+    # (напр. 1 апреля – 31 мая) корректно суммировали лимиты, а не
+    # перезаписывали значение более раннего месяца значением более позднего.
     stmt_bp = (
         select(
             Budget.category_id,
@@ -102,7 +102,7 @@ async def get_monthly_dashboard(
     bp_result = await session.execute(stmt_bp)
     plans: dict[int, Decimal] = {row.category_id: row.total_limit for row in bp_result.all()}
 
-    # ── Step 3: Fetch category names ─────────
+    # ── Шаг 3: получаем названия категорий ─────────
     stmt_cat = select(Category.id, Category.name, Category.type, Category.icon).where(
         Category.user_id == user_id
     )
@@ -111,13 +111,15 @@ async def get_monthly_dashboard(
         row.id: {"name": row.name, "type": row.type, "icon": row.icon} for row in cat_result.all()
     }
 
-    # ── Step 4: O(N) single-pass aggregation into day matrix ─────────────
+    # ── Шаг 4: агрегация в матрицу дней за один проход O(N) ─────────────
     #   matrix[category_id][day_index] = Decimal
     #
-    #   Timezone guard: func.date(executed_at) runs in DB server timezone (UTC).
-    #   A local UTC+3 transaction at 00:30 local = 21:30 prev-day UTC → its
-    #   date() drifts one day back, producing delta_days = -1 or >= day_count.
-    #   We use `continue` (not clamp) so rogue rows don't corrupt bucket 0 or N-1.
+    #   Защита от часового пояса: func.date(executed_at) выполняется в часовом
+    #   поясе сервера БД (UTC). Локальная транзакция UTC+3 в 00:30 по местному
+    #   времени = 21:30 предыдущего дня по UTC → её date() сдвигается на день назад,
+    #   давая delta_days = -1 или >= day_count.
+    #   Используем `continue` (а не отсечение по границам), чтобы такие строки
+    #   не портили корзину 0 или N-1.
     matrix: dict[int, list[Decimal]] = {}
     fact_totals: dict[int, Decimal] = {}
     period_income = Decimal("0.00")
@@ -133,14 +135,14 @@ async def get_monthly_dashboard(
         elif isinstance(raw_exec_date, datetime):
             exec_date = raw_exec_date.date()
         else:
-            exec_date = raw_exec_date  # Already a date object
+            exec_date = raw_exec_date  # Уже объект date
 
-        # Day-index calculation with strict out-of-bounds guard.
+        # Расчёт индекса дня со строгой проверкой границ.
         delta_days = (exec_date - start_date).days
 
-        # Timezone drift → delta_days can be -1 or >= day_count.
-        # Drop silently: the row still contributes to total_balance_all_time
-        # (Step 0) but must not corrupt the fixed-length day vector.
+        # Дрейф часового пояса → delta_days может быть -1 или >= day_count.
+        # Молча отбрасываем: строка всё равно учтена в total_balance_all_time
+        # (Шаг 0), но не должна портить вектор дней фиксированной длины.
         if delta_days < 0 or delta_days >= day_count:
             continue
 
@@ -156,7 +158,7 @@ async def get_monthly_dashboard(
         elif cat_type == "expense":
             period_expense += total
 
-    # ── Step 5: Build response rows ───────────
+    # ── Шаг 5: собираем строки ответа ───────────
     all_cat_ids = set(plans.keys()) | set(matrix.keys())
     rows: list[CategoryRowSchema] = []
 

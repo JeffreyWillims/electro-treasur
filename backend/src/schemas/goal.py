@@ -1,4 +1,4 @@
-"""Pydantic V2 schemas for Savings Goals (режим «Цель»)."""
+"""Pydantic V2-схемы целей «Сейф» (режим «Цель»)."""
 
 from __future__ import annotations
 

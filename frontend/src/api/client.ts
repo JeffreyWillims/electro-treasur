@@ -1,6 +1,6 @@
 /**
- * API Client — typed fetch wrappers for the Citrine Vault backend.
- * All responses validated against contract types. Zero `any` types in public API.
+ * API Client — типизированные fetch-обёртки для бэкенда Citrine Vault.
+ * Все ответы валидируются по контрактным типам. Ноль `any` в публичном API.
  *
  * Auth: httpOnly cookies, выставляемые бэкендом. Каждый запрос шлёт cookie
  * (credentials: 'include'); на 401 прозрачно делаем один refresh и повторяем
@@ -136,14 +136,14 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-// ── Telegram Integration ──────────────────────────────────────────────
+// ── Интеграция с Telegram ──────────────────────────────────────────────
 export function generateTelegramOtp(): Promise<TelegramOtpResponse> {
   return request<TelegramOtpResponse>('/v1/users/telegram-link', {
     method: 'POST',
   });
 }
 
-// ── Transactions ───────────────────────────────────────────────────────
+// ── Транзакции ───────────────────────────────────────────────────────
 export function createTransaction(
   payload: TransactionCreate,
   idempotencyKey?: string,
@@ -151,8 +151,8 @@ export function createTransaction(
   const headers: Record<string, string> = {};
   if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
 
-  // 1. Convert amount to string to satisfy strict Pydantic V2 Decimal validation
-  // 2. Safely replace 'Z' with '+00:00' for Python <3.11 isoformat compat
+  // 1. Приводим сумму к строке для строгой валидации Decimal в Pydantic V2
+  // 2. Безопасно заменяем 'Z' на '+00:00' для совместимости с isoformat в Python <3.11
   const safePayload = {
     ...payload,
     amount: payload.amount.toString(),
@@ -210,15 +210,15 @@ export async function deleteTransaction(id: number): Promise<void> {
     const errorBody = await response.json().catch(() => ({ detail: response.statusText }));
     throw new ApiError(response.status, errorBody.detail || `API error: ${response.status}`);
   }
-  // 204 No Content — no body to parse
+  // 204 No Content — тела ответа нет
 }
 
-// ── Dashboard ──────────────────────────────────────────────────────────
+// ── Дашборд ──────────────────────────────────────────────────────────
 export function fetchDashboard(startDate: string, endDate: string): Promise<DashboardResponse> {
   return request<DashboardResponse>(`/v1/dashboard/?start_date=${startDate}&end_date=${endDate}`);
 }
 
-// ── LLM Insights ───────────────────────────────────────────────────────
+// ── LLM Insights (AI Анализ) ───────────────────────────────────────────────────────
 export function enqueueInsight(body: InsightRequest): Promise<InsightEnqueueResponse> {
   return request<InsightEnqueueResponse>('/v1/insights/', {
     method: 'POST',
@@ -230,7 +230,7 @@ export function pollInsight(taskId: string): Promise<InsightResultResponse> {
   return request<InsightResultResponse>(`/v1/insights/${taskId}`);
 }
 
-// ── Analytics & Simulation ─────────────────────────────────────────────
+// ── Аналитика и симуляция ─────────────────────────────────────────────
 export function fetchAnalyticsProfile(): Promise<AnalyticsProfileResponse> {
   return request<AnalyticsProfileResponse>('/v1/analytics/profile');
 }
@@ -242,7 +242,7 @@ export function simulateSavings(body: SimulateRequest): Promise<SimulateResponse
   });
 }
 
-// ── Authentication ────────────────────────────────────────────────────
+// ── Аутентификация ────────────────────────────────────────────────────
 // Бэкенд ставит httpOnly-cookie и НЕ возвращает токены в теле — поэтому login
 // возвращает void: успех определяется отсутствием ошибки.
 export async function login(username: string, password: string): Promise<void> {
@@ -274,7 +274,7 @@ export function register(payload: { email: string; password: string; full_name?:
   });
 }
 
-// ── User Profile ──────────────────────────────────────────────────────
+// ── Профиль пользователя ──────────────────────────────────────────────────────
 export function fetchMe(): Promise<UserRead> {
   return request<UserRead>('/v1/users/me');
 }
@@ -286,7 +286,7 @@ export function updateMe(payload: UserUpdate): Promise<UserRead> {
   });
 }
 
-// ── Categories ────────────────────────────────────────────────────────
+// ── Категории ────────────────────────────────────────────────────────
 export function fetchCategories(): Promise<CategoryRead[]> {
   return request<CategoryRead[]>('/v1/users/categories');
 }
@@ -322,12 +322,12 @@ export async function deleteCategory(categoryId: number): Promise<void> {
     const errorBody = await response.json().catch(() => ({ detail: response.statusText }));
     throw new ApiError(response.status, errorBody.detail || `API error: ${response.status}`);
   }
-  // 204 No Content — no body to parse
+  // 204 No Content — тела ответа нет
 }
 
-// ── Budgets ───────────────────────────────────────────────────────────
+// ── Бюджеты ───────────────────────────────────────────────────────────
 export function upsertBudget(payload: BudgetUpsert): Promise<{ status: string; amount_limit: string }> {
-  // Pydantic strictly checks amount format
+  // Pydantic строго проверяет формат суммы
   const safePayload = {
     ...payload,
     amount_limit: payload.amount_limit.toString(),
@@ -350,11 +350,11 @@ export async function deleteBudget(categoryId: number, month: number, year: numb
   }
 }
 
-// ── Data Vault: Import / Export ────────────────────────────────────────────
+// ── Data Vault: импорт / экспорт ────────────────────────────────────────────
 
 /**
- * Download all user transactions as a CSV file.
- * Creates a hidden <a> element, triggers click, then cleans up.
+ * Скачивает все транзакции пользователя в виде CSV-файла.
+ * Создаёт скрытый элемент <a>, эмулирует клик, затем убирает за собой.
  */
 export async function exportTransactions(): Promise<void> {
   const response = await apiFetch('/v1/transactions/export');
@@ -376,11 +376,11 @@ export async function exportTransactions(): Promise<void> {
 }
 
 /**
- * Upload a CSV or Excel file for transaction import.
- * Uses FormData — browser auto-sets multipart Content-Type with boundary.
+ * Загружает CSV или Excel файл для импорта транзакций.
+ * Использует FormData — браузер сам проставляет multipart Content-Type с boundary.
  */
 export async function importTransactions(file: File): Promise<ImportResult> {
-  // NOTE: Do NOT set Content-Type here — browser must set multipart boundary
+  // ВАЖНО: не задавать Content-Type вручную — браузер должен сам выставить multipart boundary
   const formData = new FormData();
   formData.append('file', file);
 
@@ -398,7 +398,7 @@ export async function importTransactions(file: File): Promise<ImportResult> {
 }
 
 
-// ── Bank Offers (Savings Navigator CPA) ────────────────────────────────
+// ── Банковские предложения (CPA в Горизонте капитала) ────────────────────────────────
 export interface BankOfferDto {
   id: number;
   name: string;
@@ -411,12 +411,12 @@ export function fetchBankOffers(): Promise<BankOfferDto[]> {
   return request<BankOfferDto[]>('/v1/offers/');
 }
 
-/** Fire-and-forget funnel counter; 204 has no body so we ignore the response. */
+/** Счётчик воронки в режиме fire-and-forget; у 204 нет тела, поэтому ответ игнорируем. */
 export function clickBankOffer(offerId: number): Promise<void> {
   return apiFetch(`/v1/offers/${offerId}/click`, { method: 'POST' }).then(() => undefined);
 }
 
-// ── Latest persisted monthly insight (Cashflow Prophet) ────────────────
+// ── Последний сохранённый месячный анализ (Cashflow Prophet) ────────────────
 export interface Psychopassport {
   persona_code: string;
   persona_title: string;
@@ -618,7 +618,7 @@ export async function downloadFinancialPlanPdf(): Promise<void> {
   URL.revokeObjectURL(url);
 }
 
-// ── Feedback ───────────────────────────────────────────────────────────
+// ── Обратная связь ───────────────────────────────────────────────────────────
 export function submitFeedback(message: string): Promise<{ status: string }> {
   return request<{ status: string }>('/v1/feedback/', {
     method: 'POST',
@@ -626,7 +626,7 @@ export function submitFeedback(message: string): Promise<{ status: string }> {
   });
 }
 
-// ── Citrine Arcade ─────────────────────────────────────────────────────
+// ── Citrine Arcade (игры) ─────────────────────────────────────────────────────
 export interface LeaderboardEntry {
   name: string;
   score: number;
@@ -670,7 +670,7 @@ export function markNotificationsRead(): Promise<{ status: string }> {
   return request<{ status: string }>('/v1/notifications/read-all', { method: 'POST' });
 }
 
-// ── API Keys (Developer) ───────────────────────────────────────────────
+// ── API-ключи (для разработчиков) ───────────────────────────────────────────────
 export function createApiKey(name: string): Promise<ApiKeyCreatedResponse> {
   return request<ApiKeyCreatedResponse>('/v1/api-keys/', {
     method: 'POST',
@@ -688,10 +688,10 @@ export async function revokeApiKey(keyId: number): Promise<void> {
     const errorBody = await response.json().catch(() => ({ detail: response.statusText }));
     throw new ApiError(response.status, errorBody.detail || `API error: ${response.status}`);
   }
-  // 204 No Content — no body to parse
+  // 204 No Content — тела ответа нет
 }
 
-// ── Consultant (RBAC) ──────────────────────────────────────────────────
+// ── Консультант (RBAC) ──────────────────────────────────────────────────
 export function getConsultantClients(): Promise<ClientInfo[]> {
   return request<ClientInfo[]>('/v1/consultant/clients');
 }

@@ -24,7 +24,7 @@ from src.schemas.insight import (
 
 router = APIRouter(tags=["LLM Insights"])
 
-# ── arq connection pool (lazy singleton) ────────────────────────────────
+# ── пул соединений arq (ленивый синглтон) ────────────────────────────────
 _arq_pool: ArqRedis | None = None
 _pool_lock = asyncio.Lock()
 

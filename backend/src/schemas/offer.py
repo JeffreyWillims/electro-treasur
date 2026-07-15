@@ -1,4 +1,4 @@
-"""Pydantic V2 schemas for bank deposit offers (Savings Navigator CPA)."""
+"""Pydantic V2-схемы банковских депозитных предложений (CPA в «Горизонте капитала»)."""
 
 from __future__ import annotations
 

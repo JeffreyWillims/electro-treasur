@@ -116,6 +116,34 @@ Python-образы из исходников (Immutable Infrastructure). Fronte
 - Секреты в тестовом джобе — заглушки (`ci-test-secret-key-not-for-production-...`,
   `fake:token`), реальные секреты в CI не используются.
 
+### Ручной деплой без SSH-ключа в CI (`deploy.sh`)
+
+Если не хочется хранить приватный ключ сервера в GitHub Secrets — джоб `deploy` из
+CI можно не настраивать вообще (без `VPS_*` секретов он просто не понадобится).
+Вместо этого на сервере лежит `deploy.sh` — тот же порядок шагов (pull кода → pull
+образов из GHCR → миграции новым образом → пересборка фронтенда → `up -d`), но
+запускается вручную самим человеком, зашедшим на сервер по своему SSH-ключу.
+GitHub при этом вообще не знает о существовании сервера.
+
+Первый раз на сервере:
+
+```bash
+git clone https://github.com/JeffreyWillims/electro-treasur.git
+cd electro-treasur
+cp backend/.env.example backend/.env   # заполнить секреты, см. таблицу переменных выше
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+docker compose exec backend alembic upgrade head
+```
+
+На каждое обновление после `git push` в `main` — зайти на сервер и выполнить:
+
+```bash
+./deploy.sh
+```
+
+Скрипт прерывается, если в рабочей копии на сервере есть незакоммиченные
+изменения (защита от случайной потери правок, сделанных прямо на проде).
+
 ## Первый автодеплой — чек-лист
 
 **Шаг 0 — бэкап БД на VPS (обязательно, ДО пуша в main):**

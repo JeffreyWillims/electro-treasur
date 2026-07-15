@@ -1,4 +1,4 @@
-"""Pydantic V2 schema for user feedback."""
+"""Pydantic V2-схема сообщения обратной связи от пользователя."""
 
 from __future__ import annotations
 

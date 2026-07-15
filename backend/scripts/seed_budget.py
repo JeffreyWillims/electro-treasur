@@ -27,7 +27,7 @@ async def main():
             await session.commit()
             await session.refresh(cat)
 
-        # Check if budget already exists
+        # Проверяем, не существует ли уже бюджет
         res = await session.execute(
             select(Budget).where(Budget.user_id == user.id, Budget.category_id == cat.id)
         )
@@ -35,7 +35,7 @@ async def main():
             print("Budget already exists")
             return
 
-        # Create budget constraint
+        # Создаём ограничение бюджета
         today = date.today()
         b = Budget(
             user_id=user.id,

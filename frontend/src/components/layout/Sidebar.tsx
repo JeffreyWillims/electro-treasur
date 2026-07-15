@@ -1,6 +1,6 @@
 /**
- * Sidebar — Citrine Vault floating glass navigation.
- * Apple Liquid Glass aesthetic with floating island layout.
+ * Sidebar — плавающая стеклянная навигация Citrine Vault.
+ * Эстетика Apple Liquid Glass с раскладкой «плавающего острова».
  */
 import {
   Wallet,
@@ -85,7 +85,7 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Mobile Toggle Button */}
+      {/* Кнопка переключения на мобильном */}
       <button
         onClick={() => setMobileOpen(true)}
         className="lg:hidden fixed top-[max(1rem,env(safe-area-inset-top))] left-[max(1rem,env(safe-area-inset-left))] z-50 p-2.5 rounded-xl bg-white/80 dark:bg-vault-black/80 backdrop-blur-xl border border-vault-pine/10 dark:border-white/10 shadow-card"
@@ -94,7 +94,7 @@ export function Sidebar() {
         <Menu size={20} className="text-vault-pine dark:text-white" />
       </button>
 
-      {/* Mobile Overlay */}
+      {/* Затемнение на мобильном */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
@@ -107,7 +107,7 @@ export function Sidebar() {
         )}
       </AnimatePresence>
 
-      {/* Floating Island Sidebar */}
+      {/* Плавающий остров-сайдбар */}
       <aside
         className={cn(
           // z-50 на мобильном: меню должно быть выше оверлея (z-40), иначе оно
@@ -117,7 +117,7 @@ export function Sidebar() {
           "backdrop-blur-3xl backdrop-saturate-150",
           "shadow-2xl",
           "transition-all duration-500",
-          // Mobile
+          // Мобильная версия
           "fixed lg:relative",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
@@ -132,7 +132,7 @@ export function Sidebar() {
           }}>
         </div>
 
-        {/* Mobile Close */}
+        {/* Закрытие на мобильном */}
         <button
           onClick={() => setMobileOpen(false)}
           className="lg:hidden absolute top-4 right-4 p-1.5 rounded-lg hover:bg-[#FF7A00]/5 transition-colors"
@@ -174,14 +174,14 @@ export function Sidebar() {
               {({ isActive }) => (
                 <>
                   <div className="relative w-10 h-10 rounded-xl shrink-0">
-                    {/* The concave base (вдавленная лунка) */}
+                    {/* Вогнутая база (вдавленная лунка) */}
                     <div className={cn(
                       "absolute inset-0 rounded-xl transition-all duration-300",
                       "bg-black/5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.1),0_1px_0_rgba(255,255,255,0.8)] border border-black/5",
                       "dark:bg-black/40 dark:shadow-[inset_0_2px_6px_rgba(0,0,0,0.5),0_1px_0_rgba(255,255,255,0.05)] dark:border-white/5"
                     )} />
 
-                    {/* The Emoji / Avatar */}
+                    {/* Эмодзи / аватар */}
                     <div className="absolute inset-0 flex items-center justify-center">
                       {item.icon === 'avatar' ? (
                         <span className={cn(
@@ -209,7 +209,7 @@ export function Sidebar() {
           ))}
         </nav>
 
-        {/* Compact Dock Bottom Section */}
+        {/* Компактный док внизу */}
         <div className="flex justify-between items-center w-full px-2 mt-auto pt-6 border-t border-[#FF7A00]/[0.06]">
           <ThemeToggle />
           <NotificationBell />

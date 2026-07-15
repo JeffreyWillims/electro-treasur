@@ -1,6 +1,6 @@
 /**
- * Skeleton Loader — animate-pulse placeholder for async data.
- * Used while O(N) aggregation or arq worker is processing.
+ * Skeleton Loader — плейсхолдер animate-pulse для асинхронных данных.
+ * Используется, пока идёт O(N)-агрегация или обработка arq-воркером.
  */
 import { cn } from '@/lib/utils';
 

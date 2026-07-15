@@ -65,7 +65,8 @@ def test_summary_on_empty_month_has_no_rate() -> None:
 
 def test_deficit_line_when_expense_exceeds_income() -> None:
     text = ENGINE.generate([_tx("15600", SALARY, CategoryType.income), _tx("57910")], [])
-    assert "Расходы превысили доходы на 42 310.00 ₽ — период уходит в минус." in text
+    assert "больше, чем пришло, — разница 42 310.00 ₽" in text
+    assert "это поправимо" in text
 
 
 def test_no_deficit_line_when_positive() -> None:
@@ -78,12 +79,12 @@ def test_no_deficit_line_when_positive() -> None:
 
 def test_budget_alert_fires_at_80_percent() -> None:
     text = ENGINE.generate([_tx("8000")], [_budget("10000")])
-    assert "Бюджет «Еда» на исходе: потрачено 8 000.00 ₽ — 80% лимита." in text
+    assert "Бюджет «Еда» почти на пределе: потрачено 8 000.00 ₽ — 80% лимита." in text
 
 
 def test_budget_ok_when_under_threshold() -> None:
     text = ENGINE.generate([_tx("7999.99")], [_budget("10000")])
-    assert "Все бюджеты в пределах лимитов — хорошая дисциплина." in text
+    assert "Все бюджеты в пределах лимитов — вы отлично держите курс." in text
 
 
 def test_budget_picks_most_exceeded_category() -> None:
@@ -115,13 +116,13 @@ def test_zero_limit_budget_ignored() -> None:
 def test_anomaly_fires_on_more_than_three_expenses_per_day() -> None:
     transactions = [_tx("100", day=15, hour=h) for h in (9, 12, 15, 18)]
     text = ENGINE.generate(transactions, [])
-    assert "Самый насыщенный день: 4 трат за сутки" in text
+    assert "Самый активный день: 4 трат за сутки" in text
 
 
 def test_anomaly_not_fired_on_exactly_three_expenses() -> None:
     transactions = [_tx("100", day=15, hour=h) for h in (9, 12, 15)]
     text = ENGINE.generate(transactions, [])
-    assert "насыщенный день" not in text
+    assert "активный день" not in text
 
 
 # ── Секция 5: Рекомендация (всегда) ─────────────────────────────────────
@@ -135,10 +136,8 @@ def test_recommendation_no_income() -> None:
 def test_recommendation_deficit_points_to_worst_category() -> None:
     transactions = [_tx("5000", SALARY, CategoryType.income), _tx("8000", FOOD)]
     text = ENGINE.generate(transactions, [_budget("10000", FOOD, "Еда")])
-    assert (
-        "Совет: чтобы выйти в ноль, сократите расходы минимум "
-        "на 3 000.00 ₽ — начните с категории «Еда»." in text
-    )
+    assert "Совет: чтобы выйти в ноль, стоит вернуть баланс на 3 000.00 ₽." in text
+    assert "загляните в категорию «Еда» — там обычно и прячется резерв." in text
 
 
 def test_recommendation_low_savings_rate() -> None:

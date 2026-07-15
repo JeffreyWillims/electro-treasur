@@ -1,14 +1,16 @@
 /**
- * PacificRide.tsx — "The Pacific Ride" · California Sunset Edition · Juice Pass
+ * PacificRide.tsx — «Десятка» 🔟 (техническое имя — "The Pacific Ride",
+ * California Sunset Edition · сочный игровой фидбэк)
  *
- * Cinematic easter egg for Citrine Vault.
- * Features:
- *   1. California Organic Luxury sunset background
- *   2. Number Match / Семечки — 3 levels, zero-bug adjacency engine
- *   3. "Juice" game feel: match flash, strikethrough animation, cell shake, win ripples
- *   4. Premium Light Mode Panel & Interactive Tutorial
+ * Кинематографичная пасхалка для Citrine Vault.
+ * Возможности:
+ *   1. Фон в стиле California Organic Luxury sunset
+ *   2. Number Match / Семечки — 3 уровня, движок соседства без багов
+ *   3. «Сочный» игровой фидбэк: вспышка совпадения, анимация зачёркивания,
+ *      тряска ячейки, волны победы
+ *   4. Премиальная светлая тема и интерактивный туториал
  *
- * Stack: React 19 + Framer Motion 12 + Tailwind CSS 3
+ * Стек: React 19 + Framer Motion 12 + Tailwind CSS 3
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';

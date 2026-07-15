@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     db_pool_timeout: int = 30
     db_pool_recycle: int = 1800  # секунд — совместимо с PgBouncer
 
-    # ── Redis ───────────────────────────────────────────────────────────
+    # ── Redis ────────────────────────────────────────────────────────────
     redis_url: str = "redis://localhost:6379/0"
     redis_idempotency_ttl: int = 86400  # 24 часа
 
@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     # ── Воркер arq ──────────────────────────────────────────────────────
     arq_redis_url: str = "redis://localhost:6379/1"
 
-    # ── Email / SMTP ────────────────────────────────────────────────────
+    # ── Email / SMTP ─────────────────────────────────────────────────────
     # Пустой host — письма уходят в структурный лог (поведение по умолчанию).
     # Локально: ET_SMTP_HOST=mailhog (см. docker-compose.yml), UI — :8025.
     # Прод: реальный провайдер требует STARTTLS и логин/пароль (app password).

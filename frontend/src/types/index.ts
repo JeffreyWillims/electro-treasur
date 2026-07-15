@@ -1,11 +1,11 @@
 /**
- * Contract-First TypeScript types — mirrored from Pydantic V2 schemas.
- * Single Source of Truth for frontend ↔ backend DTO alignment.
+ * TypeScript-типы «contract-first» — зеркалят Pydantic V2 схемы бэкенда.
+ * Единый источник истины для согласования DTO между фронтендом и бэкендом.
  *
- * Source: backend/src/schemas/
+ * Источник: backend/src/schemas/
  */
 
-// ── User ──────────────────────────────────────────────────────────────
+// ── Пользователь ──────────────────────────────────────────────────────────
 export interface UserRead {
   id: number;
   email: string;
@@ -21,7 +21,7 @@ export interface UserUpdate {
   monthly_income?: number | null;
 }
 
-// ── Transaction ────────────────────────────────────────────────────────
+// ── Транзакция ────────────────────────────────────────────────────────
 export interface TransactionCreate {
   category_id: number;
   amount: number;
@@ -60,7 +60,7 @@ export interface TransactionPaginatedResponse {
   total: number;
 }
 
-// ── Dashboard Matrix ───────────────────────────────────────────────────
+// ── Матрица дашборда ───────────────────────────────────────────────────
 export interface DayCellSchema {
   day: number; // 1–31
   amount: string;
@@ -86,7 +86,7 @@ export interface DashboardResponse {
   rows: CategoryRowSchema[];
 }
 
-// ── LLM Insights ───────────────────────────────────────────────────────
+// ── LLM Insights (AI Анализ) ───────────────────────────────────────────────────────
 export interface InsightRequest {
   year: number;
 }
@@ -116,14 +116,14 @@ export interface InsightResult {
   };
 }
 
-// ── Sidebar Navigation ────────────────────────────────────────────────
+// ── Навигация сайдбара ────────────────────────────────────────────────
 export interface NavItem {
   label: string;
   icon: string;
   active?: boolean;
 }
 
-// ── Account Summary ───────────────────────────────────────────────────
+// ── Сводка по счетам ───────────────────────────────────────────────────
 export interface AccountBalance {
   name: string;
   amount: number;
@@ -138,7 +138,7 @@ export interface MonthlySummaryData {
   dailyData: { day: number; income: number; expense: number }[];
 }
 
-// ── Analytics & Simulation ────────────────────────────────────────────
+// ── Аналитика и симуляция ────────────────────────────────────────────
 export interface CategoryAvg {
   category_id: number;
   name: string;
@@ -178,7 +178,7 @@ export interface SimulateResponse {
   chart_data: SimulationDataPoint[];
 }
 
-// ── Category ──────────────────────────────────────────────────────────
+// ── Категория ──────────────────────────────────────────────────────────
 export interface CategoryRead {
   id: number;
   name: string;
@@ -204,7 +204,7 @@ export interface CategoryTransactionCount {
   transaction_count: number;
 }
 
-// ── Recurring Reminder (Frontend-managed) ─────────────────────────────
+// ── Регулярное напоминание (управляется фронтендом) ─────────────────────────────
 export interface RecurringReminder {
   id: string;
   title: string;
@@ -216,7 +216,7 @@ export interface RecurringReminder {
   isActive: boolean;
 }
 
-// ── Budget ────────────────────────────────────────────────────────────
+// ── Бюджет ────────────────────────────────────────────────────────────
 export interface BudgetUpsert {
   category_id: number;
   amount_limit: string | number;
@@ -224,7 +224,7 @@ export interface BudgetUpsert {
   year: number;
 }
 
-// ── Import / Export (Data Vault) ──────────────────────────────────────
+// ── Импорт / экспорт (Data Vault) ──────────────────────────────────────
 export interface ImportResult {
   created: number;
   skipped: number;
@@ -235,7 +235,7 @@ export interface TelegramOtpResponse {
   expires_in: number;
 }
 
-// ── API Keys (Developer) ──────────────────────────────────────────────
+// ── API-ключи (для разработчиков) ──────────────────────────────────────────────
 export interface ApiKeyInfo {
   id: number;
   name: string;
@@ -252,7 +252,7 @@ export interface ApiKeyCreatedResponse {
   api_key: string; // Полный ключ — показывается только один раз
 }
 
-// ── Consultant (RBAC) ─────────────────────────────────────────────────
+// ── Консультант (RBAC) ─────────────────────────────────────────────────
 export interface ClientInfo {
   id: number;
   email: string;

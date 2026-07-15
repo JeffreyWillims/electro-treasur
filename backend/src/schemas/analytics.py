@@ -1,4 +1,4 @@
-"""Analytics schemas for Savings Navigator."""
+"""Pydantic V2-схемы аналитики для «Горизонта капитала» (Savings Navigator)."""
 
 from datetime import date
 from decimal import Decimal

@@ -45,8 +45,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refreshUser]);
 
   const login = async (email: string, pass: string) => {
-    // CRITICAL: Clear ALL cached data from previous user session
-    // This prevents data leakage between user accounts
+    // ВАЖНО: очищаем ВСЕ кэшированные данные предыдущей сессии пользователя
+    // Это предотвращает утечку данных между аккаунтами
     queryClient.clear();
 
     await apiLogin(email, pass); // бэкенд ставит httpOnly-cookie
@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const register = async (payload: { email: string; password: string; full_name?: string; phone?: string }) => {
-    // CRITICAL: Clear cache before new user session
+    // ВАЖНО: очищаем кэш перед новой сессией пользователя
     queryClient.clear();
 
     await apiRegister(payload);
@@ -69,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Даже если запрос не прошёл — локально разлогиниваемся.
     }
     setUser(null);
-    // CRITICAL: Purge all cached query data to prevent data leakage
+    // ВАЖНО: очищаем все кэшированные данные запросов, чтобы предотвратить утечку
     queryClient.clear();
   };
 

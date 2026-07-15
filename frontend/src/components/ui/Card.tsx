@@ -1,5 +1,5 @@
 /**
- * Reusable Card component — glassmorphism-inspired surface.
+ * Переиспользуемый компонент Card — стеклянная (glassmorphism) поверхность.
  */
 import { cn } from '@/lib/utils';
 import type { ReactNode } from 'react';

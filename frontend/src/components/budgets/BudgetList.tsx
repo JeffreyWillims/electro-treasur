@@ -53,9 +53,13 @@ function AutoBudgetCard({
   // Зоны индикатора: <75% — зелёный, 75–100% — жёлтый, >100% — красный;
   // на карточке сбережений перевыполнение — зелёная победа.
   const barColor = isOver
-    ? overIsGood ? '#10B981' : '#F43F5E'
+    ? overIsGood ? '#10B981' : '#FB923C'
     : percent >= 75 ? '#F59E0B' : '#10B981';
-  const statusSuffix = isOver ? (overIsGood ? ' · цель перевыполнена' : ' · перерасход') : '';
+  const statusSuffix = isOver ? (overIsGood ? ' · цель перевыполнена' : ' · над планом') : '';
+  // «2000% лимита» кричит и пугает; спокойное «×N» читается мягче и понятнее.
+  const percentLabel = percent >= 200
+    ? `${Math.round(percent / 100)}× лимита`
+    : `${Math.round(percent)}% лимита`;
 
   const commitDraft = () => {
     setEditing(false);
@@ -159,7 +163,7 @@ function AutoBudgetCard({
           className={isOver ? undefined : 'text-gray-500 dark:text-white/40'}
           style={isOver ? { color: barColor } : undefined}
         >
-          {Math.round(percent)}% лимита{statusSuffix}
+          {percentLabel}{statusSuffix}
         </span>
       </p>
     </motion.div>

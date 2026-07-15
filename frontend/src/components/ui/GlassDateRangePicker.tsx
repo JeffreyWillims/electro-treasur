@@ -1,18 +1,18 @@
 /**
- * GlassDateRangePicker — Premium date-range selector for Citrine Vault.
+ * GlassDateRangePicker — стеклянный выбор диапазона дат для Citrine Vault.
  *
- * Architecture:
- *   • TriggerPill — glassmorphic pill button showing current range
- *   • GlassPopover — backdrop-blur panel with presets + calendar grid
- *   • CalendarGrid — custom 7×6 grid built on date-fns (tree-shaken ~4KB)
- *   • Range highlight: soft fill between caps, Pine/Citrine endpoint caps
- *   • Framer-motion for popover enter/exit + month transition crossfade
+ * Архитектура:
+ *   • TriggerPill — стеклянная кнопка-пилюля с текущим диапазоном
+ *   • GlassPopover — панель с backdrop-blur, пресетами и сеткой календаря
+ *   • CalendarGrid — своя сетка 7×6 на date-fns (tree-shaken, ~4КБ)
+ *   • Подсветка диапазона: мягкая заливка между границами, торцы Pine/Citrine
+ *   • Framer-motion для входа/выхода поповера + кроссфейд смены месяца
  *
- * State Machine:
- *   IDLE → OPEN → SELECTING (first cap clicked) → IDLE (second cap fires onChange)
+ * Конечный автомат:
+ *   IDLE → OPEN → SELECTING (клик по первой границе) → IDLE (клик по второй → onChange)
  *
- * Bundle: date-fns tree-shaken imports only. Zero headless-UI deps.
- * Time Complexity: O(42) per render (fixed 6-week grid). Space O(1).
+ * Бандл: только tree-shaken импорты date-fns. Ноль зависимостей headless-UI.
+ * Сложность: O(42) на рендер (фиксированная сетка 6 недель). Память O(1).
  */
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -113,7 +113,7 @@ export function GlassDateRangePicker({
     return sd ?? new Date();
   });
 
-  // Range selection in progress (first cap clicked, waiting for second)
+  // Выбор диапазона в процессе (первая граница выбрана, ждём вторую)
   const [selecting, setSelecting] = useState<Date | null>(null);
   const [hoverDay, setHoverDay] = useState<Date | null>(null);
 
@@ -186,15 +186,15 @@ export function GlassDateRangePicker({
     [onChange],
   );
 
-  /* ── Day click — two-click range selection ──────────────────────── */
+  /* ── Клик по дню — выбор диапазона за два клика ──────────────────────── */
   const handleDayClick = useCallback(
     (day: Date) => {
       if (!selecting) {
-        // First click — set start
+        // Первый клик — задаём начало
         setSelecting(day);
         setHoverDay(null);
       } else {
-        // Second click — determine order and fire onChange
+        // Второй клик — определяем порядок и вызываем onChange
         let s = selecting;
         let e = day;
         if (isAfter(s, e)) {
@@ -209,10 +209,10 @@ export function GlassDateRangePicker({
     [selecting, onChange],
   );
 
-  /* ── Determine visual range for highlighting ────────────────────── */
+  /* ── Определяем визуальный диапазон для подсветки ────────────────────── */
   const visualRange = useMemo(() => {
     if (selecting) {
-      // While selecting, show live preview
+      // Пока идёт выбор — показываем живое превью
       const other = hoverDay ?? selecting;
       const a = isBefore(selecting, other) ? selecting : other;
       const b = isBefore(selecting, other) ? other : selecting;
@@ -325,7 +325,7 @@ export function GlassDateRangePicker({
 
             {/* ── Right: Calendar ────────────────────────────────── */}
             <div className="flex-1 min-w-[252px]">
-              {/* Month Header */}
+              {/* Заголовок месяца */}
               <div className="flex items-center justify-between mb-3">
                 <button
                   onClick={goPrev}
@@ -344,7 +344,7 @@ export function GlassDateRangePicker({
                 </button>
               </div>
 
-              {/* Weekday Header */}
+              {/* Заголовок дней недели */}
               <div className="grid grid-cols-7 mb-1">
                 {WEEKDAYS.map((wd) => (
                   <div
@@ -356,7 +356,7 @@ export function GlassDateRangePicker({
                 ))}
               </div>
 
-              {/* Day Grid with month crossfade */}
+              {/* Сетка дней с кроссфейдом смены месяца */}
               <AnimatePresence mode="wait">
                 <motion.div
                   key={viewMonth.toISOString()}
@@ -370,7 +370,7 @@ export function GlassDateRangePicker({
                     const inMonth = isSameMonth(day, viewMonth);
                     const isToday = isSameDay(day, today);
 
-                    // Range state
+                    // Состояние диапазона
                     const isStart = visualRange ? isSameDay(day, visualRange.start) : false;
                     const isEnd = visualRange ? isSameDay(day, visualRange.end) : false;
                     const isSingle = isStart && isEnd;
@@ -379,7 +379,7 @@ export function GlassDateRangePicker({
                         ? isWithinInterval(day, { start: visualRange.start, end: visualRange.end })
                         : false;
 
-                    // Rounding logic for range fill
+                    // Логика скругления заливки диапазона
                     const isLeftCap = isStart && !isSingle;
                     const isRightCap = isEnd && !isSingle;
 
@@ -395,20 +395,20 @@ export function GlassDateRangePicker({
                         }}
                         className={cn(
                           'relative h-9 w-full text-[13px] font-semibold transition-all duration-150 cursor-pointer',
-                          // Default
+                          // По умолчанию
                           !isStart && !isEnd && !inRange && 'hover:bg-slate-100/60 dark:hover:bg-white/5 rounded-lg',
-                          // Opacity for other months
+                          // Прозрачность для дней другого месяца
                           !inMonth && 'opacity-30',
-                          // In-range fill
+                          // Заливка внутри диапазона
                           inRange && 'bg-[#1C3F35]/10 dark:bg-white/5 rounded-none',
-                          // Start cap
+                          // Левая граница диапазона
                           isLeftCap && 'bg-[#1C3F35] dark:bg-emerald-600 text-white rounded-l-full rounded-r-none',
-                          // End cap
+                          // Правая граница диапазона
                           isRightCap && 'bg-[#1C3F35] dark:bg-emerald-600 text-white rounded-r-full rounded-l-none',
-                          // Single day
+                          // Один день
                           isSingle && 'bg-[#1C3F35] dark:bg-emerald-600 text-white rounded-full',
                           isToday && !isStart && !isEnd && !isSingle && 'ring-1 ring-[#1C3F35]/60 dark:ring-emerald-500/60 text-[#1C3F35] dark:text-emerald-400 font-bold rounded-lg',
-                          // Default text
+                          // Текст по умолчанию
                           !isStart && !isEnd && !isSingle && !isToday && 'text-slate-700 dark:text-white/80',
                         )}
                       >
@@ -419,7 +419,7 @@ export function GlassDateRangePicker({
                 </motion.div>
               </AnimatePresence>
 
-              {/* Selection hint */}
+              {/* Подсказка по выбору */}
               {selecting && (
                 <p className="text-sm font-sans font-bold text-[#1C3F35] dark:text-emerald-400 mt-4 text-center animate-pulse tracking-wide">
                   Выберите конец диапазона

@@ -2,7 +2,7 @@ import asyncio
 import os
 import sys
 
-# Add src to path
+# Добавляем src в путь поиска модулей
 sys.path.append(os.path.join(os.getcwd(), "src"))
 sys.path.append(os.getcwd())
 
@@ -15,7 +15,7 @@ from src.domain.models import User  # noqa: E402
 async def diagnose():
     print("🔍 Starting Deep Diagnostic Probe...")
 
-    # 1. Test basic connection
+    # 1. Проверяем базовое соединение
     try:
         async with engine.connect() as conn:
             result = await conn.execute(text("SELECT 1"))
@@ -24,7 +24,7 @@ async def diagnose():
         print(f"❌ DB Connectivity FAILED: {str(e)}")
         return
 
-    # 2. Inspect User table
+    # 2. Проверяем таблицу User
     try:
 
         def get_columns(connection):
@@ -42,7 +42,7 @@ async def diagnose():
     except Exception as e:
         print(f"❌ Table Inspection FAILED: {str(e)}")
 
-    # 3. Test Create User directly
+    # 3. Проверяем прямое создание пользователя
     async with async_session_factory() as session:
         try:
             print("🧪 Attempting atomic user creation...")
@@ -50,13 +50,13 @@ async def diagnose():
                 email="diag_user@aura.com",
                 hashed_password="fake_hash",
                 full_name="Diag",
-                # monthly_income should use default=Decimal("0") now
+                # monthly_income теперь должен использовать default=Decimal("0")
             )
             session.add(u)
             await session.commit()
             print(f"✅ User creation successful. ID: {u.id}")
 
-            # Clean up
+            # Убираем за собой
             await session.delete(u)
             await session.commit()
             print("🧹 Cleanup complete.")

@@ -56,7 +56,7 @@ export function RegisterForm() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#FDFBF7] dark:bg-[#050505] relative overflow-hidden px-4 py-8">
-      {/* Background atmosphere */}
+      {/* Фоновая атмосфера */}
       <div className="absolute -top-10 -right-20 w-[420px] h-[420px] bg-[#FF7A00]/40 rounded-full mix-blend-multiply filter blur-[100px] animate-blob z-0 pointer-events-none" />
 
       {/* THE GLASS MONOLITH */}
@@ -97,20 +97,20 @@ export function RegisterForm() {
         {/* ── Shared Tab Navigation (Quantum Toggle) ── */}
         <div className="px-8 pb-0 z-20 relative">
           <div className="relative flex items-center bg-slate-900/10 dark:bg-black/20 shadow-inner rounded-2xl p-1 mb-8">
-              {/* Login tab */}
+              {/* Вкладка входа */}
               <Link
                 to="/login"
                 className="relative flex-1 py-2.5 text-center text-sm font-semibold tracking-wide text-slate-500 dark:text-white/40 z-10 hover:text-slate-700 dark:hover:text-white/70 transition-colors"
               >
                 Вход
               </Link>
-              {/* Active tab indicator */}
+              {/* Индикатор активной вкладки */}
               <motion.div
                 layoutId="auth-tab-indicator"
                 className="absolute inset-y-1 right-1 w-[calc(50%-4px)] rounded-xl bg-white/80 dark:bg-white/10 backdrop-blur-md shadow-sm"
                 transition={{ type: 'spring', stiffness: 400, damping: 35 }}
               />
-              {/* Register tab — active */}
+              {/* Вкладка регистрации — активна */}
               <AnimatePresence mode="wait">
                 <motion.span
                   key="register-active"

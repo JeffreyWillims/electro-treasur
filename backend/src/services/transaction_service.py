@@ -41,30 +41,30 @@ async def create_transaction(
     idempotency_key: str | None,
 ) -> TransactionResponse:
     """
-    Insert a new transaction with idempotency protection.
+    Создаёт транзакцию с защитой от дублей (идемпотентность).
 
-    Args:
-        session: Async DB session.
-        redis: Async Redis client.
-        user_id: Authenticated user ID.
-        payload: Validated transaction data.
-        idempotency_key: UUID from Idempotency-Key header (optional).
+    Аргументы:
+        session: асинхронная сессия БД.
+        redis: асинхронный Redis-клиент.
+        user_id: ID аутентифицированного пользователя.
+        payload: провалидированные данные транзакции.
+        idempotency_key: UUID из заголовка Idempotency-Key (опционально).
 
-    Returns:
-        TransactionResponse — either fresh INSERT or cached duplicate.
+    Возвращает:
+        TransactionResponse — либо свежий INSERT, либо кэшированный дубль.
 
-    Raises:
-        sqlalchemy.exc.IntegrityError if DB-level UNIQUE violated
-        (should be caught by caller / middleware).
+    Исключения:
+        sqlalchemy.exc.IntegrityError при нарушении UNIQUE на уровне БД
+        (должно перехватываться вызывающим кодом/middleware).
     """
-    # ── Step 1: Redis dedup check — O(1) ────────────────────────────────
+    # ── Шаг 1: проверка дубля в Redis — O(1) ────────────────────────────
     if idempotency_key:
         cache_key = f"idempotency:{idempotency_key}"
         cached = await redis.get(cache_key)
         if cached:
             return TransactionResponse.model_validate_json(cached)
 
-    # ── Step 2: DB INSERT — O(1) amortized (B-Tree on PK) ──────────────
+    # ── Шаг 2: INSERT в БД — O(1) амортизированно (B-Tree по PK) ────────
     tx = Transaction(
         user_id=user_id,
         category_id=payload.category_id,
@@ -81,7 +81,7 @@ async def create_transaction(
 
     response = TransactionResponse.model_validate(tx)
 
-    # ── Step 3: Cache in Redis — O(1) SET with TTL ──────────────────────
+    # ── Шаг 3: кэшируем в Redis — O(1) SET с TTL ─────────────────────────
     if idempotency_key:
         await redis.set(
             cache_key,
@@ -199,7 +199,7 @@ async def update_transaction(
     await session.commit()
     await session.refresh(tx)
 
-    # Re-fetch if category was changed to eagerly load the new Category relationship
+    # Перечитываем, если категория изменилась — чтобы сразу подгрузить новую связь Category
     if "category_id" in update_data:
         stmt = (
             select(Transaction)

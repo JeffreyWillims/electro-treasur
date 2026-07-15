@@ -1,4 +1,4 @@
-"""Schemas for the tax reference search (Справочник налоговых норм)."""
+"""Схемы поиска по справочнику налоговых норм («Налоги и вычеты»)."""
 
 from __future__ import annotations
 

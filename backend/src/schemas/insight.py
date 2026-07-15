@@ -1,5 +1,5 @@
 """
-Pydantic V2 schemas for LLM Insight endpoints.
+Pydantic V2-схемы эндпоинтов LLM Insight (AI Анализ).
 """
 
 from __future__ import annotations

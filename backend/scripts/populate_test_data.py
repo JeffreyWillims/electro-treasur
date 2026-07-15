@@ -19,14 +19,14 @@ async def main():
         await conn.run_sync(Base.metadata.create_all)
 
     async with AsyncSessionLocal() as session:
-        # Create user
+        # Создаём пользователя
         user = (await session.execute(select(User).where(User.id == 1))).scalar_one_or_none()
         if not user:
             user = User(id=1, email="test@electro.local")
             session.add(user)
             await session.commit()
 
-        # Create categories
+        # Создаём категории
         categories_data = [
             ("Продукты", CategoryType.expense),
             ("Рестораны", CategoryType.expense),
@@ -50,12 +50,12 @@ async def main():
                 await session.refresh(cat)
             cats[name] = cat
 
-        # Clear old transactions to have clean test
-        # Actually just add 90 days.
+        # Чистим старые транзакции для чистого теста
+        # На деле просто добавляем 90 дней.
         today = datetime.now()
 
-        # Monthly income: ~150k
-        # Monthly expenses: ~100k
+        # Месячный доход: ~150к
+        # Месячные расходы: ~100к
         import random
 
         random.seed(42)
@@ -63,7 +63,7 @@ async def main():
         for i in range(90):
             current_day = today - timedelta(days=i)
 
-            # daily food ~1500
+            # еда ежедневно ~1500
             t1 = Transaction(
                 user_id=1,
                 category_id=cats["Продукты"].id,
@@ -72,7 +72,7 @@ async def main():
                 idempotency_key=str(uuid.uuid4()),
             )
 
-            # transport ~500
+            # транспорт ~500
             t2 = Transaction(
                 user_id=1,
                 category_id=cats["Транспорт"].id,
@@ -83,7 +83,7 @@ async def main():
 
             session.add_all([t1, t2])
 
-            # restaurants every 3 days ~3000
+            # рестораны каждые 3 дня ~3000
             if i % 3 == 0:
                 t3 = Transaction(
                     user_id=1,
@@ -94,7 +94,7 @@ async def main():
                 )
                 session.add(t3)
 
-            # salary every 30 days
+            # зарплата каждые 30 дней
             if i % 30 == 0:
                 # 150_000
                 t_inc = Transaction(

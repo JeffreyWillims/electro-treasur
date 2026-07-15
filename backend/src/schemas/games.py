@@ -1,4 +1,4 @@
-"""Pydantic V2 schemas for Citrine Arcade game scores."""
+"""Pydantic V2-схемы рекордов игр Citrine Arcade."""
 
 from __future__ import annotations
 

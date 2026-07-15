@@ -50,7 +50,7 @@ async def _get_arq_pool() -> ArqRedis:
     return _arq_pool
 
 
-# ── Schemas ─────────────────────────────────────────────────────────────
+# ── Схемы ─────────────────────────────────────────────────────────────
 class StatementEnqueueResponse(BaseModel):
     task_id: str
     status: str = "pending"
@@ -79,7 +79,7 @@ class ConfirmResponse(BaseModel):
     errors: list[str]
 
 
-# ── Endpoints ───────────────────────────────────────────────────────────
+# ── Эндпоинты ───────────────────────────────────────────────────────────
 @router.post(
     "/statement",
     response_model=StatementEnqueueResponse,

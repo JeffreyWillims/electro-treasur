@@ -1,8 +1,8 @@
 """
-Pydantic V2 schemas for Transaction CRUD.
+Pydantic V2-схемы CRUD транзакций.
 
-Strict Decimal validation — rejects float on the wire.
-PEP 585 type hints throughout.
+Строгая валидация Decimal — float по проводу отклоняется.
+Везде используются аннотации типов PEP 585.
 """
 
 from __future__ import annotations

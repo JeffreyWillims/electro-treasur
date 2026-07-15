@@ -1,12 +1,12 @@
 """
-Pydantic V2 schemas for the Dashboard aggregation endpoint.
+Pydantic V2-схемы эндпоинта агрегации дашборда.
 
-The matrix is:  Category → Plan → Fact → Delta → list[N day cells]
-Each day cell holds the actual spend for that bucket index (day 1 at index 0).
-Dynamic Bucketing: the day vector length is determined at runtime by the
-selected date range — 7-day, 31-day, 90-day, or 365-day windows are all valid.
+Матрица: Категория → План → Факт → Дельта → список[N ячеек-дней].
+Каждая ячейка дня хранит фактический расход для этого индекса корзины (день 1 — индекс 0).
+Динамическое разбиение на корзины: длина вектора дней определяется в рантайме
+выбранным диапазоном дат — валидны окна 7, 31, 90 и 365 дней.
 
-Time Complexity of building the response: O(N) where N = number of transactions in range.
+Сложность построения ответа: O(N), где N — число транзакций в диапазоне.
 """
 
 from __future__ import annotations

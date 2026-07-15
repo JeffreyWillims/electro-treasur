@@ -1,4 +1,4 @@
-// src/lib/categories.ts
+// frontend/src/lib/categories.ts
 const CATEGORY_TRANSLATIONS: Record<string, string> = {
   "Operations (Rent/Utility)": "Базовые расходы",
   "Leisure (Lifestyle)": "Лайфстайл",

@@ -20,13 +20,13 @@ async def get_analytics_profile(session: AsyncSession, user_id: int) -> Analytic
     today = date.today()
     three_months_ago = today - timedelta(days=90)
 
-    # Get all expense categories
+    # Берём все категории расходов
     cat_stmt = select(Category).where(
         Category.user_id == user_id, Category.type == CategoryType.expense
     )
     categories = (await session.scalars(cat_stmt)).all()
 
-    # Get sum of transactions per category for last 3 months
+    # Сумма транзакций по каждой категории за последние 3 месяца
     trx_stmt = (
         select(Transaction.category_id, func.sum(Transaction.amount).label("total_amount"))
         .where(
@@ -40,7 +40,7 @@ async def get_analytics_profile(session: AsyncSession, user_id: int) -> Analytic
     trx_results = (await session.execute(trx_stmt)).all()
     trx_map = {row.category_id: Decimal(row.total_amount) / Decimal(3) for row in trx_results}
 
-    # Get budgets to fallback
+    # Бюджеты как запасной вариант
     budget_stmt = select(Budget).where(
         Budget.user_id == user_id,
         Budget.month == today.month,
@@ -58,7 +58,7 @@ async def get_analytics_profile(session: AsyncSession, user_id: int) -> Analytic
             CategoryAvg(category_id=cat.id, name=cat.name, avg_amount=Decimal(round(avg_amt, 2)))
         )
 
-    # Get average income
+    # Средний доход
     inc_stmt = (
         select(func.sum(Transaction.amount))
         .join(Category)
@@ -86,7 +86,7 @@ async def simulate_savings(request: SimulateRequest) -> SimulateResponse:
         (adj_map.get(c.category_id, c.avg_amount) for c in request.base_expenses),
         Decimal("0"),
     )
-    # Habit savings are added to the monthly surplus
+    # Экономия на привычках добавляется к месячному излишку
     optimized_monthly_addition = max(
         request.avg_income - optimized_expense_total + request.habit_savings,
         Decimal("0"),
@@ -133,7 +133,8 @@ async def simulate_savings(request: SimulateRequest) -> SimulateResponse:
     if base_date and optimized_date:
         days_saved = (base_date - optimized_date).days
     elif optimized_date and not base_date:
-        # If base path never reaches target but optimized does, we cap at simulation length
+        # Если базовый сценарий никогда не достигает цели, а оптимизированный — да,
+        # ограничиваем длиной симуляции
         days_saved = (date.today() + timedelta(days=3650) - optimized_date).days
 
     return SimulateResponse(

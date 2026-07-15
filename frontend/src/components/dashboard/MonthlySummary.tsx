@@ -1,5 +1,5 @@
 /**
- * MonthlySummary — Premium Total In / Total Out cards with mini bar charts.
+ * MonthlySummary — карточки «Всего доход / Всего расход» с мини-графиками.
  */
 import { MONTHLY_SUMMARY } from '@/data/mockData';
 import { TrendingUp } from 'lucide-react';

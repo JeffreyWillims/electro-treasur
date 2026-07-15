@@ -1,5 +1,5 @@
 """
-Pydantic V2 schemas for API keys and the public /api/v2/public endpoints.
+Pydantic V2-схемы API-ключей и публичных эндпоинтов /api/v2/public.
 """
 
 from __future__ import annotations

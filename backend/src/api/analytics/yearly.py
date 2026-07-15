@@ -28,7 +28,7 @@ async def _get_arq_pool() -> ArqRedis:
     return _arq_pool
 
 
-# ── Schemas ─────────────────────────────────────────────────────────────
+# ── Схемы ─────────────────────────────────────────────────────────────
 class YearlyAnalyticsRequest(BaseModel):
     year: int = Field(..., ge=2000, le=2100)
 
@@ -44,7 +44,7 @@ class YearlyTaskStatusResponse(BaseModel):
     result: dict[str, Any] | None = None
 
 
-# ── Endpoints ───────────────────────────────────────────────────────────
+# ── Эндпоинты ───────────────────────────────────────────────────────────
 @router.post(
     "/yearly",
     response_model=YearlyEnqueueResponse,

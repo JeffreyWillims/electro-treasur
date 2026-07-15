@@ -1,5 +1,5 @@
 """
-Pydantic V2 schemas for the CONSULTANT role (RBAC, read-only client access).
+Pydantic V2-схемы роли CONSULTANT (RBAC, доступ к клиенту только на чтение).
 """
 
 from __future__ import annotations

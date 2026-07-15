@@ -18,9 +18,9 @@ from src.infrastructure.redis_client import (
     store_refresh_token,
 )
 
-# ── Security Configuration ───────────────────────────────────────────────────
-# secret_key and algorithm are read from settings (ET_SECRET_KEY env var).
-# The app will fail fast on startup if ET_SECRET_KEY is not set.
+# ── Конфигурация безопасности ────────────────────────────────────────────────
+# secret_key и algorithm читаются из настроек (переменная окружения ET_SECRET_KEY).
+# Приложение упадёт при старте, если ET_SECRET_KEY не задан.
 # Короткий access-токен (15 мин) + отзываемый refresh в Redis — см. create_refresh_token.
 ACCESS_TOKEN_EXPIRE_MINUTES = 15
 REFRESH_TOKEN_EXPIRE_SECONDS = settings.refresh_token_expire_days * 24 * 60 * 60
@@ -96,7 +96,7 @@ def decode_access_token(token: str) -> TokenData:
         raise e
 
 
-# ── Refresh Token Rotation ───────────────────────────────────────────────────
+# ── Ротация refresh-токена ───────────────────────────────────────────────────
 # Refresh-токен клиенту — непрозрачная строка "{user_id}:{token_id}"; сам секрет
 # (token_id, UUID4) хранится только в Redis. JWT здесь не используется намеренно,
 # чтобы токен можно было отозвать мгновенно (logout / rotation).

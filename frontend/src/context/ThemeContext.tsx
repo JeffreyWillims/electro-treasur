@@ -1,8 +1,8 @@
 /* eslint-disable */
 /**
- * ThemeContext — Premium Dark Mode Engine (Deep Obsidian).
- * Manages theme state, localStorage persistence, and system preference detection.
- * Synced with <html> class for Tailwind 'class' darkMode support.
+ * ThemeContext — движок тёмной темы (Deep Obsidian).
+ * Управляет состоянием темы, сохранением в localStorage и определением системных настроек.
+ * Синхронизируется с классом <html> для поддержки Tailwind 'class' darkMode.
  */
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
@@ -18,12 +18,12 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState<Theme>(() => {
-    // 1. Check local storage
+    // 1. Проверяем localStorage
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('theme') as Theme;
       if (saved) return saved;
 
-      // 2. Check system preference
+      // 2. Проверяем системные настройки
       if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
         return 'dark';
       }
@@ -43,7 +43,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       root.classList.add('light');
     }
     
-    // Non-blocking I/O write
+    // Неблокирующая запись
     setTimeout(() => {
       localStorage.setItem('theme', theme);
     }, 0);

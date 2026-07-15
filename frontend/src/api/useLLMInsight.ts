@@ -1,16 +1,16 @@
 /* eslint-disable */
 /**
- * useLLMInsight — TanStack Query polling hook.
+ * useLLMInsight — хук поллинга на TanStack Query.
  *
- * Algorithm (3-phase state machine):
- *   Phase A: POST /api/v1/insights/ → obtain task_id    O(1)
- *   Phase B: useQuery with refetchInterval: 2000ms
- *            polls GET /api/v1/insights/{task_id}        O(1) per tick
- *   Phase C: status === "complete" → stop polling,
- *            return result data to consumer.
+ * Алгоритм (конечный автомат из 3 фаз):
+ *   Фаза A: POST /api/v1/insights/ → получаем task_id    O(1)
+ *   Фаза B: useQuery с refetchInterval: 2000мс
+ *            опрашивает GET /api/v1/insights/{task_id}    O(1) на тик
+ *   Фаза C: status === "complete" → останавливаем поллинг,
+ *            возвращаем результат потребителю.
  *
- * Memory-safe: cleanup handled by TanStack Query's cache lifecycle.
- * No raw useEffect/setInterval → no leak vectors.
+ * Безопасно по памяти: очистка на жизненном цикле кэша TanStack Query.
+ * Без сырых useEffect/setInterval → нет векторов утечки.
  */
 
 import { useState, useCallback } from 'react';
@@ -19,17 +19,17 @@ import { enqueueInsight, pollInsight } from '@/api/client';
 import type { InsightResult } from '@/types';
 
 interface UseLLMInsightReturn {
-  /** Trigger the LLM insight generation */
+  /** Запускает генерацию AI Анализа */
   trigger: () => void;
-  /** True while the task is queued or processing */
+  /** True, пока задача в очереди или обрабатывается */
   isLoading: boolean;
-  /** True if the POST or any poll failed */
+  /** True, если POST или любой опрос завершился ошибкой */
   isError: boolean;
-  /** Error message if isError */
+  /** Сообщение об ошибке, если isError */
   error: string | null;
-  /** The completed insight result (null while pending) */
+  /** Готовый результат анализа (null, пока не готов) */
   data: InsightResult | null;
-  /** Reset state to allow re-triggering */
+  /** Сбрасывает состояние для повторного запуска */
   reset: () => void;
 }
 
@@ -38,7 +38,7 @@ export function useLLMInsight(startDate: string, endDate: string): UseLLMInsight
   const [isEnqueuing, setIsEnqueuing] = useState(false);
   const [enqueueError, setEnqueueError] = useState<string | null>(null);
 
-  // ── Phase B: Poll with refetchInterval until complete ──────────────
+  // ── Фаза B: опрос через refetchInterval до готовности ──────────────
   const {
     data: pollData,
     isError: isPollError,
@@ -46,11 +46,11 @@ export function useLLMInsight(startDate: string, endDate: string): UseLLMInsight
   } = useQuery({
     queryKey: ['insight-poll', taskId],
     queryFn: () => pollInsight(taskId!),
-    enabled: taskId !== null,                    // only poll after we have a task_id
+    enabled: taskId !== null,                    // опрашиваем только когда есть task_id
     refetchInterval: (query) => {
-      // Stop polling when status is "complete"
+      // Останавливаем опрос, когда статус "complete"
       if (query.state.data?.status === 'complete') return false;
-      return 2000;                               // poll every 2s
+      return 2000;                               // опрос каждые 2с
     },
     refetchIntervalInBackground: false,
     retry: 3,
@@ -60,7 +60,7 @@ export function useLLMInsight(startDate: string, endDate: string): UseLLMInsight
   const isComplete = pollData?.status === 'complete';
   const insightResult = isComplete ? (pollData?.result ?? null) : null;
 
-  // ── Phase A: Trigger POST to enqueue ───────────────────────────────
+  // ── Фаза A: POST для постановки в очередь ───────────────────────────────
   const trigger = useCallback(async () => {
     setEnqueueError(null);
     setIsEnqueuing(true);
@@ -75,7 +75,7 @@ export function useLLMInsight(startDate: string, endDate: string): UseLLMInsight
     }
   }, [startDate, endDate]);
 
-  // ── Phase C: Reset ─────────────────────────────────────────────────
+  // ── Фаза C: сброс ─────────────────────────────────────────────────
   const reset = useCallback(() => {
     setTaskId(null);
     setEnqueueError(null);

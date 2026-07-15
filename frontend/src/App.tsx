@@ -23,7 +23,7 @@ function DashboardLayout() {
     <div className="flex min-h-screen bg-[#FDFBF7] dark:bg-[#050505] relative overflow-hidden">
       <Sidebar />
 
-      {/* Main Content Area — accounts for floating sidebar margins.
+      {/* Основная область контента — с учётом отступов плавающего сайдбара.
           pt-16 на мобильном: фиксированная кнопка-гамбургер (top-4, ~40px)
           не должна перекрывать заголовки страниц; на десктопе её нет. */}
       <main className="flex-1 p-4 pt-16 lg:p-8 lg:pt-8 overflow-y-auto">
@@ -58,7 +58,7 @@ function Overview() {
         {/* V.I.A. Command Center */}
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-2">
           <div className="flex items-center gap-5">
-            {/* Strict Geometric Logo */}
+            {/* Строгий геометричный логотип */}
             <div className="relative w-14 h-14 flex items-center justify-center rounded-2xl bg-gradient-to-br from-[#1C3F35] to-[#0A1A12] dark:from-[#050505] dark:to-[#111111] shadow-lg shadow-emerald-900/10 overflow-hidden border border-white/10">
               <svg viewBox="0 0 100 100" className="w-14 h-14 drop-shadow-[0_0_8px_rgba(255,122,0,0.8)] z-10" fill="none" strokeWidth="3.5">
                 <circle cx="50" cy="50" r="30" stroke="#FF7A00" strokeOpacity="0.3" />
@@ -85,7 +85,7 @@ function Overview() {
             </div>
           </div>
           
-          {/* Glass Control Panel */}
+          {/* Стеклянная панель управления */}
           <div className="flex flex-wrap items-center gap-3">
             <GlassDateRangePicker
               startDate={startDate}
@@ -189,11 +189,11 @@ export default function App() {
         <AuthProvider>
           <BrowserRouter>
             <Routes>
-              {/* Public Auth Routes */}
+              {/* Публичные роуты авторизации */}
               <Route path="/login" element={<PublicRoute><LoginForm /></PublicRoute>} />
               <Route path="/register" element={<PublicRoute><RegisterForm /></PublicRoute>} />
 
-              {/* Protected Application Routes (ИЗМЕНЕНО: УБРАНЫ ЛИШНИЕ DIV) */}
+              {/* Защищённые роуты приложения (убраны лишние div) */}
               <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
                 <Route path="/" element={<Overview />} />
                 <Route path="/transactions" element={<TransactionList />} />

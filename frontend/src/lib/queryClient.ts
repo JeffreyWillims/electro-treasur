@@ -1,6 +1,6 @@
 /**
- * Shared QueryClient instance — accessible from both App.tsx and AuthContext.
- * Extracted to avoid circular dependencies.
+ * Общий инстанс QueryClient — доступен и из App.tsx, и из AuthContext.
+ * Вынесен отдельно, чтобы избежать циклических зависимостей.
  */
 import { QueryClient } from '@tanstack/react-query';
 

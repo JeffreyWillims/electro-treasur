@@ -1,5 +1,5 @@
 /**
- * TransactionList — Premium Infinite Ledger with Dual-Mode Editing.
+ * TransactionList — бесконечная лента транзакций с двумя режимами редактирования.
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchTransactions, fetchCategories, updateTransaction, deleteTransaction } from '@/api/client';
@@ -178,7 +178,7 @@ export function TransactionList() {
         className="flex flex-col gap-8 w-full mt-4 pb-24"
       >
           <div className="flex flex-col gap-6 mb-4">
-            {/* Top Header */}
+            {/* Верхний заголовок */}
             <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-2">
               <div>
                 <h1 className="text-3xl md:text-4xl font-sans font-extrabold tracking-tight text-[#1C3F35] dark:text-white leading-none">
@@ -207,7 +207,7 @@ export function TransactionList() {
               </div>
             </div>
 
-            {/* Filter Bar */}
+            {/* Панель фильтров */}
             <div className="flex flex-col md:flex-row items-center gap-4 w-full p-2 bg-white/40 dark:bg-[#111111]/40 backdrop-blur-3xl border border-black/5 dark:border-white/10 rounded-[2rem] shadow-sm z-20 relative">
               <div className={cn(
                 "relative flex-1 w-full rounded-2xl h-14 md:h-16 px-4 md:px-5 transition-all duration-300 flex items-center",
@@ -403,7 +403,7 @@ export function TransactionList() {
   );
 }
 
-// ── Drawer Content Component ──────────────────────────────────────────
+// ── Компонент содержимого шторки ──────────────────────────────────────────
 function DrawerContent({
   tx,
   categories,
@@ -574,7 +574,7 @@ function DrawerContent({
         </div>
       </div>
 
-      {/* Action Footer */}
+      {/* Подвал с действиями */}
       <div className="mt-auto p-6 md:p-8 border-t border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]">
         <button
           onClick={handleSave}

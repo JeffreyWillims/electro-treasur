@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
-# ─── Helpers ──────────────────────────────────────────────────────────────────
+# ─── Хелперы ──────────────────────────────────────────────────────────────────
 
 
 def _get_ru_month(date_obj: date) -> str:
@@ -226,7 +226,7 @@ def _cb_msg(callback: CallbackQuery) -> Message | None:
     return callback.message if isinstance(callback.message, Message) else None
 
 
-# ─── Link Helper ──────────────────────────────────────────────────────────────
+# ─── Хелпер привязки аккаунта ──────────────────────────────────────────────────
 
 
 async def _attempt_link(
@@ -266,7 +266,7 @@ async def _attempt_link(
     )
 
 
-# ─── /start & Base Navigation ─────────────────────────────────────────────────
+# ─── /start и базовая навигация ─────────────────────────────────────────────────
 
 
 @router.message(Command("start"))
@@ -370,7 +370,7 @@ async def cmd_unlink(message: Message, session: AsyncSession, current_user: User
     )
 
 
-# ─── Inline Menu Callbacks ────────────────────────────────────────────────────
+# ─── Колбэки инлайн-меню ────────────────────────────────────────────────────
 
 
 @router.callback_query(F.data == "menu_balance")
@@ -459,7 +459,7 @@ async def cb_welcome_auth(callback: CallbackQuery) -> None:
     await callback.answer()
 
 
-# ─── /balance & Menu Analytics ────────────────────────────────────────────────
+# ─── /balance и аналитика меню ────────────────────────────────────────────────
 
 
 @router.message(Command("balance"))
@@ -527,7 +527,7 @@ async def cmd_categories(
     await message.answer("\n".join(lines), parse_mode="Markdown", reply_markup=_get_reply_menu())
 
 
-# ─── Transaction Writers & Pickers ────────────────────────────────────────────
+# ─── Запись транзакций и пикеры ────────────────────────────────────────────
 
 
 async def _show_category_selection(message: Message, amount: Decimal, current_user: User) -> None:
@@ -761,9 +761,9 @@ async def handle_receipt_upload(
                 executed_at=datetime.now(UTC),
                 idempotency_key=idempotency_key,
             )
-            # 🔥 FIX: Savepoint per transaction — duplicate idempotency_key
-            # no longer kills the entire batch. Each insert is isolated:
-            # if tx #3 is a duplicate, tx #1, #2, #4, #5 still persist.
+            # 🔥 ФИКС: своя точка сохранения (savepoint) на транзакцию — дублирующий
+            # idempotency_key больше не убивает всю пачку. Каждая вставка изолирована:
+            # если транзакция №3 дубль, транзакции №1, №2, №4, №5 всё равно сохранятся.
             try:
                 async with session.begin_nested():
                     session.add(tx)
@@ -802,7 +802,7 @@ async def handle_receipt_upload(
     await message.answer("📲 Меню активно", reply_markup=_get_reply_menu())
 
 
-# ─── Reply Keyboard Button Handlers ─────────────────────────────────────────
+# ─── Обработчики кнопок Reply-клавиатуры ─────────────────────────────────────────
 
 
 @router.message(F.text == "💎 Внести")
@@ -839,7 +839,7 @@ async def btn_balance_reply(
     await cmd_balance(message, session, current_user)
 
 
-# ─── Smart Text Parser (Natural Language) ──────────────────────────────────
+# ─── Умный разбор текста (естественный язык) ──────────────────────────────────
 
 
 @router.message(F.text.startswith("/"))
