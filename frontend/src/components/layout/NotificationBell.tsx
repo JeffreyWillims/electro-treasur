@@ -137,7 +137,7 @@ export function NotificationBell() {
                 style={{ willChange: 'transform, opacity' }}
                 className={cn(
                   'relative flex flex-col overflow-hidden',
-                  'w-[min(28rem,100%)] max-h-[min(34rem,calc(100vh-5rem))]',
+                  'w-[min(34rem,100%)] max-h-[min(34rem,calc(100vh-5rem))]',
                   'bg-white/95 dark:bg-[#12100E]/95 backdrop-blur-xl',
                   'border border-black/10 dark:border-white/10 rounded-[1.75rem]',
                   'shadow-[0_30px_70px_-15px_rgba(0,0,0,0.45)]',

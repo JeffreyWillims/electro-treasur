@@ -6,6 +6,7 @@ import { PlusCircle, Search, Plus, Check, Settings } from 'lucide-react';
 import { createTransaction, fetchCategories, createCategory } from '@/api/client';
 import { VoiceInput } from '@/components/dashboard/VoiceInput';
 import { parseVoiceInput } from '@/lib/voiceParse';
+import { evalAmountExpression, formatAmount, sanitizeAmountInput } from '@/lib/amountInput';
 import type { CategoryRead } from '@/types';
 import { getLocalDateString } from '@/lib/dateUtils';
 import { cn } from '@/lib/utils';
@@ -132,19 +133,25 @@ export function QuickEntry() {
     onError: (error: Error) => toast.error(`Ошибка: ${error.message}`)
   });
 
+  // Ввод не режет выражение: «250+180», «1.5к» доживают до blur, где считаются.
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/[^\d.,]/g, '').replace(',', '.');
-    const parts = raw.split('.');
-    let integerPart = parts[0] || '';
-    integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-    setAmount(parts.length > 1 ? `${integerPart}.${parts[1]?.slice(0, 2)}` : integerPart);
+    setAmount(sanitizeAmountInput(e.target.value));
+  };
+
+  // Считаем выражение и показываем результат, когда поле теряет фокус.
+  const handleAmountBlur = () => {
+    const value = evalAmountExpression(amount);
+    if (value !== null && value > 0) setAmount(formatAmount(value));
   };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!amount || !selectedCategoryId) return toast.error('Заполните сумму и категорию');
+    const value = evalAmountExpression(amount);
+    if (value === null || value <= 0 || !selectedCategoryId) {
+      return toast.error('Заполните сумму и категорию');
+    }
     mutation.mutate({
-      amount: parseFloat(amount.replace(/\s/g, '')),
+      amount: value,
       currency,
       category_id: selectedCategoryId,
       executed_at: date ? `${date}T12:00:00+03:00` : new Date().toISOString(),
@@ -224,7 +231,7 @@ export function QuickEntry() {
             <div className={inputWrapperStyle}>
               {/* ИЗМЕНЕНИЯ ЗДЕСЬ: уменьшен шрифт до text-xl md:text-2xl, убран slate, добавлен #1C3F35 */}
               <input
-                type="text" inputMode="decimal" value={amount} onChange={handleAmountChange} placeholder="0"
+                type="text" inputMode="decimal" value={amount} onChange={handleAmountChange} onBlur={handleAmountBlur} placeholder="0"
                 className="flex-1 w-full outline-none bg-transparent text-left text-xl md:text-2xl font-sans font-black tabular-nums tracking-tighter text-[#1C3F35] dark:text-white placeholder-[#1C3F35]/30 dark:placeholder-white/30 px-2"
               />
               <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="ml-2 bg-transparent text-sm md:text-base font-bold uppercase tracking-widest text-[#1C3F35] dark:text-white outline-none cursor-pointer">

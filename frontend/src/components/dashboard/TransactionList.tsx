@@ -399,9 +399,9 @@ export function TransactionList() {
 
             {!isFetching && (
               <div className="flex items-center justify-between mt-6 p-4 bg-white/40 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-black/5 dark:border-white/5 shadow-sm">
-                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-5 py-2 font-bold text-sm text-[#1C3F35] dark:text-white disabled:opacity-30 transition-all hover:bg-black/5 dark:hover:bg-white/10 rounded-xl">← Назад</button>
+                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-5 min-h-11 font-bold text-sm text-[#1C3F35] dark:text-white disabled:opacity-30 transition-all hover:bg-black/5 dark:hover:bg-white/10 rounded-xl">← Назад</button>
                 <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#1C3F35]/50 dark:text-white/50">Страница {page}</span>
-                <button onClick={() => setPage(p => p + 1)} disabled={!data?.items || data.items.length < PAGE_SIZE} className="px-5 py-2 font-bold text-sm text-[#1C3F35] dark:text-white disabled:opacity-30 transition-all hover:bg-black/5 dark:hover:bg-white/10 rounded-xl">Вперед →</button>
+                <button onClick={() => setPage(p => p + 1)} disabled={!data?.items || data.items.length < PAGE_SIZE} className="px-5 min-h-11 font-bold text-sm text-[#1C3F35] dark:text-white disabled:opacity-30 transition-all hover:bg-black/5 dark:hover:bg-white/10 rounded-xl">Вперед →</button>
               </div>
             )}
           </div>

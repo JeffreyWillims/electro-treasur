@@ -124,7 +124,7 @@ function makeGrid(values: readonly number[]): Cell[] {
   }));
 }
 
-// Экспорт: единый закатный фон для всех игр Arcade (используют Game512 и GreedLadder).
+// Экспорт: единый закатный фон для всех игр Arcade (используют Game512 и MathSprint).
 export function SunsetBackground() {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none select-none">

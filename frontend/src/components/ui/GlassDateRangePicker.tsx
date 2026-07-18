@@ -298,12 +298,13 @@ export function GlassDateRangePicker({
               'rounded-3xl',
               'shadow-[0_30px_60px_rgba(0,0,0,0.12)] dark:shadow-[0_30px_60px_rgba(0,0,0,0.8)]',
               'p-5',
-              'flex gap-0',
-              'min-w-[420px]',
+              'flex flex-col sm:flex-row gap-0',
+              // Мобильный: не шире вьюпорта; десктоп — прежняя фикс-ширина
+              'w-[calc(100vw-2rem)] max-w-[420px] sm:w-auto sm:min-w-[420px]',
             )}
           >
             {/* ── Left: Quick Presets ────────────────────────────── */}
-            <div className="border-r border-slate-200/50 dark:border-white/5 pr-4 mr-4 flex flex-col gap-1.5 min-w-[130px] justify-center">
+            <div className="flex flex-col gap-1.5 justify-center pb-4 mb-4 border-b sm:border-b-0 sm:border-r border-slate-200/50 dark:border-white/5 sm:pr-4 sm:mr-4 sm:min-w-[130px]">
               <p className="text-[9px] font-mono font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-white/30 mb-2">
                 Быстрый выбор
               </p>
@@ -324,7 +325,7 @@ export function GlassDateRangePicker({
             </div>
 
             {/* ── Right: Calendar ────────────────────────────────── */}
-            <div className="flex-1 min-w-[252px]">
+            <div className="flex-1 min-w-0 sm:min-w-[252px]">
               {/* Заголовок месяца */}
               <div className="flex items-center justify-between mb-3">
                 <button

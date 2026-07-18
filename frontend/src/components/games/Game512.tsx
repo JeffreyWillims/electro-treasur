@@ -244,7 +244,7 @@ export function Game512({ onClose }: { onClose: () => void }) {
     >
       {/* Единый фон Arcade — калифорнийский закат, как в «Десятке» */}
       <SunsetBackground />
-      <div className="relative w-full max-w-md rounded-[2.5rem] bg-[#0A1A12]/80 backdrop-blur-2xl border border-white/10 p-5 sm:p-6 shadow-2xl">
+      <div className="relative w-full max-w-xl rounded-[2.5rem] bg-[#0A1A12]/80 backdrop-blur-2xl border border-white/10 p-5 sm:p-8 shadow-2xl">
         {/* Шапка */}
         <div className="flex items-center justify-between mb-5">
           <div>

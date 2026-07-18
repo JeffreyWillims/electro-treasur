@@ -4,7 +4,7 @@ import { Trophy } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { PacificRide } from '@/components/ui/PacificRide';
 import { Game512 } from '@/components/games/Game512';
-import { GreedLadder } from '@/components/games/GreedLadder';
+import { MathSprint } from '@/components/games/MathSprint';
 import { getBest, type GameKey } from '@/lib/gameRecords';
 import { fetchLeaderboard, fetchTotalLeaderboard } from '@/api/client';
 import { cn } from '@/lib/utils';
@@ -49,13 +49,13 @@ const GAMES: {
   },
   {
     id: 'piggy',
-    recordKey: 'piggy', // ключ рекордов прежний — рейтинг Копилки сохраняется
-    title: 'Не жадничай',
-    subtitle: 'Забрать или рискнуть? · лесенка ×2',
-    emoji: '🎲',
-    unit: '₽',
-    gradient: 'from-[#2A0E44] via-[#8B3578] to-[#E47C36]', // сумерки азарта
-    glow: 'rgba(255, 150, 90, 0.55)',
+    recordKey: 'piggy', // ключ рекордов прежний — рейтинг топ-100 сохраняется
+    title: 'Устный счёт',
+    subtitle: 'Спринт · реши как можно больше',
+    emoji: '🧮',
+    unit: 'очков',
+    gradient: 'from-[#0A1633] via-[#1E3A8A] to-[#22D3EE]', // «мозговой» индиго → циан
+    glow: 'rgba(56, 189, 248, 0.5)',
   },
 ];
 
@@ -325,7 +325,7 @@ export function GamesHub() {
       <AnimatePresence>
         {openGame === 'match' && <PacificRide onClose={() => setOpenGame(null)} />}
         {openGame === 'game512' && <Game512 onClose={() => setOpenGame(null)} />}
-        {openGame === 'piggy' && <GreedLadder onClose={() => setOpenGame(null)} />}
+        {openGame === 'piggy' && <MathSprint onClose={() => setOpenGame(null)} />}
       </AnimatePresence>
     </div>
   );

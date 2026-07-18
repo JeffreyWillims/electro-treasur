@@ -78,19 +78,20 @@ export function BalanceCards({
                 initial={{ opacity: 0, x: -8 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -8 }}
-                className="hidden sm:flex items-baseline gap-3 min-w-0 truncate"
+                className="flex items-baseline gap-3 min-w-0 truncate"
               >
-                <motion.span className="text-xl md:text-2xl font-sans font-black tabular-nums tracking-tighter text-[#1C3F35] dark:text-white">
+                {/* Капитал виден и на телефоне; доход/расход — с sm и шире */}
+                <motion.span className="text-lg sm:text-xl md:text-2xl font-sans font-black tabular-nums tracking-tighter text-[#1C3F35] dark:text-white">
                   {displayTotal}
                 </motion.span>
                 <span className="text-xs font-sans font-bold uppercase tracking-widest text-[#1C3F35] dark:text-white opacity-40">RUB</span>
                 {hasIncomeData && (
-                  <span className="text-sm font-sans font-black tabular-nums text-emerald-600 dark:text-emerald-400">
+                  <span className="hidden sm:inline text-sm font-sans font-black tabular-nums text-emerald-600 dark:text-emerald-400">
                     +{Math.round(monthlyIncome).toLocaleString('ru-RU')}
                   </span>
                 )}
                 {hasExpenseData && (
-                  <span className="text-sm font-sans font-black tabular-nums text-rose-600 dark:text-rose-500">
+                  <span className="hidden sm:inline text-sm font-sans font-black tabular-nums text-rose-600 dark:text-rose-500">
                     -{Math.round(monthlyExpense).toLocaleString('ru-RU')}
                   </span>
                 )}
@@ -98,11 +99,13 @@ export function BalanceCards({
             )}
           </AnimatePresence>
         </div>
-        <span className="flex items-center gap-3 shrink-0 mt-1.5">
-          {/* 🔥 ИСПРАВЛЕНИЕ: МСК ВРЕМЯ ВМЕСТО new Date() */}
-          <span className="text-xs md:text-sm font-sans font-bold uppercase tracking-widest text-[#1C3F35] dark:text-white text-right">
-            {getMoscowDate().toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' }).replace(' г.', '')}
-          </span>
+        <span className="flex items-center gap-3 shrink-0 mt-1.5 pl-3">
+          {/* Дата — только в развёрнутом виде: в свёрнутом она налезала на заголовок */}
+          {!collapsed && (
+            <span className="text-xs md:text-sm font-sans font-bold uppercase tracking-widest text-[#1C3F35] dark:text-white text-right">
+              {getMoscowDate().toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' }).replace(' г.', '')}
+            </span>
+          )}
           <motion.span
             animate={{ rotate: collapsed ? 180 : 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 22 }}
@@ -196,7 +199,7 @@ export function BalanceCards({
         </div>
 
         <div className="flex flex-wrap gap-8 mt-5 relative">
-          <div className="flex items-center gap-2.5 cursor-help group" onMouseEnter={() => setActiveTooltip('dyn')} onMouseLeave={() => setActiveTooltip(null)}>
+          <button type="button" className="flex items-center gap-2.5 cursor-pointer group text-left" onClick={() => setActiveTooltip((t) => (t === 'dyn' ? null : 'dyn'))} onMouseEnter={() => setActiveTooltip('dyn')} onMouseLeave={() => setActiveTooltip(null)}>
             <div className="w-2 h-2 rounded-full bg-[#1C3F35] dark:bg-emerald-500 shadow-[0_0_6px_rgba(52,211,153,0.4)]" />
             <span className="text-[10px] md:text-[11px] font-mono font-bold text-[#1C3F35]/50 dark:text-white/40 uppercase tracking-widest group-hover:text-[#1C3F35] dark:group-hover:text-white transition-colors">Динамика роста</span>
             <span className="text-sm font-sans font-black text-[#1C3F35] dark:text-white/90 tabular-nums">{growth}%</span>
@@ -214,9 +217,9 @@ export function BalanceCards({
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
+          </button>
 
-          <div className="flex items-center gap-2.5 cursor-help group" onMouseEnter={() => setActiveTooltip('int')} onMouseLeave={() => setActiveTooltip(null)}>
+          <button type="button" className="flex items-center gap-2.5 cursor-pointer group text-left" onClick={() => setActiveTooltip((t) => (t === 'int' ? null : 'int'))} onMouseEnter={() => setActiveTooltip('int')} onMouseLeave={() => setActiveTooltip(null)}>
             <div className="w-2 h-2 rounded-full bg-[#FF7A00] shadow-[0_0_6px_rgba(255,122,0,0.4)]" />
             <span className="text-[10px] md:text-[11px] font-mono font-bold text-[#1C3F35]/50 dark:text-white/40 uppercase tracking-widest group-hover:text-[#1C3F35] dark:group-hover:text-white transition-colors">Интенсивность трат</span>
             <span className="text-sm font-sans font-black text-[#1C3F35] dark:text-white/90 tabular-nums">{dissipation}%</span>
@@ -234,7 +237,7 @@ export function BalanceCards({
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
+          </button>
         </div>
       </div>
           </motion.div>
