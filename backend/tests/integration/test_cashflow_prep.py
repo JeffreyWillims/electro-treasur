@@ -153,10 +153,33 @@ async def test_schedule_monthly_analysis_fans_out(db_session: AsyncSession) -> N
 
     assert result["scheduled"] == 2
     assert fake_pool.enqueue_job.await_count == 2
-    # Cron с v1.1 ставит rule-based задачу, а не mock-LLM.
+    # Cron с v1.1 ставит rule-based задачу, а не mock-LLM. _job_id детерминирован:
+    # повторный запуск cron не создаст дубль задачи (и дубль пуша в Telegram).
     fake_pool.enqueue_job.assert_any_await(
-        "calculate_static_insights", u1.id, start.isoformat(), end.isoformat()
+        "calculate_static_insights",
+        u1.id,
+        start.isoformat(),
+        end.isoformat(),
+        _job_id=f"insight:{u1.id}:{start.isoformat()}:{end.isoformat()}",
     )
+
+
+async def test_schedule_monthly_analysis_job_ids_are_stable(db_session: AsyncSession) -> None:
+    """Два прогона cron подряд дают те же _job_id — arq отсеет повтор сам."""
+    start, end = previous_month_range(date.today())
+    user = await _make_user(db_session, "stable@t.dev")
+    await _add_transaction(db_session, user, start, "100.00", "income")
+
+    first_pool, second_pool = AsyncMock(), AsyncMock()
+    await schedule_monthly_analysis(
+        {"SessionLocal": _session_local(db_session), "arq_pool": first_pool}
+    )
+    await schedule_monthly_analysis(
+        {"SessionLocal": _session_local(db_session), "arq_pool": second_pool}
+    )
+
+    job_id_of = lambda pool: pool.enqueue_job.await_args.kwargs["_job_id"]  # noqa: E731
+    assert job_id_of(first_pool) == job_id_of(second_pool)
 
 
 # ── get_linked_users_without_tx_on ──────────────────────────────────────────

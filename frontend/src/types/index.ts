@@ -74,7 +74,9 @@ export interface CategoryRowSchema {
   planned: string;
   fact: string;
   delta: string;
-  days: DayCellSchema[]; // exactly 31 items
+  // Длина = числу дней в запрошенном диапазоне (НЕ всегда 31), а day внутри
+  // ячейки — офсет от начала периода, а не число месяца.
+  days: DayCellSchema[];
 }
 
 export interface DashboardResponse {

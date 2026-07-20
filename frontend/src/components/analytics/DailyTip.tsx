@@ -1,56 +1,33 @@
 /**
- * DailyTip — «Совет дня» в Аналитике: детерминированная подсказка по норме
- * сбережений текущего месяца, ротация по дню года (без LLM). Переехал сюда
- * с главного дашборда — советы живут рядом с остальной аналитикой.
+ * DailyTip — «Совет дня» в Аналитике.
+ *
+ * Подсказка собирается правилами из реальных цифр периода (см. dailyTipRules):
+ * раньше это были девять захардкоженных фраз, которые ротировались по дню года
+ * и никогда не ссылались на данные пользователя. Теперь у совета есть повод и
+ * следующее действие. Период и цифры приходят сверху — своего запроса нет.
  */
 import { motion } from 'framer-motion';
-import { useQuery } from '@tanstack/react-query';
-import { Lightbulb } from 'lucide-react';
-import { fetchDashboard } from '@/api/client';
-import { getLocalDateString, getMoscowDate } from '@/lib/dateUtils';
-
-const DAILY_TIPS: Record<'strong' | 'mid' | 'low', string[]> = {
-  strong: [
-    'Вы сберегаете больше 20% дохода — отличный уровень. Проверьте, работают ли эти деньги на вас.',
-    'Отличный запас прочности. Свободные деньги любят цели — загляните в «Горизонт капитала».',
-    'Сбережения растут — самое время автоматизировать: сначала платите себе.',
-  ],
-  mid: [
-    'Каждый отложенный рубль — кирпич в фундамент вашей свободы. Начните с 10% дохода.',
-    'Правило суток: перед незапланированной покупкой возьмите паузу до завтра. Работает безотказно.',
-    'Маленькие траты съедают большие мечты. Проверьте подписки — там часто прячется лишнее.',
-  ],
-  low: [
-    'Минус — это сигнал, а не приговор. Начните с конвертов в «Бюджетах»: что видно, то под контролем.',
-    'Расходы обгоняют доход. Найдите три самые прожорливые категории в структуре расходов.',
-    'Для начала фиксируйте траты неделю, а затем решите, какие из них действительно ваши, а какие — по привычке.',
-  ],
-};
+import { Link } from 'react-router-dom';
+import { ArrowRight, Lightbulb } from 'lucide-react';
+import { pickDailyTip, type TipContext } from '@/lib/dailyTipRules';
+import type { PersonaCode } from '@/lib/purchaseAdvice';
 
 function dayOfYear(): number {
   const now = new Date();
   return Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86_400_000);
 }
 
-export function DailyTip() {
-  const d = getMoscowDate();
-  const start = getLocalDateString(new Date(d.getFullYear(), d.getMonth(), 1));
-  const end = getLocalDateString(new Date(d.getFullYear(), d.getMonth() + 1, 0));
-  const { data } = useQuery({
-    queryKey: ['dashboard', start, end],
-    queryFn: () => fetchDashboard(start, end),
-  });
+interface Props {
+  income: number;
+  expense: number;
+  topCategory?: { name: string; amount: number } | null;
+  persona?: PersonaCode | null;
+}
 
-  if (!data) return null;
-
-  const income = parseFloat(data.period_income) || 0;
-  const expense = parseFloat(data.period_expense) || 0;
-  const free = income - expense;
-  const savingsRate = income > 0 ? free / income : 0;
-
-  const tipPool =
-    savingsRate >= 0.2 ? DAILY_TIPS.strong : savingsRate >= 0 ? DAILY_TIPS.mid : DAILY_TIPS.low;
-  const tip = tipPool[dayOfYear() % tipPool.length]!;
+export function DailyTip({ income, expense, topCategory = null, persona = null }: Props) {
+  const ctx: TipContext = { income, expense, topCategory, persona };
+  const tip = pickDailyTip(ctx, dayOfYear());
+  const savingsRate = income > 0 ? (income - expense) / income : 0;
 
   return (
     <motion.section
@@ -68,15 +45,38 @@ export function DailyTip() {
           <h2 className="text-lg font-sans font-extrabold text-[#1C3F35] dark:text-white">
             Совет дня
           </h2>
-          <p className="text-sm md:text-base font-medium text-[#1C3F35]/75 dark:text-white/70 leading-relaxed mt-2">
-            {tip}
-          </p>
-          <p className="text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-white/40 mt-4">
-            Свободно в этом месяце:{' '}
-            <span className={free >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'}>
-              {Math.round(free).toLocaleString('ru-RU')} ₽
-            </span>
-          </p>
+
+          <motion.p
+            key={tip.id}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35 }}
+            className="text-sm md:text-base font-medium text-[#1C3F35]/75 dark:text-white/70 leading-relaxed mt-2"
+          >
+            {tip.text}
+          </motion.p>
+
+          <div className="flex flex-wrap items-center gap-4 mt-4">
+            {tip.cta && (
+              <Link
+                to={tip.cta.to}
+                className="inline-flex items-center gap-2 h-10 px-4 rounded-2xl bg-gradient-to-r from-[#FF7A00] to-[#FFA011] text-white text-xs font-bold uppercase tracking-wide hover:opacity-90 active:scale-95 transition-all"
+              >
+                {tip.cta.label}
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            )}
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-white/40">
+              Норма сбережений за период:{' '}
+              <span
+                className={
+                  savingsRate >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'
+                }
+              >
+                {Math.round(savingsRate * 100)}%
+              </span>
+            </p>
+          </div>
         </div>
       </div>
     </motion.section>

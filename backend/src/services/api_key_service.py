@@ -11,7 +11,7 @@ API Key Service — ключи для публичного /api/v2/public.
 from __future__ import annotations
 
 import secrets
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -56,11 +56,18 @@ async def create_api_key(session: AsyncSession, user_id: int, name: str) -> tupl
     return api_key, plain_key
 
 
+# Как часто освежать last_used_at. Точность «до пяти минут» здесь достаточна,
+# а запись на КАЖДЫЙ запрос превращала чтение публичного API в UPDATE+COMMIT
+# по горячей строке ключа.
+LAST_USED_THROTTLE = timedelta(minutes=5)
+
+
 async def resolve_api_key(session: AsyncSession, plain_key: str) -> User | None:
     """
     Аутентификация по ключу: prefix-lookup → Argon2-верификация → владелец.
 
-    Обновляет last_used_at при успехе. None — ключ неверен/отозван.
+    Освежает last_used_at не чаще раза в LAST_USED_THROTTLE. None — ключ
+    неверен/отозван.
     """
     prefix = extract_prefix(plain_key)
     if prefix is None:
@@ -74,7 +81,11 @@ async def resolve_api_key(session: AsyncSession, plain_key: str) -> User | None:
     if not await verify_password(plain_key, api_key.key_hash):
         return None
 
-    api_key.last_used_at = datetime.now(UTC)
     user = await session.get(User, api_key.user_id)
-    await session.commit()
+
+    now = datetime.now(UTC)
+    last_used = api_key.last_used_at
+    if last_used is None or now - last_used >= LAST_USED_THROTTLE:
+        api_key.last_used_at = now
+        await session.commit()
     return user

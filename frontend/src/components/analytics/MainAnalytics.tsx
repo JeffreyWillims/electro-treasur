@@ -6,7 +6,10 @@ import { GlassDateRangePicker } from '@/components/ui/GlassDateRangePicker';
 import { getLocalDateString, getMoscowDate } from '@/lib/dateUtils';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { fetchDashboard, fetchCategories } from '@/api/client';
+import { fetchDashboard, fetchCategories, fetchPsychopassport } from '@/api/client';
+import { PsychopassportCard } from '@/components/analytics/PsychopassportCard';
+import { AnalyticsHero } from '@/components/analytics/AnalyticsHero';
+import type { PersonaCode } from '@/lib/purchaseAdvice';
 import { SpendingChart } from '@/components/dashboard/SpendingChart';
 import { CategoryPieChart } from '@/components/dashboard/CategoryPieChart';
 import { HealthScoreCard } from '@/components/dashboard/HealthScoreCard';
@@ -76,10 +79,31 @@ function HolographicPrism() {
   );
 }
 
-function aggregateDailyFlows(dashboard: DashboardResponse, categories: CategoryRead[]) {
+/**
+ * Дневные потоки за период. `day` — офсет от начала диапазона (так считает бэк),
+ * `label` — настоящая календарная дата: без неё графики подписывали «12-е»
+ * двенадцатым днём периода, а не двенадцатым числом месяца.
+ */
+function aggregateDailyFlows(
+  dashboard: DashboardResponse,
+  categories: CategoryRead[],
+  startDate: string,
+) {
   const incomeIds = new Set(categories.filter(c => c.type === 'income').map(c => c.id));
   const dayCount = dashboard.rows[0]?.days.length || 0;
-  const days = Array.from({ length: dayCount }, (_, i) => ({ day: i + 1, income: 0, expense: 0 }));
+  const start = new Date(`${startDate}T00:00:00`);
+  const days = Array.from({ length: dayCount }, (_, i) => {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    return {
+      day: i + 1,
+      label: d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }),
+      dayOfMonth: d.getDate(),
+      date: getLocalDateString(d),
+      income: 0,
+      expense: 0,
+    };
+  });
 
   dashboard.rows.forEach(row => {
     const isIncome = incomeIds.has(row.category_id);
@@ -135,8 +159,8 @@ export function MainAnalytics() {
 
   const dailyFlows = useMemo(() => {
     if (!dashboard || !categories.length) return [];
-    return aggregateDailyFlows(dashboard, categories);
-  }, [dashboard, categories]);
+    return aggregateDailyFlows(dashboard, categories, startDate);
+  }, [dashboard, categories, startDate]);
 
   const categoryTotals = useMemo(() => {
     if (!dashboard || !categories.length) return [];
@@ -145,6 +169,15 @@ export function MainAnalytics() {
 
   const totalIncome = useMemo(() => dailyFlows.reduce((s, d) => s + d.income, 0), [dailyFlows]);
   const totalExpense = useMemo(() => dailyFlows.reduce((s, d) => s + d.expense, 0), [dailyFlows]);
+
+  // Психопаспорт за выбранный период. Считается по требованию, поэтому виден
+  // всем, а не только тем, кого успел обработать месячный воркер.
+  const { data: psychopassport } = useQuery({
+    queryKey: ['psychopassport', startDate, endDate],
+    queryFn: () => fetchPsychopassport(startDate, endDate),
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
 
   return (
     <motion.div
@@ -186,7 +219,22 @@ export function MainAnalytics() {
       {/* ═══ ТРИ ИСТОРИИ ДАННЫХ ═══ */}
       {!isLoading && (
         <div className="flex flex-col gap-8 w-full">
-          <DailyTip />
+          <AnalyticsHero
+            capital={parseFloat(dashboard?.total_balance_all_time ?? '0') || 0}
+            income={totalIncome}
+            expense={totalExpense}
+          />
+          <DailyTip
+            income={totalIncome}
+            expense={totalExpense}
+            topCategory={
+              categoryTotals[0]
+                ? { name: categoryTotals[0].name, amount: categoryTotals[0].value }
+                : null
+            }
+            persona={(psychopassport?.persona_code ?? null) as PersonaCode | null}
+          />
+          <PsychopassportCard psychopassport={psychopassport} />
           <PurchaseAdvisor startDate={startDate} endDate={endDate} />
           <HealthScoreCard />
           <SpendingChart dailyFlows={dailyFlows} totalIncome={totalIncome} totalExpense={totalExpense} />

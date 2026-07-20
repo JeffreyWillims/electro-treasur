@@ -5,11 +5,22 @@
 Переменные окружения переопределяют значения по умолчанию → соответствие 12-Factor.
 """
 
+from typing import Literal
+
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     """Общая конфигурация приложения, загружаемая из окружения / .env файла."""
+
+    # ── Окружение ────────────────────────────────────────────────────────
+    # В "prod" включаются инварианты ниже: приложение откажется стартовать
+    # с дефолтным CORS, коротким секретом или cookie без Secure.
+    environment: Literal["local", "staging", "prod"] = "local"
+
+    # Origin'ы фронтенда для CORS — через запятую.
+    cors_origins: str = "http://localhost:5173,http://localhost:3000"
 
     # ── Безопасность JWT ─────────────────────────────────────────────────
     # Значения по умолчанию нет — должен быть задан через ET_SECRET_KEY. Иначе быстрый фейл при старте.
@@ -41,18 +52,10 @@ class Settings(BaseSettings):
     # ── Воркер arq ──────────────────────────────────────────────────────
     arq_redis_url: str = "redis://localhost:6379/1"
 
-    # ── Email / SMTP ─────────────────────────────────────────────────────
-    # Пустой host — письма уходят в структурный лог (поведение по умолчанию).
-    # Локально: ET_SMTP_HOST=mailhog (см. docker-compose.yml), UI — :8025.
-    # Прод: реальный провайдер требует STARTTLS и логин/пароль (app password).
-    smtp_host: str = ""
-    smtp_port: int = 1025
-    smtp_from: str = "noreply@citrine-vault.local"
-    smtp_user: str = ""
-    smtp_password: str = ""
-    smtp_starttls: bool = False
-    # Адрес, куда уходит обратная связь (совпадает с адресом в FeedbackWidget).
-    feedback_email: str = "ninjacodex333@gmail.com"
+    # ── Обратная связь ───────────────────────────────────────────────────
+    # Кто видит окно «Обратная связь» (список email через запятую). Пусто —
+    # доступ закрыт для всех, тот же принцип, что и у admin_password ниже.
+    feedback_admin_emails: str = ""
 
     # ── Telegram-бот ─────────────────────────────────────────────────────
     telegram_bot_token: str = ""
@@ -64,6 +67,34 @@ class Settings(BaseSettings):
     admin_password: str = ""
 
     model_config = {"env_prefix": "ET_", "env_file": ".env", "extra": "ignore"}
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        """CORS-origin'ы списком (пустые элементы отбрасываются)."""
+        return [item.strip() for item in self.cors_origins.split(",") if item.strip()]
+
+    @model_validator(mode="after")
+    def _check_prod_invariants(self) -> "Settings":
+        """Прод не должен стартовать с небезопасными настройками.
+
+        Раньше такие ошибки обнаруживались уже в бою: дефолтный localhost-CORS
+        или cookie без Secure никак себя не проявляли до инцидента.
+        """
+        if self.environment != "prod":
+            return self
+
+        problems: list[str] = []
+        if len(self.secret_key) < 32:
+            problems.append("ET_SECRET_KEY короче 32 символов")
+        if not self.cookie_secure:
+            problems.append("ET_COOKIE_SECURE=false — cookie уйдёт по http")
+        if not self.cors_origin_list:
+            problems.append("ET_CORS_ORIGINS пуст")
+        if any("localhost" in origin for origin in self.cors_origin_list):
+            problems.append("ET_CORS_ORIGINS содержит localhost")
+        if problems:
+            raise ValueError("Небезопасная конфигурация прода: " + "; ".join(problems))
+        return self
 
 
 settings = Settings()

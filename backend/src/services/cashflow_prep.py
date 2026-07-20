@@ -97,15 +97,56 @@ async def get_linked_users_without_tx_on(
     return [(row[0], row[1]) for row in result.all()]
 
 
-async def get_free_funds(
+async def get_category_expense(
     session: AsyncSession, user_id: int, start: date, end: date
-) -> dict[str, Any]:
-    """Свободные средства за [start, end]: доход − расход + остатки по конвертам.
+) -> dict[str, Decimal]:
+    """{название категории: сумма расходов} за период — вход психопаспорта.
 
-    income/expense — суммы транзакций по типу категории. `envelopes` — по бюджетам
-    месяца (start.month, start.year): remaining = amount_limit − факт по категории.
+    Общая точка для месячного воркера и эндпоинта /analytics/psychopassport:
+    иначе два места считали бы «расход по категориям» каждое по-своему.
     """
-    totals_stmt = (
+    stmt = (
+        select(Category.name, func.sum(Transaction.amount))
+        .join(Category, Transaction.category_id == Category.id)
+        .where(
+            Transaction.user_id == user_id,
+            Category.type == CategoryType.expense,
+            func.date(Transaction.executed_at) >= start,
+            func.date(Transaction.executed_at) <= end,
+        )
+        .group_by(Category.name)
+    )
+    return {name: total for name, total in (await session.execute(stmt)).all()}
+
+
+async def get_active_users_with_chat(
+    session: AsyncSession, start: date, end: date
+) -> list[tuple[int, int]]:
+    """(user_id, telegram_chat_id) активных за период юзеров с привязанным чатом.
+
+    Пара к get_active_user_ids: сразу отсекает тех, кому всё равно не отправить,
+    и отдаёт chat_id тем же запросом — иначе рассылка делала SELECT на каждого
+    пользователя в цикле (N+1).
+    """
+    has_tx = exists().where(
+        Transaction.user_id == User.id,
+        func.date(Transaction.executed_at) >= start,
+        func.date(Transaction.executed_at) <= end,
+    )
+    stmt = (
+        select(User.id, User.telegram_chat_id)
+        .where(User.telegram_chat_id.is_not(None), has_tx)
+        .order_by(User.id)
+    )
+    result = await session.execute(stmt)
+    return [(row[0], row[1]) for row in result.all()]
+
+
+async def get_period_totals(
+    session: AsyncSession, user_id: int, start: date, end: date
+) -> tuple[Decimal, Decimal]:
+    """(доход, расход) за период — суммы транзакций по типу категории."""
+    stmt = (
         select(Category.type, func.coalesce(func.sum(Transaction.amount), 0))
         .join(Category, Transaction.category_id == Category.id)
         .where(
@@ -117,11 +158,23 @@ async def get_free_funds(
     )
     income = Decimal("0")
     expense = Decimal("0")
-    for ctype, total in (await session.execute(totals_stmt)).all():
+    for ctype, total in (await session.execute(stmt)).all():
         if ctype == CategoryType.income:
             income = total
         elif ctype == CategoryType.expense:
             expense = total
+    return income, expense
+
+
+async def get_free_funds(
+    session: AsyncSession, user_id: int, start: date, end: date
+) -> dict[str, Any]:
+    """Свободные средства за [start, end]: доход − расход + остатки по конвертам.
+
+    income/expense — суммы транзакций по типу категории. `envelopes` — по бюджетам
+    месяца (start.month, start.year): remaining = amount_limit − факт по категории.
+    """
+    income, expense = await get_period_totals(session, user_id, start, end)
 
     spent_stmt = (
         select(Transaction.category_id, func.coalesce(func.sum(Transaction.amount), 0))

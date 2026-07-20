@@ -89,11 +89,15 @@ async def schedule_monthly_analysis(ctx: dict[str, Any]) -> dict[str, Any]:
 
     pool: ArqRedis = ctx["arq_pool"]
     for user_id in user_ids:
+        # Детерминированный _job_id делает фан-аут идемпотентным: повторный
+        # запуск cron (рестарт воркера, вторая реплика) не поставит задачу
+        # второй раз, иначе пользователь получил бы дубль пуша в Telegram.
         await pool.enqueue_job(
             "calculate_static_insights",
             user_id,
             start_date.isoformat(),
             end_date.isoformat(),
+            _job_id=f"insight:{user_id}:{start_date.isoformat()}:{end_date.isoformat()}",
         )
 
     logger.info(

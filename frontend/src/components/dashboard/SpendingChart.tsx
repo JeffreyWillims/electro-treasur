@@ -8,6 +8,8 @@ import { TrendingUp, TrendingDown, Scale } from 'lucide-react';
 
 interface DailyFlow {
   day: number;
+  /** Настоящая календарная дата «дд.мм» — ось и тултип подписываются ею. */
+  label: string;
   income: number;
   expense: number;
 }
@@ -23,7 +25,7 @@ const CashflowTooltip = ({ active, payload, label }: any) => {
     return (
       <div className="bg-white/95 dark:bg-[#121212]/95 backdrop-blur-3xl border border-black/10 dark:border-white/10 px-5 py-4 rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.6)] z-50">
         <p className="text-[10px] md:text-[11px] font-mono font-bold text-[#1C3F35]/50 dark:text-white/40 mb-3 uppercase tracking-[0.25em]">
-          День {label}
+          {label}
         </p>
         <div className="space-y-3">
           <p className="flex items-baseline gap-2">
@@ -130,7 +132,7 @@ export function SpendingChart({ dailyFlows, totalIncome, totalExpense }: Spendin
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={dailyFlows} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barGap={2} style={{ outline: 'none' }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128, 128, 128, 0.1)" />
-              <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#888', fontWeight: 600, fontFamily: 'monospace' }} tickMargin={12} />
+              <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#888', fontWeight: 600, fontFamily: 'monospace' }} tickMargin={12} />
               <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#888', fontWeight: 600, fontFamily: 'monospace' }} tickFormatter={(v) => v >= 1000 ? (v / 1000).toLocaleString('ru-RU') + 'k' : `${v}`} tickMargin={8} />
               <Tooltip content={<CashflowTooltip />} cursor={{ fill: 'rgba(128, 128, 128, 0.05)' }} isAnimationActive={false} wrapperStyle={{ outline: 'none' }} />
               <Bar dataKey="income" fill="#10B981" radius={[6, 6, 6, 6]} maxBarSize={16} animationDuration={1200} animationEasing="ease-in-out" />

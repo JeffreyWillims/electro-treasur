@@ -14,10 +14,12 @@ Source of Truth.
 from __future__ import annotations
 
 import json
+import logging
 import time
+import uuid
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, cast
 
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -34,16 +36,36 @@ from src.admin import setup_admin
 from src.api.analytics.yearly import router as analytics_router
 from src.api.v1.router import router as v1_router
 from src.api.v2.public import router as public_v2_router
+from src.config import settings
 from src.core.exceptions import setup_exception_handlers
 from src.core.rate_limit import limiter
-from src.database import get_session
+from src.database import async_session_factory, get_session
 from src.infrastructure.redis_client import close_redis, get_redis
+
+# uvicorn настраивает только свои логгеры и не трогает корневой, поэтому без
+# явного basicConfig записи приложения уровня INFO молча отбрасывались.
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+)
+
+logger = logging.getLogger(__name__)
+# Отдельный канал для access-лога: строки уходят через logging, а не print,
+# поэтому подхватываются общей конфигурацией логирования и сборщиком логов.
+access_logger = logging.getLogger("access")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Управление жизненным циклом приложения — хуки startup и shutdown."""
     # ── Запуск ─────────────────────────────────────────────────────────
+    # Fail-fast: без этой проверки мёртвая БД/Redis обнаруживались только
+    # первым запросом, а контейнер успевал пройти readiness и принять трафик.
+    async with async_session_factory() as session:
+        await session.execute(text("SELECT 1"))
+    await (await get_redis()).ping()
+    logger.info("Startup checks passed: PostgreSQL и Redis доступны")
+
     yield
     # ── Остановка ────────────────────────────────────────────────────────
     await close_redis()
@@ -68,9 +90,11 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, cast(Any, _rate_limit_exceeded_handler))
 
 # ── CORS ────────────────────────────────────────────────────────────────
+# Origin'ы берутся из настроек (ET_CORS_ORIGINS): раньше здесь был захардкожен
+# localhost, и прод-домена в списке не было вовсе.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=settings.cors_origin_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -79,24 +103,34 @@ app.add_middleware(
 
 @app.middleware("http")
 async def json_log_middleware(request: Request, call_next: Callable[[Request], Any]) -> Response:
+    """Структурный access-лог с request_id.
+
+    request_id пробрасывается в заголовок ответа и доступен обработчикам ошибок,
+    поэтому запись access-лога и сообщение об ошибке теперь связаны общим
+    идентификатором — раньше инцидент искали по времени.
+    """
+    request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex[:12]
+    request.state.request_id = request_id
     start_time = time.perf_counter()
     status_code = 500
     try:
         response = cast(Response, await call_next(request))
         status_code = response.status_code
-    except Exception:
-        raise
+        response.headers["X-Request-ID"] = request_id
     finally:
         latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
         log_data = {
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(UTC).isoformat(),
+            "request_id": request_id,
             "method": request.method,
             "path": request.url.path,
             "status": status_code,
             "latency_ms": latency_ms,
-            "user_id": "anonymous",
+            # Пользователь известен только после аутентификации зависимостью,
+            # поэтому её проставляет get_current_user; иначе — анонимный запрос.
+            "user_id": getattr(request.state, "user_id", "anonymous"),
         }
-        print(json.dumps(log_data), flush=True)
+        access_logger.info(json.dumps(log_data, ensure_ascii=False))
     return response
 
 

@@ -438,6 +438,17 @@ export function fetchLatestInsight(): Promise<LatestInsightDto | null> {
   return request<LatestInsightDto | null>('/v1/insights/latest');
 }
 
+/**
+ * Психопаспорт за произвольный период — считается по требованию.
+ * В отличие от insights/latest доступен сразу и всем: там профиль появлялся
+ * только после месячного воркера, а до него карточка была пустой.
+ */
+export function fetchPsychopassport(start: string, end: string): Promise<Psychopassport> {
+  return request<Psychopassport>(
+    `/v1/analytics/psychopassport?start=${start}&end=${end}`,
+  );
+}
+
 export function fetchInsightHistory(limit = 12): Promise<LatestInsightDto[]> {
   return request<LatestInsightDto[]>(`/v1/insights/?limit=${limit}`);
 }
@@ -624,6 +635,32 @@ export function submitFeedback(message: string): Promise<{ status: string }> {
     method: 'POST',
     body: JSON.stringify({ message }),
   });
+}
+
+export interface FeedbackItem {
+  id: number;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+  author_email: string;
+}
+
+export interface FeedbackListDto {
+  items: FeedbackItem[];
+  unread: number;
+}
+
+/** Список обращений — доступен только владельцам (иначе 403). */
+export function fetchFeedback(limit = 100): Promise<FeedbackListDto> {
+  return request<FeedbackListDto>(`/v1/feedback/?limit=${limit}`);
+}
+
+export function markFeedbackRead(id: number): Promise<{ updated: number }> {
+  return request<{ updated: number }>(`/v1/feedback/${id}/read`, { method: 'PATCH' });
+}
+
+export function markAllFeedbackRead(): Promise<{ updated: number }> {
+  return request<{ updated: number }>('/v1/feedback/read-all', { method: 'PATCH' });
 }
 
 // ── Citrine Arcade (игры) ─────────────────────────────────────────────────────

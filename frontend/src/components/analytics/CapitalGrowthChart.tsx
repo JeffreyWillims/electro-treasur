@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { motion } from 'framer-motion';
 import { Activity, TrendingDown, TrendingUp } from 'lucide-react';
+import { getLocalDateString, getMoscowDate } from '@/lib/dateUtils';
 
 /**
  * «Пульс капитала» — замена «Траектории накоплений».
@@ -15,6 +16,12 @@ import { Activity, TrendingDown, TrendingUp } from 'lucide-react';
 
 interface DailyFlow {
   day: number;
+  /** Настоящая календарная дата «дд.мм». */
+  label: string;
+  /** Число месяца — для подписи «лучший день». */
+  dayOfMonth: number;
+  /** ISO-дата дня — по ней определяется, прожит день или ещё впереди. */
+  date: string;
   income: number;
   expense: number;
 }
@@ -24,7 +31,13 @@ interface CapitalGrowthChartProps {
 }
 
 /** capital — факт (обрывается на сегодня), forecast — пунктир до конца месяца. */
-type PulsePoint = { day: number; net: number; capital: number | null; forecast: number | null };
+type PulsePoint = {
+  day: number;
+  label: string;
+  net: number;
+  capital: number | null;
+  forecast: number | null;
+};
 
 const PulseTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -36,7 +49,7 @@ const PulseTooltip = ({ active, payload, label }: any) => {
   return (
     <div className="bg-white/95 dark:bg-[#121212]/95 backdrop-blur-3xl border border-black/10 dark:border-white/10 p-5 rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.6)]">
       <p className="text-[11px] font-sans font-bold uppercase tracking-[0.18em] text-[#1C3F35]/50 dark:text-white/40 mb-2.5">
-        День {label}
+        {label}
         {isForecast && <span className="ml-2 text-[#FF7A00]">прогноз</span>}
       </p>
       {!isForecast && (
@@ -60,27 +73,33 @@ export function CapitalGrowthChart({ dailyFlows }: CapitalGrowthChartProps) {
     pulseData: PulsePoint[];
     projectedEnd: number | null;
   }>(() => {
-    // Последний день с операциями = «сегодня» периода: дальше факта нет, только прогноз.
-    const lastActive = dailyFlows.reduce(
-      (last, d) => (d.income !== 0 || d.expense !== 0 ? d.day : last),
-      0,
-    );
+    // «Сегодня» — по календарю, а не по последней операции: иначе пауза в
+    // несколько дней без трат завышала дневной темп и рисовала оптимистичный
+    // прогноз (делили капитал на меньшее число дней).
+    const today = getLocalDateString(getMoscowDate());
+    const elapsed = dailyFlows.filter((d) => d.date <= today).length || dailyFlows.length;
 
+    // Явный цикл вместо накопления внутри map: копим сумму по прожитым дням,
+    // не мутируя переменную из колбэка во время рендера.
+    const factual: PulsePoint[] = [];
     let cumulative = 0;
-    const factual = dailyFlows.map((d) => {
+    for (const d of dailyFlows) {
       const net = d.income - d.expense;
-      if (d.day <= lastActive) cumulative += net;
-      return {
+      const lived = d.day <= elapsed;
+      if (lived) cumulative += net;
+      factual.push({
         day: d.day,
+        label: d.label,
         net: Math.round(net * 100) / 100,
-        capital: d.day <= lastActive ? Math.round(cumulative * 100) / 100 : null,
-        forecast: null as number | null,
-      };
-    });
+        capital: lived ? Math.round(cumulative * 100) / 100 : null,
+        forecast: null,
+      });
+    }
 
     // Средний дневной темп по прожитым дням → пунктир до конца периода.
     const capitalNow = cumulative;
-    const avgPerDay = lastActive > 0 ? capitalNow / lastActive : 0;
+    const lastActive = elapsed;
+    const avgPerDay = elapsed > 0 ? capitalNow / elapsed : 0;
     const totalDays = dailyFlows.length;
     const hasFuture = lastActive > 0 && lastActive < totalDays;
 
@@ -168,7 +187,7 @@ export function CapitalGrowthChart({ dailyFlows }: CapitalGrowthChartProps) {
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={pulseData} margin={{ top: 10, right: 10, left: -14, bottom: 0 }} style={{ outline: 'none' }} barCategoryGap="28%">
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128, 128, 128, 0.1)" />
-              <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#888', fontWeight: 700 }} tickMargin={12} />
+              <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#888', fontWeight: 700 }} tickMargin={12} />
               <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#888', fontWeight: 700 }} tickFormatter={(v: number) => (Math.abs(v) >= 1000 ? (v / 1000).toLocaleString('ru-RU') + 'k' : `${v}`)} tickMargin={8} />
               <ReferenceLine y={0} stroke="rgba(128,128,128,0.35)" strokeWidth={1} />
               <Tooltip content={<PulseTooltip />} cursor={{ fill: 'rgba(255,122,0,0.06)' }} isAnimationActive={false} wrapperStyle={{ outline: 'none' }} />
@@ -192,7 +211,7 @@ export function CapitalGrowthChart({ dailyFlows }: CapitalGrowthChartProps) {
             <div className="flex items-center gap-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-2.5">
               <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span className="text-[13px] font-sans font-bold text-[#1C3F35]/75 dark:text-white/70">
-                Лучший день — {bestDay.day}-е:{' '}
+                Лучший день — {bestDay.label}:{' '}
                 <span className="font-black tabular-nums text-emerald-600 dark:text-emerald-400">
                   +{Math.round(bestDay.net).toLocaleString('ru-RU')} ₽
                 </span>
@@ -203,7 +222,7 @@ export function CapitalGrowthChart({ dailyFlows }: CapitalGrowthChartProps) {
             <div className="flex items-center gap-2.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 px-4 py-2.5">
               <TrendingDown className="w-4 h-4 text-rose-600 dark:text-rose-500 shrink-0" />
               <span className="text-[13px] font-sans font-bold text-[#1C3F35]/75 dark:text-white/70">
-                Самый затратный — {worstDay.day}-е:{' '}
+                Самый затратный — {worstDay.label}:{' '}
                 <span className="font-black tabular-nums text-rose-600 dark:text-rose-500">
                   {Math.round(worstDay.net).toLocaleString('ru-RU')} ₽
                 </span>

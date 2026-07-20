@@ -222,13 +222,15 @@ class BankOffer(Base):
 
 
 class Feedback(Base):
-    """Сообщение обратной связи от пользователя. Сохраняется для аудита; доставка письма через EmailService."""
+    """Сообщение обратной связи от пользователя. Читается владельцем в окне
+    «Обратная связь» (GET /v1/feedback/); is_read гасит счётчик новых."""
 
     __tablename__ = "feedback"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     message: Mapped[str] = mapped_column(Text, nullable=False)
+    is_read: Mapped[bool] = mapped_column(nullable=False, server_default=text("false"))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

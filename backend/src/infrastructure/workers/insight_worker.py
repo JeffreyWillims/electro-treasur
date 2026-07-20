@@ -32,8 +32,8 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
-from src.domain.models import Budget, Category, CategoryType, Notification, Transaction, User
-from src.services.cashflow_prep import get_active_user_ids, upsert_insight
+from src.domain.models import Budget, Category, Notification, Transaction, User
+from src.services.cashflow_prep import get_active_user_ids, get_category_expense, upsert_insight
 from src.services.insight_engine import (
     BudgetData,
     RuleBasedInsightEngine,
@@ -149,21 +149,9 @@ async def calculate_static_insights(
         )
 
         # Расход по названию категории за период (только expense-транзакции) →
-        # детерминированный психопаспорт поведения.
-        expense_stmt = (
-            select(Category.name, func.sum(Transaction.amount))
-            .join(Category, Transaction.category_id == Category.id)
-            .where(
-                Transaction.user_id == user_id,
-                Category.type == CategoryType.expense,
-                func.date(Transaction.executed_at) >= period_start,
-                func.date(Transaction.executed_at) <= period_end,
-            )
-            .group_by(Category.name)
-        )
-        category_expense = {
-            name: total for name, total in (await session.execute(expense_stmt)).all()
-        }
+        # детерминированный психопаспорт поведения. Агрегация общая с
+        # эндпоинтом /analytics/psychopassport — считаем одинаково.
+        category_expense = await get_category_expense(session, user_id, period_start, period_end)
         pp = build_psychopassport(category_expense, income, expense)
 
         await upsert_insight(

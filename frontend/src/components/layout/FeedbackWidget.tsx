@@ -1,14 +1,27 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import { X, Inbox } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { submitFeedback } from '@/api/client';
+import { submitFeedback, fetchFeedback } from '@/api/client';
+import { FeedbackInbox } from '@/components/layout/FeedbackInbox';
 
 export function FeedbackWidget() {
   const [isOpen, setIsOpen] = useState(false);
+  const [inboxOpen, setInboxOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Доступ к входящим решает сервер: обычному пользователю прилетит 403,
+  // и вход в окно просто не отрисуется.
+  const { data: inbox } = useQuery({
+    queryKey: ['feedback'],
+    queryFn: () => fetchFeedback(),
+    retry: false,
+    staleTime: 60_000,
+  });
+  const canReadInbox = inbox !== undefined;
 
   const handleSubmit = async () => {
     const text = message.trim();
@@ -81,20 +94,28 @@ export function FeedbackWidget() {
               </button>
             </div>
 
-            <div className="space-y-4 mb-6">
-              {/* ── EMAIL (Read Only) ── */}
-              <div>
-                <label className={labelStyle}>Кому</label>
-                <input
-                  value="ninjacodex333@gmail.com"
-                  readOnly
-                  className={cn(
-                    inputWrapperStyle,
-                    "h-12 py-0 text-[#1C3F35]/50 dark:text-white/40 cursor-not-allowed focus:bg-transparent focus:shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] focus:border-transparent dark:focus:bg-black/40 dark:focus:shadow-[inset_0_2px_6px_rgba(0,0,0,0.5)]"
-                  )}
-                />
-              </div>
+            {/* Вход во «Входящие» — только у владельца (иначе сервер отдаёт 403) */}
+            {canReadInbox && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOpen(false);
+                  setInboxOpen(true);
+                }}
+                className="w-full mb-5 flex items-center justify-between gap-3 px-4 h-12 rounded-2xl bg-black/5 dark:bg-white/5 hover:bg-[#FF7A00]/15 transition-colors group"
+              >
+                <span className="flex items-center gap-2.5 text-sm font-bold text-[#1C3F35] dark:text-white group-hover:text-[#FF7A00] transition-colors">
+                  <Inbox className="w-4 h-4" /> Входящие
+                </span>
+                {inbox.unread > 0 && (
+                  <span className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-gradient-to-br from-[#FF7A00] to-[#FFA011] text-white text-[11px] font-black flex items-center justify-center">
+                    {inbox.unread}
+                  </span>
+                )}
+              </button>
+            )}
 
+            <div className="space-y-4 mb-6">
               {/* ── TEXTAREA ── */}
               <div>
                 <label className={labelStyle}>Сообщение</label>
@@ -118,6 +139,8 @@ export function FeedbackWidget() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <FeedbackInbox isOpen={inboxOpen} onClose={() => setInboxOpen(false)} />
     </>
   );
 }

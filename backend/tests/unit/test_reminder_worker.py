@@ -59,16 +59,12 @@ async def test_remind_inactive_users_no_targets() -> None:
     send.assert_not_awaited()
 
 
-async def test_push_free_funds_skips_users_without_chat_id() -> None:
-    async def _fake_execute(_stmt: Any) -> Any:
-        # user 1 has a chat_id, user 2 does not.
-        _fake_execute.calls += 1  # type: ignore[attr-defined]
-        chat_id = 111 if _fake_execute.calls == 1 else None  # type: ignore[attr-defined]
-        result = AsyncMock()
-        result.scalar_one_or_none = lambda: chat_id
-        return result
+async def test_push_free_funds_sends_only_to_users_with_chat() -> None:
+    """Пользователи без chat_id отсекаются одним запросом-выборкой, а не в цикле.
 
-    _fake_execute.calls = 0  # type: ignore[attr-defined]
+    Регрессия на N+1: раньше рассылка делала SELECT chat_id на каждого активного
+    пользователя; теперь адресаты приходят готовой парой (user_id, chat_id).
+    """
 
     class _Session:
         async def __aenter__(self) -> _Session:
@@ -77,8 +73,6 @@ async def test_push_free_funds_skips_users_without_chat_id() -> None:
         async def __aexit__(self, *exc: object) -> bool:
             return False
 
-        execute = staticmethod(_fake_execute)
-
     funds = {
         "income": Decimal("10000"),
         "expense": Decimal("3500"),
@@ -86,7 +80,10 @@ async def test_push_free_funds_skips_users_without_chat_id() -> None:
         "envelopes": [{"name": "Еда", "remaining": Decimal("1500")}],
     }
     with (
-        patch.object(reminder_worker, "get_active_user_ids", AsyncMock(return_value=[1, 2])),
+        # Вернулся только юзер 1: юзер 2 без chat_id отфильтрован в SQL.
+        patch.object(
+            reminder_worker, "get_active_users_with_chat", AsyncMock(return_value=[(1, 111)])
+        ) as targets,
         patch.object(reminder_worker, "get_free_funds", AsyncMock(return_value=funds)) as ff,
         patch.object(
             reminder_worker.notifier, "send_message", AsyncMock(return_value=True)
@@ -95,9 +92,33 @@ async def test_push_free_funds_skips_users_without_chat_id() -> None:
         ctx = {"SessionLocal": lambda: _Session()}
         result = await reminder_worker.push_free_funds(ctx)
 
-    assert result["pushed"] == 1  # user 2 skipped (no chat_id)
+    assert result["pushed"] == 1
+    targets.assert_awaited_once()
     ff.assert_awaited_once()
     send.assert_awaited_once()
+    assert send.await_args.args[0] == 111  # ушло на chat_id из выборки
     text = send.await_args.args[1]
     assert "Свободно в этом месяце" in text
     assert "Еда" in text
+
+
+async def test_push_free_funds_no_targets_sends_nothing() -> None:
+    """Никого с чатом — ни одного обращения к деньгам и ни одной отправки."""
+
+    class _Session:
+        async def __aenter__(self) -> _Session:
+            return self
+
+        async def __aexit__(self, *exc: object) -> bool:
+            return False
+
+    with (
+        patch.object(reminder_worker, "get_active_users_with_chat", AsyncMock(return_value=[])),
+        patch.object(reminder_worker, "get_free_funds", AsyncMock()) as ff,
+        patch.object(reminder_worker.notifier, "send_message", AsyncMock()) as send,
+    ):
+        result = await reminder_worker.push_free_funds({"SessionLocal": lambda: _Session()})
+
+    assert result["pushed"] == 0
+    ff.assert_not_awaited()
+    send.assert_not_awaited()
