@@ -1,5 +1,6 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Outlet, useLocation } from 'react-router-dom';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { Toaster } from 'sonner';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { BalanceCards } from '@/components/dashboard/BalanceCards';
@@ -19,6 +20,9 @@ import { GlassDateRangePicker } from '@/components/ui/GlassDateRangePicker';
 import { queryClient } from '@/lib/queryClient';
 
 function DashboardLayout() {
+  // pathname сбрасывает границу ошибок при переходе: упавшая страница не
+  // должна держать плашку после ухода на другую.
+  const { pathname } = useLocation();
   return (
     <div className="flex min-h-screen bg-[#FDFBF7] dark:bg-[#050505] relative overflow-hidden">
       <Sidebar />
@@ -27,9 +31,13 @@ function DashboardLayout() {
           pt-16 на мобильном: фиксированная кнопка-гамбургер (top-4, ~40px)
           не должна перекрывать заголовки страниц; на десктопе её нет. */}
       <main className="flex-1 p-4 pt-16 lg:p-8 lg:pt-8 overflow-y-auto">
-        <Suspense fallback={<div className="flex items-center justify-center min-h-[50vh] font-sans font-bold text-[#FF7A00] animate-pulse text-xl">Загрузка...</div>}>
-          <Outlet />
-        </Suspense>
+        {/* Граница вокруг страницы: сбой в контенте показывает плашку,
+            а сайдбар и навигация остаются рабочими. */}
+        <ErrorBoundary label="Этот раздел" resetKey={pathname}>
+          <Suspense fallback={<div className="flex items-center justify-center min-h-[50vh] font-sans font-bold text-[#FF7A00] animate-pulse text-xl">Загрузка...</div>}>
+            <Outlet />
+          </Suspense>
+        </ErrorBoundary>
 
       </main>
     </div>
@@ -184,6 +192,7 @@ function ThemeAwareToaster() {
 
 export default function App() {
   return (
+    <ErrorBoundary label="Приложение">
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
@@ -211,5 +220,6 @@ export default function App() {
         </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
+    </ErrorBoundary>
   );
 }

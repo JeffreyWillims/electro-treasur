@@ -1,10 +1,43 @@
 /* eslint-disable */
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    VitePWA({
+      // SW обновляется сам при выходе новой сборки — без баннера «обновитесь».
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+      manifest: {
+        name: 'Citrine Vault',
+        short_name: 'Citrine',
+        description: 'Citrine Vault — управление личными финансами',
+        lang: 'ru',
+        theme_color: '#1C3F35',
+        background_color: '#FDFBF7',
+        display: 'standalone',
+        start_url: '/',
+        icons: [
+          { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+          // Тот же арт с полным дном годится и как maskable (важное в центре).
+          { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
+      },
+      workbox: {
+        // Оффлайн = только статическая оболочка. Финансовые данных (/api, /v1)
+        // намеренно НЕ кэшируем: устаревший баланс офлайн опаснее его отсутствия.
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/api/, /^\/v1/],
+        // На всякий случай — никакого рантайм-кэша для API.
+        runtimeCaching: [],
+      },
+    }),
+  ],
   resolve: {
     alias: {
       // Поддержка абсолютных путей для DDD/FSD архитектуры

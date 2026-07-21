@@ -73,6 +73,40 @@ async def test_leaderboard_sorted_desc(
     assert all(e["name"] for e in entries)
 
 
+async def test_leaderboard_total_sums_best_per_game(
+    async_client: AsyncClient,
+    auth_headers: dict[str, str],
+    test_user: User,
+) -> None:
+    """«Общий зачёт» (вид по умолчанию у клиента) = сумма лучших по каждой игре."""
+    await _submit(async_client, auth_headers, "match", 300)
+    await _submit(async_client, auth_headers, "match", 100)  # хуже — в сумму не идёт
+    await _submit(async_client, auth_headers, "piggy", 250)
+
+    resp = await async_client.get("/v1/games/leaderboard/total", headers=auth_headers)
+    assert resp.status_code == 200
+    entries = resp.json()
+
+    me = next(e for e in entries if e["name"] == "Citrine Tester")
+    # 300 (лучший match) + 250 (piggy), а не 300+100+250.
+    assert me["score"] == 550
+
+
+async def test_leaderboard_name_is_full_name(
+    async_client: AsyncClient,
+    auth_headers: dict[str, str],
+    test_user: User,
+) -> None:
+    """Клиент показывает full_name, а не e-mail целиком."""
+    await _submit(async_client, auth_headers, "match", 42)
+
+    resp = await async_client.get("/v1/games/leaderboard?game=match", headers=auth_headers)
+    names = [e["name"] for e in resp.json()]
+    assert "Citrine Tester" in names
+    # e-mail не утекает в публичный рейтинг.
+    assert not any("@" in n for n in names)
+
+
 async def test_games_require_auth(async_client: AsyncClient) -> None:
     assert (
         await async_client.post("/v1/games/score", json={"game": "match", "score": 1})

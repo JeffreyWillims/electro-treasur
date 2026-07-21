@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { PacificRide } from '@/components/ui/PacificRide';
 import { Game512 } from '@/components/games/Game512';
 import { MathSprint } from '@/components/games/MathSprint';
-import { getBest, type GameKey } from '@/lib/gameRecords';
+import { backfillLocalRecords, getBest, type GameKey } from '@/lib/gameRecords';
 import { fetchLeaderboard, fetchTotalLeaderboard } from '@/api/client';
 import { cn } from '@/lib/utils';
 
@@ -239,6 +239,12 @@ function Leaderboard() {
 
 export function GamesHub() {
   const [openGame, setOpenGame] = useState<GameId | null>(null);
+
+  // Разово догружаем на сервер рекорды, сделанные до появления рейтинга.
+  useEffect(() => {
+    void backfillLocalRecords();
+  }, []);
+
   // Рекорды перечитываются после закрытия игры (openGame → null)
   const records = Object.fromEntries(
     GAMES.map((g) => [g.id, getBest(g.recordKey)]),
