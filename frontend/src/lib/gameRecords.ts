@@ -2,15 +2,20 @@
  * Рекорды игр Citrine Arcade — localStorage + фоновая синхронизация с бэкендом
  * (рейтинг топ-100).
  *
+ * ВАЖНО: ключи localStorage неймспейснуты по id пользователя
+ * (`cv_best_<userId>_<game>`). localStorage общий на браузер, поэтому без
+ * неймспейса новый пользователь на том же браузере читал бы чужие рекорды на
+ * карточках, а синхронизация отправила бы их на его аккаунт — так у никогда не
+ * игравшего появлялись чужие очки. С неймспейсом это невозможно by design:
+ * у нового аккаунта своих ключей просто нет → рекорды = 0, синкать нечего.
+ *
  * Надёжность отправки держится на трёх опорах:
  *  1. Во время партии — дебаунс 4 с, чтобы серия рекордов не спамила API.
  *  2. При уходе со страницы (pagehide / вкладку свернули) — немедленный flush
- *     через keepalive-fetch: иначе результат, поставленный за секунду до
- *     закрытия вкладки, потерялся бы вместе с таймером дебаунса.
- *  3. При каждом открытии аркады — переотправка текущих рекордов из localStorage.
- *     upsert на бэкенде идемпотентен, поэтому это дешёвая страховка: даже если
- *     фоновая отправка во время партии не дошла (обрыв сети), рекорд окажется
- *     на сервере при следующем заходе.
+ *     через keepalive-fetch: иначе результат за секунду до закрытия вкладки
+ *     потерялся бы вместе с таймером дебаунса.
+ *  3. При открытии аркады — переотправка своих рекордов (идемпотентный upsert)
+ *     как страховка от потерянных фоновых отправок.
  */
 
 import { submitGameScore } from '@/api/client';
@@ -20,10 +25,21 @@ export type GameKey = 'match' | 'game512' | 'piggy';
 
 const GAME_KEYS: GameKey[] = ['match', 'game512', 'piggy'];
 
-const STORAGE_PREFIX = 'cv_best_';
-const USER_MARKER = 'cv_best_user';
 const SYNC_DEBOUNCE_MS = 4000;
 const SCORE_ENDPOINT = '/api/v1/games/score';
+
+// id текущего пользователя — задаётся из AuthContext при входе/восстановлении
+// сессии. Пока не задан, работаем в изолированном namespace 'anon' (до логина
+// аркада всё равно недоступна — она за ProtectedRoute).
+let currentUserId: string | null = null;
+
+export function setGameRecordsUser(userId: number | string | null | undefined): void {
+  currentUserId = userId == null ? null : String(userId);
+}
+
+function storageKey(game: GameKey): string {
+  return `cv_best_${currentUserId ?? 'anon'}_${game}`;
+}
 
 const pendingSync = new Map<GameKey, number>();
 const syncTimers = new Map<GameKey, ReturnType<typeof setTimeout>>();
@@ -92,44 +108,21 @@ if (typeof window !== 'undefined') {
   });
 }
 
-/**
- * Сбрасывает локальные рекорды при смене пользователя в одном браузере.
- *
- * Рекорды хранятся в localStorage per-browser, а не per-user. Без этой очистки
- * новый пользователь на том же браузере «наследовал» бы чужие рекорды на
- * карточках игр, а syncLocalRecords отправил бы их на его аккаунт — так у
- * никогда не игравшего появлялись чужие очки в рейтинге.
- *
- * Очистка срабатывает ТОЛЬКО когда id отличается от запомненного: у одного
- * пользователя на своём браузере рекорды переживают перезаход, как и раньше.
- */
-export function resetGameRecordsForUser(userId: number | string | null | undefined): void {
-  if (userId == null) return;
-  try {
-    const marker = String(userId);
-    if (localStorage.getItem(USER_MARKER) === marker) return;
-    for (const game of GAME_KEYS) localStorage.removeItem(STORAGE_PREFIX + game);
-    localStorage.setItem(USER_MARKER, marker);
-  } catch {
-    /* приватный режим — синхронизировать нечего */
-  }
-}
-
 export function getBest(game: GameKey): number {
   try {
-    return Number(localStorage.getItem(STORAGE_PREFIX + game)) || 0;
+    return Number(localStorage.getItem(storageKey(game))) || 0;
   } catch {
     return 0;
   }
 }
 
 /**
- * Переотправляет на сервер текущие рекорды из localStorage. Зовётся при
- * открытии аркады. Идемпотентно (upsert берёт максимум), поэтому безопасно
- * гонять на каждом заходе — это и есть страховка от потерянных фоновых отправок
- * и способ подтянуть в рейтинг игроков, чей рекорд был поставлен до его появления.
+ * Переотправляет на сервер рекорды ТЕКУЩЕГО пользователя из его namespace.
+ * Зовётся при открытии аркады. Идемпотентно (upsert берёт максимум) — страховка
+ * от потерянных фоновых отправок. У нового аккаунта своих ключей нет → выходим.
  */
 export async function syncLocalRecords(): Promise<void> {
+  if (currentUserId == null) return; // без пользователя синкать нечего
   let stored: (readonly [GameKey, number])[];
   try {
     stored = GAME_KEYS.map((game) => [game, getBest(game)] as const).filter(
@@ -152,14 +145,10 @@ export async function syncLocalRecords(): Promise<void> {
 /** Возвращает true, если установлен новый рекорд. */
 export function submitScore(game: GameKey, score: number): boolean {
   const best = getBest(game);
-  // Шлём всегда, а не только при локальном рекорде: у игроков, начавших до
-  // появления рейтинга, лучший результат уже лежит в localStorage, и по
-  // условию `score > best` он не ушёл бы на сервер никогда. Лишнее отсеет
-  // upsert — он обновляет строку только при более высоком результате.
   queueSync(game, score);
   if (score > best) {
     try {
-      localStorage.setItem(STORAGE_PREFIX + game, String(score));
+      localStorage.setItem(storageKey(game), String(score));
     } catch {
       /* приватный режим — рекорд просто не сохранится */
     }
