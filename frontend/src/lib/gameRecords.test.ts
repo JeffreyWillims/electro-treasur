@@ -97,6 +97,31 @@ describe('syncLocalRecords', () => {
   });
 });
 
+describe('resetGameRecordsForUser', () => {
+  it('чистит локальные рекорды при смене пользователя', async () => {
+    localStorage.setItem('cv_best_match', '1170');
+    localStorage.setItem('cv_best_game512', '3526');
+    localStorage.setItem('cv_best_user', '1'); // прошлый пользователь
+    const { resetGameRecordsForUser, getBest } = await import('@/lib/gameRecords');
+
+    resetGameRecordsForUser(2); // залогинился другой пользователь
+
+    expect(getBest('match')).toBe(0);
+    expect(getBest('game512')).toBe(0);
+    expect(localStorage.getItem('cv_best_user')).toBe('2');
+  });
+
+  it('сохраняет рекорды, если пользователь тот же', async () => {
+    localStorage.setItem('cv_best_match', '1170');
+    localStorage.setItem('cv_best_user', '7');
+    const { resetGameRecordsForUser, getBest } = await import('@/lib/gameRecords');
+
+    resetGameRecordsForUser(7); // тот же пользователь
+
+    expect(getBest('match')).toBe(1170);
+  });
+});
+
 describe('flushPendingSync', () => {
   it('немедленно шлёт накопленное через keepalive при уходе со страницы', async () => {
     const fetchMock = vi.fn(() => Promise.resolve({ ok: true } as Response));
