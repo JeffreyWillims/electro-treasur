@@ -57,8 +57,11 @@ export function BalanceCards({
     Math.round(current).toLocaleString('ru-RU')
   );
 
+  // Высоту анимирует только framer (см. motion.div ниже). У контейнера
+  // переходим лишь padding: transition-all тянул ещё и min-height по своей
+  // кривой 500ms против 350ms у контента — карточка дёргалась.
   return (
-    <div className={`relative bg-white/40 dark:bg-[#111111]/40 backdrop-blur-3xl border border-black/5 dark:border-white/10 shadow-2xl rounded-[2.5rem] w-full flex flex-col overflow-hidden transition-all duration-500 z-10 ${collapsed ? 'p-5 md:p-6' : 'p-8 md:p-10 min-h-[380px]'}`}>
+    <div className={`relative bg-white/40 dark:bg-[#111111]/40 backdrop-blur-3xl border border-black/5 dark:border-white/10 shadow-2xl rounded-[2.5rem] w-full flex flex-col overflow-hidden transition-[padding] duration-300 ease-in-out z-10 ${collapsed ? 'p-5 md:p-6' : 'p-8 md:p-10'}`}>
 
       {/* ── 1. ШАПКА (клик — свернуть/развернуть) ── */}
       <button
@@ -124,11 +127,13 @@ export function BalanceCards({
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.35, ease: 'easeInOut' }}
-            className="overflow-hidden flex flex-col flex-1 w-full"
+            /* Без flex-1: flex-grow растягивал блок обратно и боролся с
+               инлайновым height от framer — сворачивание срывалось. */
+            className="overflow-hidden flex flex-col w-full"
           >
 
       {/* ── 2. МАТРИЦА БАЛАНСОВ ── */}
-      <div className="w-full mt-auto pt-4">
+      <div className="w-full pt-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-x-12 gap-y-10 md:items-stretch">
 
           {/* CAPITAL */}

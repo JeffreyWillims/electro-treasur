@@ -149,6 +149,7 @@ export function Game512({ onClose }: { onClose: () => void }) {
   const [lastGain, setLastGain] = useState<{ amount: number; key: number } | null>(null);
 
   const tilesRef = useRef<Tile[]>(tiles); // логическое поле для расчёта хода (без промежуточной фазы)
+  const winShownRef = useRef(false); // купюра собрана — поздравляем один раз за партию
   const animatingRef = useRef(false);
   const timeoutRef = useRef<number | null>(null);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
@@ -177,7 +178,12 @@ export function Game512({ onClose }: { onClose: () => void }) {
         const final = extra ? [...res.settled, extra] : res.settled;
         tilesRef.current = final;
         setTiles(final);
-        if (final.some((t) => t.value >= GOAL)) setWon(true);
+        // Собранная купюра остаётся на поле, поэтому проверка сработала бы на
+        // каждом следующем ходу и оверлей возвращался бы после «Дальше».
+        if (!winShownRef.current && final.some((t) => t.value >= GOAL)) {
+          winShownRef.current = true;
+          setWon(true);
+        }
         if (!canMove(final)) setOver(true);
         animatingRef.current = false;
       }, SLIDE_MS);
@@ -212,6 +218,7 @@ export function Game512({ onClose }: { onClose: () => void }) {
     animatingRef.current = false;
     const fresh = initialTiles();
     tilesRef.current = fresh;
+    winShownRef.current = false;
     setTiles(fresh);
     setScore(0);
     setWon(false);

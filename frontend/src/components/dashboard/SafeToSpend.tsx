@@ -33,9 +33,18 @@ export function SafeToSpend() {
     );
   }
 
-  const expenseRows = dashboard?.rows.filter((r) => Number(r.planned) > 0) || [];
-  const totalPlanned = expenseRows.reduce((acc: number, row: CategoryRowSchema) => acc + Number(row.planned), 0);
-  const overspent = expenseRows.reduce((acc: number, row: CategoryRowSchema) => acc + Math.max(0, Number(row.fact) - Number(row.planned)), 0);
+  // Берём ВСЕ расходные строки, а не только с планом: траты в категориях без
+  // конверта — тоже потраченные деньги. Раньше они отфильтровывались, и без
+  // единого конверта лимит вырождался в «весь доход ÷ дни».
+  const expenseRows = (dashboard?.rows || []).filter((r) => r.type !== 'income');
+
+  // Уже потрачено с начала месяца — фактические расходы за период.
+  const spent = Number(dashboard?.period_expense) || 0;
+  // Ещё не потраченная часть лимитов конвертов: эти деньги зарезервированы.
+  const committed = expenseRows.reduce(
+    (acc: number, row: CategoryRowSchema) => acc + Math.max(0, Number(row.planned) - Number(row.fact)),
+    0,
+  );
 
   // 🔥 ИСПРАВЛЕНИЕ МСК ВРЕМЕНИ (BUG-3)
   const today = getMoscowDate();
@@ -43,7 +52,7 @@ export function SafeToSpend() {
   const daysLeft = Math.max(0, daysInMonth - today.getDate() + 1);
 
   const monthlyIncome = Number(user?.monthly_income) || Number(dashboard?.period_income) || 0;
-  const limit = daysLeft > 0 ? Math.max(0, (monthlyIncome - totalPlanned - overspent) / daysLeft) : 0;
+  const limit = daysLeft > 0 ? Math.max(0, (monthlyIncome - spent - committed) / daysLeft) : 0;
 
   return (
     <div className="w-full bg-white/40 dark:bg-[#111111]/40 backdrop-blur-3xl border border-black/5 dark:border-white/10 rounded-[2.5rem] p-8 md:p-12 relative overflow-hidden shadow-2xl transition-all duration-500 z-30">
@@ -88,7 +97,9 @@ export function SafeToSpend() {
           <span className="text-sm md:text-base font-sans font-extrabold uppercase tracking-widest text-[#1C3F35] dark:text-emerald-500">
             ₽ / День
           </span>
-          <p className="text-[13px] font-sans font-semibold text-[#1C3F35]/55 dark:text-white/45">
+          {/* Персиковый вместо серого. Тона разные по темам: на светлом фоне
+              нужен глубокий персик ради читаемости 13px, на тёмном — светлый. */}
+          <p className="text-[13px] font-sans font-semibold text-[#B85F35] dark:text-[#FFB58F]">
             на каждый из {daysLeft} {daysLeft === 1 ? 'дня' : 'дней'} до конца месяца — трать
             спокойно, план не пострадает 🛡️
           </p>
@@ -120,13 +131,13 @@ export function SafeToSpend() {
                   <dd>{Math.round(monthlyIncome).toLocaleString('ru-RU')} ₽</dd>
                 </div>
                 <div className="flex justify-between gap-3">
-                  <dt className="text-[#1C3F35]/60 dark:text-white/50 font-medium">− лимиты конвертов</dt>
-                  <dd>−{Math.round(totalPlanned).toLocaleString('ru-RU')} ₽</dd>
+                  <dt className="text-[#1C3F35]/60 dark:text-white/50 font-medium">− уже потрачено</dt>
+                  <dd>−{Math.round(spent).toLocaleString('ru-RU')} ₽</dd>
                 </div>
-                {overspent > 0 && (
-                  <div className="flex justify-between gap-3 text-rose-600 dark:text-rose-400">
-                    <dt className="font-medium">− перерасходы</dt>
-                    <dd>−{Math.round(overspent).toLocaleString('ru-RU')} ₽</dd>
+                {committed > 0 && (
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-[#1C3F35]/60 dark:text-white/50 font-medium">− остаток конвертов</dt>
+                    <dd>−{Math.round(committed).toLocaleString('ru-RU')} ₽</dd>
                   </div>
                 )}
                 <div className="flex justify-between gap-3 border-t border-black/10 dark:border-white/10 pt-1.5">
