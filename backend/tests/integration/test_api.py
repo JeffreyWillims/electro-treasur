@@ -160,12 +160,8 @@ class TestCreateTransaction:
         db_session.add(foreign_cat)
         await db_session.flush()
 
-        payload = TransactionCreateFactory.build_json(
-            category_id=foreign_cat.id, amount="100.00"
-        )
-        response = await async_client.post(
-            "/v1/transactions/", json=payload, headers=auth_headers
-        )
+        payload = TransactionCreateFactory.build_json(category_id=foreign_cat.id, amount="100.00")
+        response = await async_client.post("/v1/transactions/", json=payload, headers=auth_headers)
         assert response.status_code == 404, response.text
 
 
