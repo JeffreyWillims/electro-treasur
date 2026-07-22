@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { fetchMe, login as apiLogin, logout as apiLogout, register as apiRegister } from '@/api/client';
 import { queryClient } from '@/lib/queryClient';
-import { resetGameRecordsForUser } from '@/lib/gameRecords';
+import { setGameRecordsUser } from '@/lib/gameRecords';
 
 interface User {
   id: number;
@@ -33,8 +33,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshUser = useCallback(async () => {
     try {
       const userData = await fetchMe();
+      // Синхронно, ДО рендера игр: карточки читают рекорды из namespace юзера.
+      setGameRecordsUser(userData.id);
       setUser(userData);
     } catch {
+      setGameRecordsUser(null);
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -45,12 +48,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshUser();
   }, [refreshUser]);
 
-  // Смена пользователя в одном браузере → чистим локальные игровые рекорды,
-  // чтобы новый профиль не унаследовал чужие очки (и не отправил их на сервер).
-  useEffect(() => {
-    if (user) resetGameRecordsForUser(user.id);
-  }, [user?.id]);
-
   const login = async (email: string, pass: string) => {
     // ВАЖНО: очищаем ВСЕ кэшированные данные предыдущей сессии пользователя
     // Это предотвращает утечку данных между аккаунтами
@@ -58,6 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     await apiLogin(email, pass); // бэкенд ставит httpOnly-cookie
     const userData = await fetchMe(); // подтягиваем профиль → пользователь залогинен
+    setGameRecordsUser(userData.id); // рекорды игр — из namespace этого юзера
     setUser(userData);
   };
 
@@ -75,6 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // Даже если запрос не прошёл — локально разлогиниваемся.
     }
+    setGameRecordsUser(null);
     setUser(null);
     // ВАЖНО: очищаем все кэшированные данные запросов, чтобы предотвратить утечку
     queryClient.clear();
