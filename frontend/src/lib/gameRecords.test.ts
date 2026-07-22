@@ -67,33 +67,49 @@ describe('submitScore', () => {
   });
 });
 
-describe('backfillLocalRecords', () => {
-  it('единожды догружает непустые рекорды из localStorage и обновляет рейтинг', async () => {
+describe('syncLocalRecords', () => {
+  it('отправляет непустые рекорды из localStorage и обновляет рейтинг', async () => {
     localStorage.setItem('cv_best_match', '150');
     localStorage.setItem('cv_best_piggy', '80');
     // cv_best_game512 отсутствует → 0 → не отправляем.
 
-    const { backfillLocalRecords } = await import('@/lib/gameRecords');
+    const { syncLocalRecords } = await import('@/lib/gameRecords');
     const { submitGameScore } = await import('@/api/client');
     const { queryClient } = await import('@/lib/queryClient');
 
-    await backfillLocalRecords();
+    await syncLocalRecords();
 
     expect(submitGameScore).toHaveBeenCalledTimes(2);
     expect(submitGameScore).toHaveBeenCalledWith('match', 150);
     expect(submitGameScore).toHaveBeenCalledWith('piggy', 80);
-    expect(localStorage.getItem('cv_best_backfilled')).toBe('1');
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['leaderboard'] });
   });
 
-  it('повторный вызов ничего не шлёт (флаг уже стоит)', async () => {
+  it('переотправляет при каждом вызове (идемпотентно, страховка от потерь)', async () => {
     localStorage.setItem('cv_best_match', '150');
-    const { backfillLocalRecords } = await import('@/lib/gameRecords');
+    const { syncLocalRecords } = await import('@/lib/gameRecords');
     const { submitGameScore } = await import('@/api/client');
 
-    await backfillLocalRecords();
-    await backfillLocalRecords();
+    await syncLocalRecords();
+    await syncLocalRecords();
 
-    expect(submitGameScore).toHaveBeenCalledTimes(1);
+    expect(submitGameScore).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('flushPendingSync', () => {
+  it('немедленно шлёт накопленное через keepalive при уходе со страницы', async () => {
+    const fetchMock = vi.fn(() => Promise.resolve({ ok: true } as Response));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { submitScore, flushPendingSync } = await import('@/lib/gameRecords');
+    submitScore('match', 300); // ставит рекорд в очередь дебаунса
+    flushPendingSync(); // имитируем pagehide до срабатывания таймера
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/games/score',
+      expect.objectContaining({ keepalive: true, method: 'POST' }),
+    );
+    vi.unstubAllGlobals();
   });
 });

@@ -57,6 +57,9 @@ async def get_current_user(request: Request, db: AsyncSession = Depends(get_db))
     user = await get_user_by_email(db, email=token_data.email)
     if user is None:
         raise credentials_exception
+    # Прокидываем id в state, чтобы access-log-мидлварь связала запрос с
+    # пользователем (иначе в логах всегда "anonymous").
+    request.state.user_id = user.id
     return user
 
 

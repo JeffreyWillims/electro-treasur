@@ -116,7 +116,11 @@ export function Sidebar() {
           "bg-white/40 dark:bg-[#111111]/40",
           "backdrop-blur-3xl backdrop-saturate-150",
           "shadow-2xl",
-          "transition-all duration-500",
+          // Только transform, а не transition-all: иначе браузер на каждом
+          // перерисовывании (когда main скроллится за backdrop-filter) анимирует
+          // сам блюр — отсюда белое мерцание края. transform-gpu выносит панель
+          // на отдельный слой, чтобы backdrop-filter не перерастрировался при скролле.
+          "transition-transform duration-500 transform-gpu [will-change:transform]",
           // Мобильная версия
           "fixed lg:relative",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
