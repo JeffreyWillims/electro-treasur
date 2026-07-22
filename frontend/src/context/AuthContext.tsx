@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { fetchMe, login as apiLogin, logout as apiLogout, register as apiRegister } from '@/api/client';
 import { queryClient } from '@/lib/queryClient';
+import { resetGameRecordsForUser } from '@/lib/gameRecords';
 
 interface User {
   id: number;
@@ -9,7 +10,7 @@ interface User {
   full_name: string | null;
   phone: string | null;
   monthly_income: number | null;
-  role: 'user' | 'consultant';
+  role: 'user' | 'consultant' | 'admin';
 }
 
 interface AuthContextType {
@@ -43,6 +44,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     refreshUser();
   }, [refreshUser]);
+
+  // Смена пользователя в одном браузере → чистим локальные игровые рекорды,
+  // чтобы новый профиль не унаследовал чужие очки (и не отправил их на сервер).
+  useEffect(() => {
+    if (user) resetGameRecordsForUser(user.id);
+  }, [user?.id]);
 
   const login = async (email: string, pass: string) => {
     // ВАЖНО: очищаем ВСЕ кэшированные данные предыдущей сессии пользователя

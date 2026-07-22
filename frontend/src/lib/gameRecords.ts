@@ -21,6 +21,7 @@ export type GameKey = 'match' | 'game512' | 'piggy';
 const GAME_KEYS: GameKey[] = ['match', 'game512', 'piggy'];
 
 const STORAGE_PREFIX = 'cv_best_';
+const USER_MARKER = 'cv_best_user';
 const SYNC_DEBOUNCE_MS = 4000;
 const SCORE_ENDPOINT = '/api/v1/games/score';
 
@@ -89,6 +90,29 @@ if (typeof window !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') flushPendingSync();
   });
+}
+
+/**
+ * Сбрасывает локальные рекорды при смене пользователя в одном браузере.
+ *
+ * Рекорды хранятся в localStorage per-browser, а не per-user. Без этой очистки
+ * новый пользователь на том же браузере «наследовал» бы чужие рекорды на
+ * карточках игр, а syncLocalRecords отправил бы их на его аккаунт — так у
+ * никогда не игравшего появлялись чужие очки в рейтинге.
+ *
+ * Очистка срабатывает ТОЛЬКО когда id отличается от запомненного: у одного
+ * пользователя на своём браузере рекорды переживают перезаход, как и раньше.
+ */
+export function resetGameRecordsForUser(userId: number | string | null | undefined): void {
+  if (userId == null) return;
+  try {
+    const marker = String(userId);
+    if (localStorage.getItem(USER_MARKER) === marker) return;
+    for (const game of GAME_KEYS) localStorage.removeItem(STORAGE_PREFIX + game);
+    localStorage.setItem(USER_MARKER, marker);
+  } catch {
+    /* приватный режим — синхронизировать нечего */
+  }
 }
 
 export function getBest(game: GameKey): number {
