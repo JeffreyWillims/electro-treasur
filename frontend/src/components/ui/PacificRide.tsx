@@ -261,7 +261,7 @@ const GameCell = React.memo(({ cell, isSelected, isBadTarget, onClick }: CellPro
         boxShadow: matchFlash ? '0 0 12px rgba(255,122,0,0.3)' : 'none',
         position: 'relative', overflow: 'hidden',
       }}
-      className="aspect-square flex items-center justify-center rounded-lg text-base font-black font-mono select-none outline-none focus:outline-none"
+      className="aspect-square flex items-center justify-center rounded-xl text-base font-black font-mono select-none outline-none focus:outline-none"
     >
       {cell.crossed && !cell.justMatched ? null : cell.value}
       <AnimatePresence>
@@ -449,19 +449,22 @@ function NumberMatchGame() {
 
       <div className="absolute inset-0 flex items-center justify-center z-[50] pointer-events-none p-4">
         <motion.div
-          className="pointer-events-auto w-full max-w-sm md:max-w-md relative"
+          className="pointer-events-auto w-full max-w-md md:max-w-lg relative"
           animate={panelShake ? { x: [-7, 7, -5, 5, -3, 3, 0] } : { x: 0 }}
           transition={{ duration: 0.38, ease: 'easeOut' }}
         >
           <div
-            className="rounded-[2.5rem] p-6 sm:p-8 flex flex-col items-center gap-4 relative overflow-hidden"
+            className="rounded-[2.75rem] p-6 sm:p-9 flex flex-col items-center gap-4 relative overflow-hidden"
             style={{
-              background: 'rgba(255, 255, 255, 0.95)',
+              // Не плоский белый, а мягкий градиент в тёплый крем — даёт объём.
+              background: 'linear-gradient(180deg, #ffffff 0%, #FDF6EC 100%)',
               backdropFilter: 'blur(28px)',
               WebkitBackdropFilter: 'blur(28px)',
+              // Глубокая амбиентная тень в фирменный зелёный + верхний блик и
+              // нижнее внутреннее свечение — карточка «приподнимается» над фоном.
               boxShadow: combo >= 2
-                ? '0 32px 72px rgba(0,0,0,0.25), 0 0 46px rgba(255,122,0,0.4), inset 0 2px 0 rgba(255,255,255,1)'
-                : '0 32px 72px rgba(0,0,0,0.25), inset 0 2px 0 rgba(255,255,255,1)',
+                ? '0 44px 96px -24px rgba(28,63,53,0.50), 0 0 50px rgba(255,122,0,0.35), inset 0 2px 0 rgba(255,255,255,1), inset 0 -26px 48px -28px rgba(255,122,0,0.20)'
+                : '0 44px 96px -24px rgba(28,63,53,0.50), inset 0 2px 0 rgba(255,255,255,1), inset 0 -26px 48px -28px rgba(28,63,53,0.12)',
               transition: 'box-shadow 0.4s ease',
             }}
           >
@@ -564,7 +567,7 @@ function NumberMatchGame() {
                   transition={{ duration: 0.22 }}
                   className="w-full flex flex-col gap-4"
                 >
-                  <div className="w-full max-h-[40vh] overflow-y-auto scrollbar-none pr-1">
+                  <div className="w-full max-h-[46vh] overflow-y-auto scrollbar-none pr-1">
                     <div className="grid gap-[3px]" style={{ gridTemplateColumns: `repeat(${COLS}, 1fr)` }}>
                       {cellElements}
                     </div>
