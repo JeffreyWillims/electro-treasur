@@ -70,7 +70,7 @@ export function BalanceCards({
         aria-expanded={!collapsed}
         className={`flex justify-between items-start w-full relative z-10 text-left group cursor-pointer ${collapsed ? '' : 'mb-8'}`}
       >
-        <div className="flex items-baseline gap-4 min-w-0">
+        <div className={`flex items-baseline gap-x-4 gap-y-1 min-w-0 ${collapsed ? 'flex-wrap' : ''}`}>
           <h2 className="text-2xl md:text-3xl font-sans font-extrabold tracking-tight text-[#1C3F35] dark:text-white leading-none shrink-0">
             Общее состояние
           </h2>
@@ -81,20 +81,21 @@ export function BalanceCards({
                 initial={{ opacity: 0, x: -8 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -8 }}
-                className="flex items-baseline gap-3 min-w-0 truncate"
+                className="flex flex-wrap items-baseline gap-x-3 gap-y-1 min-w-0"
               >
-                {/* Капитал виден и на телефоне; доход/расход — с sm и шире */}
+                {/* Капитал + доход + расход видны и на телефоне; при нехватке
+                    ширины перенос на новую строку, а не скрытие цифр. */}
                 <motion.span className="text-lg sm:text-xl md:text-2xl font-sans font-black tabular-nums tracking-tighter text-[#1C3F35] dark:text-white">
                   {displayTotal}
                 </motion.span>
                 <span className="text-xs font-sans font-bold uppercase tracking-widest text-[#1C3F35] dark:text-white opacity-40">RUB</span>
                 {hasIncomeData && (
-                  <span className="hidden sm:inline text-sm font-sans font-black tabular-nums text-emerald-600 dark:text-emerald-400">
+                  <span className="text-sm font-sans font-black tabular-nums text-emerald-600 dark:text-emerald-400">
                     +{Math.round(monthlyIncome).toLocaleString('ru-RU')}
                   </span>
                 )}
                 {hasExpenseData && (
-                  <span className="hidden sm:inline text-sm font-sans font-black tabular-nums text-rose-600 dark:text-rose-500">
+                  <span className="text-sm font-sans font-black tabular-nums text-rose-600 dark:text-rose-500">
                     -{Math.round(monthlyExpense).toLocaleString('ru-RU')}
                   </span>
                 )}

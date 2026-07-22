@@ -29,8 +29,8 @@ const TILE_STYLE: Record<number, string> = {
   32: 'bg-[#1C3F35] text-white',
   64: 'bg-[#FFB255] text-[#3A2100]',
   128: 'bg-[#FF9A2E] text-white',
-  256: 'bg-[#FF7A00] text-white shadow-[0_0_18px_rgba(255,122,0,0.5)]',
-  512: 'bg-gradient-to-br from-[#FF7A00] to-[#FFA011] text-white shadow-[0_0_28px_rgba(255,122,0,0.8)]',
+  256: 'bg-[#FF7A00] text-white shadow-[0_4px_14px_-4px_rgba(255,122,0,0.35)]',
+  512: 'bg-gradient-to-br from-[#FF8A1E] to-[#FFB255] text-white shadow-[0_6px_20px_-6px_rgba(255,140,0,0.45)]',
 };
 
 // Устойчивые id плиток нужны только для реконсиляции React — важна лишь уникальность.
@@ -334,7 +334,7 @@ export function Game512({ onClose }: { onClose: () => void }) {
           <div className="absolute inset-3 grid grid-cols-4 grid-rows-4">
             {Array.from({ length: SIZE * SIZE }, (_, i) => (
               <div key={i} className="p-1.5">
-                <div className="w-full h-full rounded-xl bg-white/5" />
+                <div className="w-full h-full rounded-2xl bg-white/5" />
               </div>
             ))}
           </div>
@@ -353,13 +353,14 @@ export function Game512({ onClose }: { onClose: () => void }) {
                   transition={{
                     x: { duration: SLIDE_MS / 1000, ease: 'easeInOut' },
                     y: { duration: SLIDE_MS / 1000, ease: 'easeInOut' },
+                    // Мягкое появление вместо резкого пружинного «щелчка».
                     scale: pop
-                      ? { type: 'spring', stiffness: 520, damping: 16 }
-                      : { duration: 0.1 },
+                      ? { type: 'spring', stiffness: 300, damping: 24 }
+                      : { duration: 0.12 },
                   }}
                 >
                   <div
-                    className={`w-full h-full rounded-xl flex flex-col items-center justify-center font-sans font-extrabold ${TILE_STYLE[t.value] || TILE_STYLE[GOAL]}`}
+                    className={`w-full h-full rounded-2xl flex flex-col items-center justify-center font-sans font-extrabold ${TILE_STYLE[t.value] || TILE_STYLE[GOAL]}`}
                   >
                     <span className={t.value >= 128 ? 'text-2xl' : 'text-xl'}>{t.value}</span>
                     <span className="text-[9px] font-mono opacity-70 -mt-0.5">₽</span>
