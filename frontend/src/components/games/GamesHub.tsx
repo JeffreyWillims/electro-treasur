@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { PacificRide } from '@/components/ui/PacificRide';
 import { Game512 } from '@/components/games/Game512';
 import { MathSprint } from '@/components/games/MathSprint';
-import { backfillLocalRecords, getBest, type GameKey } from '@/lib/gameRecords';
+import { syncLocalRecords, getBest, type GameKey } from '@/lib/gameRecords';
 import { fetchLeaderboard, fetchTotalLeaderboard } from '@/api/client';
 import { cn } from '@/lib/utils';
 
@@ -240,9 +240,10 @@ function Leaderboard() {
 export function GamesHub() {
   const [openGame, setOpenGame] = useState<GameId | null>(null);
 
-  // Разово догружаем на сервер рекорды, сделанные до появления рейтинга.
+  // Переотправляем рекорды из localStorage при каждом открытии аркады —
+  // страховка от потерянных фоновых отправок (upsert идемпотентен).
   useEffect(() => {
-    void backfillLocalRecords();
+    void syncLocalRecords();
   }, []);
 
   // Рекорды перечитываются после закрытия игры (openGame → null)

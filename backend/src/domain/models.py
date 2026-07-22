@@ -55,6 +55,9 @@ class UserRole(enum.StrEnum):
 
     user = "user"
     consultant = "consultant"
+    # ADMIN добавлен вслед за значением user_role_enum в БД: без него загрузка
+    # пользователя-админа падала на маппинге (LookupError → 500 на логине).
+    admin = "admin"
 
 
 class User(Base):

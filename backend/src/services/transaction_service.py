@@ -18,8 +18,10 @@ import contextlib
 from datetime import date
 from decimal import Decimal
 
+from fastapi import HTTPException, status
 from redis.asyncio import Redis
 from sqlalchemy import func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -31,6 +33,24 @@ from src.schemas.transaction import (
     TransactionResponse,
     TransactionUpdate,
 )
+
+
+async def _ensure_category_owned(session: AsyncSession, user_id: int, category_id: int) -> None:
+    """Категория обязана принадлежать пользователю.
+
+    Иначе транзакцию можно привязать к чужой категории (любой существующий id
+    проходит по FK) — это межтенантная порча данных и утечка чужого имени
+    категории через category_name/аналитику. v2-эндпоинт такую проверку делает,
+    v1 — исторически нет.
+    """
+    owned = await session.scalar(
+        select(Category.id).where(Category.id == category_id, Category.user_id == user_id)
+    )
+    if owned is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Категория не найдена",
+        )
 
 
 async def create_transaction(
@@ -64,6 +84,9 @@ async def create_transaction(
         if cached:
             return TransactionResponse.model_validate_json(cached)
 
+    # Категория должна быть своей — до вставки.
+    await _ensure_category_owned(session, user_id, payload.category_id)
+
     # ── Шаг 2: INSERT в БД — O(1) амортизированно (B-Tree по PK) ────────
     tx = Transaction(
         user_id=user_id,
@@ -76,7 +99,20 @@ async def create_transaction(
         idempotency_key=idempotency_key,
     )
     session.add(tx)
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError:
+        # Гонка: два запроса с одним Idempotency-Key проскочили мимо Redis-проверки
+        # и оба дошли до INSERT. UNIQUE ловит дубль — возвращаем уже записанную
+        # транзакцию идемпотентно, а не отдаём 500 (как делает v2-путь).
+        await session.rollback()
+        if idempotency_key:
+            existing = await session.scalar(
+                select(Transaction).where(Transaction.idempotency_key == idempotency_key)
+            )
+            if existing is not None:
+                return TransactionResponse.model_validate(existing)
+        raise
     await session.refresh(tx)
 
     response = TransactionResponse.model_validate(tx)
@@ -193,6 +229,9 @@ async def update_transaction(
         return None
 
     update_data = payload.model_dump(exclude_unset=True)
+    # Смена категории — только на свою (та же защита, что и при создании).
+    if "category_id" in update_data:
+        await _ensure_category_owned(session, user_id, update_data["category_id"])
     for key, value in update_data.items():
         setattr(tx, key, value)
 

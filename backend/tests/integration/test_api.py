@@ -133,6 +133,41 @@ class TestCreateTransaction:
 
         assert response.status_code == 201, f"Factory-generated payload rejected: {response.text}"
 
+    async def test_cannot_attach_transaction_to_foreign_category(
+        self,
+        async_client: AsyncClient,
+        auth_headers: dict[str, str],
+        db_session: AsyncSession,
+    ) -> None:
+        """Межтенантная защита: нельзя создать транзакцию в чужой категории.
+
+        Раньше v1 брал category_id из payload без проверки владельца — любой
+        существующий id проходил по FK, что давало порчу данных и утечку чужого
+        имени категории. Теперь — 404.
+        """
+        from argon2 import PasswordHasher
+
+        other = User(
+            email="foreign-owner@citrine.dev",
+            hashed_password=PasswordHasher().hash("x"),
+            full_name="Foreign Owner",
+        )
+        db_session.add(other)
+        await db_session.flush()
+        foreign_cat = Category(
+            user_id=other.id, name="Чужая", type=CategoryType.expense, icon="#000"
+        )
+        db_session.add(foreign_cat)
+        await db_session.flush()
+
+        payload = TransactionCreateFactory.build_json(
+            category_id=foreign_cat.id, amount="100.00"
+        )
+        response = await async_client.post(
+            "/v1/transactions/", json=payload, headers=auth_headers
+        )
+        assert response.status_code == 404, response.text
+
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # NEGATIVE TESTS — Pydantic V2 validation

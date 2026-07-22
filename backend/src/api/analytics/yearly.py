@@ -6,10 +6,11 @@ from typing import Any
 
 from arq.connections import ArqRedis, RedisSettings, create_pool
 from arq.jobs import Job, JobResult
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from src.config import settings
+from src.core.rate_limit import limiter
 from src.dependencies import get_current_user
 from src.domain.models import User
 
@@ -51,7 +52,9 @@ class YearlyTaskStatusResponse(BaseModel):
     status_code=status.HTTP_202_ACCEPTED,
     summary="Enqueue yearly analytics report",
 )
+@limiter.limit("10/minute")
 async def enqueue_yearly_analytics(
+    request: Request,
     body: YearlyAnalyticsRequest,
     current_user: User = Depends(get_current_user),
 ) -> YearlyEnqueueResponse:
