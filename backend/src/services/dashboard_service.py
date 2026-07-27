@@ -63,11 +63,16 @@ async def get_monthly_dashboard(
     # граничные строки из-за tz-дрейфа строго отсекаются day-index-гардом в Step 4.
     range_start = datetime.combine(start_date, time.min, tzinfo=UTC)
     range_end = datetime.combine(end_date + timedelta(days=1), time.min, tzinfo=UTC)
+    # День бакетим в ЯВНОМ UTC. executed_at — timestamptz; голый func.date(executed_at)
+    # выполняется в TimeZone сервера БД, и если Postgres развёрнут не в UTC, строки
+    # у границы суток попадали в чужой день и расходились с UTC-границами WHERE.
+    # timezone('UTC', ts) приводит к UTC-стенке независимо от настройки сервера.
+    exec_date_utc = func.date(func.timezone("UTC", Transaction.executed_at))
     stmt_tx = (
         select(
             Transaction.category_id,
             Category.type,
-            func.date(Transaction.executed_at).label("exec_date"),
+            exec_date_utc.label("exec_date"),
             func.sum(Transaction.amount).label("total"),
         )
         .join(Category, Transaction.category_id == Category.id)
@@ -76,7 +81,7 @@ async def get_monthly_dashboard(
             Transaction.executed_at >= range_start,
             Transaction.executed_at < range_end,
         )
-        .group_by(Transaction.category_id, Category.type, func.date(Transaction.executed_at))
+        .group_by(Transaction.category_id, Category.type, exec_date_utc)
     )
     tx_result = await session.execute(stmt_tx)
     tx_rows = tx_result.all()  # list[(category_id, type, exec_date, total)]
@@ -114,12 +119,12 @@ async def get_monthly_dashboard(
     # ── Шаг 4: агрегация в матрицу дней за один проход O(N) ─────────────
     #   matrix[category_id][day_index] = Decimal
     #
-    #   Защита от часового пояса: func.date(executed_at) выполняется в часовом
-    #   поясе сервера БД (UTC). Локальная транзакция UTC+3 в 00:30 по местному
-    #   времени = 21:30 предыдущего дня по UTC → её date() сдвигается на день назад,
-    #   давая delta_days = -1 или >= day_count.
-    #   Используем `continue` (а не отсечение по границам), чтобы такие строки
-    #   не портили корзину 0 или N-1.
+    #   Защита от часового пояса (подстраховка): exec_date теперь считается в
+    #   явном UTC (func.timezone('UTC', ...)) и совпадает с UTC-границами WHERE,
+    #   поэтому delta_days вне [0; day_count) в норме не встречается. Guard оставлен
+    #   на случай будущих правок фильтра/границ: строку с delta_days = -1 или
+    #   >= day_count молча пропускаем (`continue`), чтобы не портить корзину 0/N-1
+    #   (в total_balance_all_time из Шага 0 она всё равно учтена).
     matrix: dict[int, list[Decimal]] = {}
     fact_totals: dict[int, Decimal] = {}
     period_income = Decimal("0.00")

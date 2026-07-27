@@ -23,9 +23,10 @@ from typing import Any
 
 from arq import cron
 from arq.connections import ArqRedis, RedisSettings, create_pool
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from src.config import settings
+from src.database import engine as db_engine
 from src.infrastructure.workers.import_worker import parse_statement
 from src.infrastructure.workers.insight_worker import (
     build_insight_for_period,
@@ -115,16 +116,22 @@ async def schedule_monthly_analysis(ctx: dict[str, Any]) -> dict[str, Any]:
 async def startup(ctx: dict[str, Any]) -> None:
     """arq worker startup hook — DB session factory + arq pool for cron fan-out."""
     ctx["arq_pool"] = await create_pool(RedisSettings.from_dsn(settings.arq_redis_url))
-    engine = create_async_engine(settings.database_url)
-    ctx["SessionLocal"] = async_sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+    # Переиспользуем общий engine из src.database: он единственный сконфигурирован
+    # под PgBouncer (statement_cache_size=0, pool_pre_ping). Собственный
+    # create_async_engine(database_url) без этих args ловил на проде плавающие
+    # «prepared statement "__asyncpg_stmt__" does not exist» и утекал (не закрывался).
+    ctx["SessionLocal"] = async_sessionmaker(
+        bind=db_engine, autoflush=False, expire_on_commit=False
+    )
     logger.info("arq worker started, DB connected.")
 
 
 async def shutdown(ctx: dict[str, Any]) -> None:
-    """arq worker shutdown hook — close arq pool."""
+    """arq worker shutdown hook — close arq pool and dispose the DB engine."""
     pool = ctx.get("arq_pool")
     if pool:
         await pool.aclose()
+    await db_engine.dispose()
     logger.info("arq worker shut down.")
 
 

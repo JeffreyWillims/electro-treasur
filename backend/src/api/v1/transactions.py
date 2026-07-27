@@ -5,11 +5,22 @@ from decimal import Decimal
 from typing import Any
 
 # Добавлен импорт Query
-from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Header,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+    status,
+)
 from fastapi.responses import StreamingResponse
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.rate_limit import limiter
 from src.dependencies import get_current_user, get_db, get_redis_client
 from src.domain.models import User
 from src.schemas.transaction import (
@@ -65,7 +76,11 @@ async def get_transactions(
     current_user: User = Depends(get_current_user),
     # 🔒 ХИРУРГИЧЕСКАЯ ЗАЩИТА: Ограничение пагинации сверху (Max 100)
     limit: int = Query(10, ge=1, le=100, description="Max 100 transactions per page"),
-    offset: int = 0,
+    # Верхняя граница offset: без неё клиент может запросить offset=10_000_000 —
+    # Postgres всё равно материализует и отбрасывает все строки до него
+    # (deep-pagination O(offset)) → тяжёлый запрос на ровном месте. Для более
+    # глубокого доступа есть фильтры/поиск (в идеале — keyset-пагинация).
+    offset: int = Query(0, ge=0, le=100_000, description="Max offset 100000"),
     category_id: int | None = None,
     type: str | None = None,
     min_amount: Decimal | None = None,
@@ -116,7 +131,11 @@ async def export_transactions(
 
 
 @router.post("/import", summary="Import transactions from CSV/Excel")
+# Парсинг CSV/Excel + dedup — тяжёлая синхронная работа. Без лимита заливка
+# файлов пачкой блокирует пул воркеров/БД. Тот же порог, что и на /imports/statement.
+@limiter.limit("10/minute")
 async def import_transactions_endpoint(
+    request: Request,
     file: UploadFile = File(..., description="CSV or Excel file with transactions"),
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),

@@ -288,6 +288,16 @@ def _parse_transactions_from_text(
     ]
 
 
+def _extract_text_from_pdf(content: bytes) -> str:
+    """Синхронный разбор PDF через pdfplumber — вызывать ТОЛЬКО в thread-pool.
+
+    pdfplumber полностью блокирующий: в async-контексте он вешал event loop и
+    вместе с ним все 10 конкурентных job воркера, пока разбирался один PDF.
+    """
+    with pdfplumber.open(io.BytesIO(content)) as pdf:
+        return "\n".join(page.extract_text() or "" for page in pdf.pages)
+
+
 async def parse_document_bytes(
     content: bytes,
     file_name: str,
@@ -306,8 +316,7 @@ async def parse_document_bytes(
     text = ""
     if ext == "pdf":
         try:
-            with pdfplumber.open(io.BytesIO(content)) as pdf:
-                text = "\n".join([p.extract_text() or "" for p in pdf.pages])
+            text = await asyncio.to_thread(_extract_text_from_pdf, content)
         except Exception as e:
             logger.error(f"PDF parsing error: {e}")
             return None

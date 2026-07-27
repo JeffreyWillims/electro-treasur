@@ -115,7 +115,15 @@ export function StatementImportModal({ isOpen, onClose }: Props) {
         const es = new EventSource(`/api/v1/jobs/${task_id}/stream`, { withCredentials: true });
         esRef.current = es;
         es.onmessage = (ev) => {
-          const d = JSON.parse(ev.data);
+          // Кадр SSE может быть неполным или служебным (keepalive) — тогда
+          // JSON.parse бросает прямо в обработчике, и импорт навсегда виснет
+          // на ~90%. Битый кадр пропускаем и ждём следующий.
+          let d: { status?: string; result?: { candidates?: StatementCandidate[] } };
+          try {
+            d = JSON.parse(ev.data);
+          } catch {
+            return;
+          }
           if (d.status === 'complete') {
             settled = true;
             applyResult(d.result?.candidates ?? []);

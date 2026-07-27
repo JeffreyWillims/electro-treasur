@@ -53,6 +53,10 @@ function Overview() {
 
   const [endDate, setEndDate] = useState<string>(() => {
     const d = getMoscowDate(); // БЕРЕМ МОСКОВСКОЕ ВРЕМЯ
+    // Последний день ТЕКУЩЕГО месяца. setDate(1) обязателен ПЕРЕД setMonth:
+    // на 31-х числах setMonth переполняется (31 июня → 1 июля), и setDate(0)
+    // вернул бы конец следующего месяца — период залезал бы на 2 месяца.
+    d.setDate(1);
     d.setMonth(d.getMonth() + 1);
     d.setDate(0);
     return getLocalDateString(d);

@@ -110,9 +110,15 @@ async function apiFetch(
     credentials: 'include',
   });
 
-  if (response.status === 401 && !retry && !isAuthEndpoint(url)) {
-    const refreshed = await refreshSession();
-    if (refreshed) return apiFetch(url, options, true);
+  if (response.status === 401 && !isAuthEndpoint(url)) {
+    // Первый 401 — пробуем один refresh и повторяем запрос. Если refresh не
+    // удался ИЛИ повторный запрос снова 401 (сессия действительно мертва) —
+    // редирект на логин. Раньше повторный 401 (retry=true) проваливался мимо
+    // редиректа и оставлял пользователя на странице с битыми запросами.
+    if (!retry) {
+      const refreshed = await refreshSession();
+      if (refreshed) return apiFetch(url, options, true);
+    }
     redirectToLogin();
   }
 
@@ -208,7 +214,7 @@ export async function deleteTransaction(id: number): Promise<void> {
   const response = await apiFetch(`/v1/transactions/${id}`, { method: 'DELETE' });
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({ detail: response.statusText }));
-    throw new ApiError(response.status, errorBody.detail || `API error: ${response.status}`);
+    throw new ApiError(response.status, humanizeDetail(response.status, errorBody.detail));
   }
   // 204 No Content — тела ответа нет
 }
@@ -320,7 +326,7 @@ export async function deleteCategory(categoryId: number): Promise<void> {
   const response = await apiFetch(`/v1/users/categories/${categoryId}`, { method: 'DELETE' });
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({ detail: response.statusText }));
-    throw new ApiError(response.status, errorBody.detail || `API error: ${response.status}`);
+    throw new ApiError(response.status, humanizeDetail(response.status, errorBody.detail));
   }
   // 204 No Content — тела ответа нет
 }
@@ -346,7 +352,7 @@ export async function deleteBudget(categoryId: number, month: number, year: numb
   );
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({ detail: response.statusText }));
-    throw new ApiError(response.status, errorBody.detail || `API error: ${response.status}`);
+    throw new ApiError(response.status, humanizeDetail(response.status, errorBody.detail));
   }
 }
 
@@ -361,7 +367,7 @@ export async function exportTransactions(): Promise<void> {
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({ detail: response.statusText }));
-    throw new ApiError(response.status, errorBody.detail || 'Export failed');
+    throw new ApiError(response.status, humanizeDetail(response.status, errorBody.detail));
   }
 
   const blob = await response.blob();
@@ -391,7 +397,7 @@ export async function importTransactions(file: File): Promise<ImportResult> {
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({ detail: 'Import failed' }));
-    throw new ApiError(response.status, errorBody.detail || `API error: ${response.status}`);
+    throw new ApiError(response.status, humanizeDetail(response.status, errorBody.detail));
   }
 
   return response.json() as Promise<ImportResult>;
@@ -536,7 +542,7 @@ export async function uploadStatement(file: File): Promise<{ task_id: string }> 
   const response = await apiFetch('/v1/imports/statement', { method: 'POST', body: formData });
   if (!response.ok) {
     const err = await response.json().catch(() => ({ detail: 'Upload failed' }));
-    throw new ApiError(response.status, err.detail || `API error: ${response.status}`);
+    throw new ApiError(response.status, humanizeDetail(response.status, err.detail));
   }
   return response.json() as Promise<{ task_id: string }>;
 }
@@ -723,7 +729,7 @@ export async function revokeApiKey(keyId: number): Promise<void> {
   const response = await apiFetch(`/v1/api-keys/${keyId}`, { method: 'DELETE' });
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({ detail: response.statusText }));
-    throw new ApiError(response.status, errorBody.detail || `API error: ${response.status}`);
+    throw new ApiError(response.status, humanizeDetail(response.status, errorBody.detail));
   }
   // 204 No Content — тела ответа нет
 }

@@ -22,11 +22,12 @@ from typing import Any, Literal
 
 from arq.connections import ArqRedis, RedisSettings, create_pool
 from arq.jobs import Job, JobResult
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
+from src.core.rate_limit import limiter
 from src.database import get_session
 from src.dependencies import get_current_user
 from src.domain.models import User
@@ -86,7 +87,11 @@ class ConfirmResponse(BaseModel):
     status_code=status.HTTP_202_ACCEPTED,
     summary="Upload a bank statement (PDF/image/Excel) for background parsing",
 )
+# Разбор офлоадится в ARQ-воркер (pdfplumber/OCR — дорого). Без лимита один
+# клиент может забить очередь воркера → DoS фонового парсинга для всех.
+@limiter.limit("10/minute")
 async def upload_statement(
+    request: Request,
     file: UploadFile = File(..., description="Bank statement: PDF, image or Excel"),
     current_user: User = Depends(get_current_user),
 ) -> StatementEnqueueResponse:

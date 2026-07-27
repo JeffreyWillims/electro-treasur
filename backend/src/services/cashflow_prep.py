@@ -34,11 +34,17 @@ async def get_active_user_ids(session: AsyncSession, start: date, end: date) -> 
     Matches get_monthly_dashboard's date filter so scheduling and aggregation
     agree on what "active this month" means.
     """
+    # Sargable-диапазон вместо func.date(executed_at): это глобальный (без user_id)
+    # запрос по всей таблице, и обёртка func.date() вокруг колонки не даёт
+    # использовать b-tree по executed_at → seq scan всей transactions + сортировка
+    # под distinct. Полуоткрытый интервал [start, end+1day) эквивалентен
+    # включительному по датам и опирается на индекс. Заодно уходит зависимость
+    # от серверной TZ внутри func.date (сравниваем сам timestamp).
     stmt = (
         select(distinct(Transaction.user_id))
         .where(
-            func.date(Transaction.executed_at) >= start,
-            func.date(Transaction.executed_at) <= end,
+            Transaction.executed_at >= start,
+            Transaction.executed_at < end + timedelta(days=1),
         )
         .order_by(Transaction.user_id)
     )

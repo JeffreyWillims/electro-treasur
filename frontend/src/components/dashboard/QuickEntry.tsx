@@ -13,7 +13,10 @@ import { cn } from '@/lib/utils';
 import { CategoryManagerModal } from './CategoryManagerModal';
 import { GlassDatePicker } from '@/components/ui/GlassDatePicker';
 
-const CURRENCIES = ['RUB', 'USD', 'EUR'];
+// Только RUB: конвертации валют в проекте нет, а дашборд/аналитика суммируют
+// amount без пересчёта — выбор USD/EUR молча ломал бы суммы (100 USD учлись бы
+// как 100 RUB). До появления FX-курсов держим одну валюту (запрет смешения).
+const CURRENCIES = ['RUB'];
 
 const CATEGORY_TRANSLATIONS: Record<string, string> = {
   "Operations (Rent/Utility)": "Базовые расходы",
@@ -119,7 +122,13 @@ export function QuickEntry() {
   };
 
   const mutation = useMutation({
-    mutationFn: (payload: Parameters<typeof createTransaction>[0]) => createTransaction(payload),
+    // Idempotency-Key генерируется один раз на сабмит (в handleSave) и передаётся
+    // сюда: при сетевом ретрае того же сохранения бэкенд вернёт уже записанную
+    // транзакцию, а не создаст дубль. Новый клик = новый ключ = новая операция.
+    mutationFn: ({ payload, idempotencyKey }: {
+      payload: Parameters<typeof createTransaction>[0];
+      idempotencyKey: string;
+    }) => createTransaction(payload, idempotencyKey),
     onSuccess: () => {
       setAmount('');
       setSubcategory('');
@@ -151,12 +160,15 @@ export function QuickEntry() {
       return toast.error('Заполните сумму и категорию');
     }
     mutation.mutate({
-      amount: value,
-      currency,
-      category_id: selectedCategoryId,
-      executed_at: date ? `${date}T12:00:00+03:00` : new Date().toISOString(),
-      entry_type: 'manual',
-      comment: subcategory || undefined,
+      payload: {
+        amount: value,
+        currency,
+        category_id: selectedCategoryId,
+        executed_at: date ? `${date}T12:00:00+03:00` : new Date().toISOString(),
+        entry_type: 'manual',
+        comment: subcategory || undefined,
+      },
+      idempotencyKey: crypto.randomUUID(),
     });
   };
 
