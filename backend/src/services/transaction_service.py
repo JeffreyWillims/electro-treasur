@@ -35,22 +35,26 @@ from src.schemas.transaction import (
 )
 
 
-async def _ensure_category_owned(session: AsyncSession, user_id: int, category_id: int) -> None:
-    """Категория обязана принадлежать пользователю.
+async def _ensure_category_owned(session: AsyncSession, user_id: int, category_id: int) -> str:
+    """Категория обязана принадлежать пользователю; возвращает её имя.
 
     Иначе транзакцию можно привязать к чужой категории (любой существующий id
     проходит по FK) — это межтенантная порча данных и утечка чужого имени
     категории через category_name/аналитику. v2-эндпоинт такую проверку делает,
     v1 — исторически нет.
+
+    Имя отдаём наружу, чтобы create мог заполнить `category_name` в ответе тем же
+    запросом (без второго round-trip и без ленивой подгрузки relationship в async).
     """
-    owned = await session.scalar(
-        select(Category.id).where(Category.id == category_id, Category.user_id == user_id)
+    name = await session.scalar(
+        select(Category.name).where(Category.id == category_id, Category.user_id == user_id)
     )
-    if owned is None:
+    if name is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Категория не найдена",
         )
+    return name
 
 
 async def create_transaction(
@@ -84,8 +88,8 @@ async def create_transaction(
         if cached:
             return TransactionResponse.model_validate_json(cached)
 
-    # Категория должна быть своей — до вставки.
-    await _ensure_category_owned(session, user_id, payload.category_id)
+    # Категория должна быть своей — до вставки. Имя переиспользуем для ответа.
+    category_name = await _ensure_category_owned(session, user_id, payload.category_id)
 
     # ── Шаг 2: INSERT в БД — O(1) амортизированно (B-Tree по PK) ────────
     tx = Transaction(
@@ -111,11 +115,16 @@ async def create_transaction(
                 select(Transaction).where(Transaction.idempotency_key == idempotency_key)
             )
             if existing is not None:
-                return TransactionResponse.model_validate(existing)
+                # Дубль тоже должен отдавать заполненное имя категории, как и
+                # свежий INSERT — иначе ответ на ретрай беднее оригинала.
+                dup = TransactionResponse.model_validate(existing)
+                dup.category_name = category_name
+                return dup
         raise
     await session.refresh(tx)
 
     response = TransactionResponse.model_validate(tx)
+    response.category_name = category_name
 
     # ── Шаг 3: кэшируем в Redis — O(1) SET с TTL ─────────────────────────
     if idempotency_key:

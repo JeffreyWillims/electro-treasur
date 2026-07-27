@@ -27,12 +27,34 @@ from src.domain.models import (
     Transaction,
     User,
 )
+from src.infrastructure.redis_client import get_redis
+
+# Брутфорс-защита формы входа: не больше N попыток с одного IP в окне.
+_LOGIN_MAX_ATTEMPTS = 5
+_LOGIN_WINDOW_SECONDS = 60
 
 
 class AdminAuth(AuthenticationBackend):
     """Вход по сессии для единственного админа против ET_ADMIN_USERNAME / ET_ADMIN_PASSWORD."""
 
     async def login(self, request: Request) -> bool:
+        # Rate-limit брутфорса пароля. SQLAdmin login — это не FastAPI-route,
+        # декоратор @limiter.limit здесь не работает, поэтому считаем попытки
+        # вручную в Redis (INCR + EXPIRE на первую попытку в окне). Fail-open:
+        # если Redis недоступен — не блокируем вход, чтобы не запереть админа.
+        client_ip = request.client.host if request.client else "unknown"
+        attempts_key = f"admin_login_attempts:{client_ip}"
+        redis = None
+        try:
+            redis = await get_redis()
+            attempts = await redis.incr(attempts_key)
+            if attempts == 1:
+                await redis.expire(attempts_key, _LOGIN_WINDOW_SECONDS)
+            if attempts > _LOGIN_MAX_ATTEMPTS:
+                return False  # слишком много попыток — отклоняем, не проверяя пароль
+        except Exception:
+            redis = None  # Redis недоступен — деградируем без rate-limit
+
         form = await request.form()
         username = str(form.get("username", ""))
         password = str(form.get("password", ""))
@@ -41,6 +63,8 @@ class AdminAuth(AuthenticationBackend):
         ok_user = secrets.compare_digest(username, settings.admin_username)
         ok_pass = secrets.compare_digest(password, settings.admin_password)
         if ok_user and ok_pass:
+            if redis is not None:
+                await redis.delete(attempts_key)  # успешный вход обнуляет счётчик
             request.session.update({"admin": True})
             return True
         return False

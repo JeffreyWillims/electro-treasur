@@ -63,11 +63,23 @@ async def list_notifications(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> NotificationList:
-    for key, title, body in CHANGELOG:
-        stmt = pg_insert(Notification).values(
-            user_id=current_user.id, type="update", title=title, body=body, dedup_key=key
-        )
-        await db.execute(stmt.on_conflict_do_nothing(constraint="uq_notifications_user_dedup"))
+    # Досеиваем «Что нового» ОДНИМ батч-upsert вместо отдельного INSERT на каждую
+    # запись при КАЖДОМ открытии колокольчика: раньше это были 5 round-trip'ов и
+    # лишний WAL-churn на любой опрос. ON CONFLICT DO NOTHING оставляет уже
+    # досеянные записи нетронутыми, поэтому в устоявшемся состоянии вставок нет.
+    stmt = pg_insert(Notification).values(
+        [
+            {
+                "user_id": current_user.id,
+                "type": "update",
+                "title": title,
+                "body": body,
+                "dedup_key": key,
+            }
+            for key, title, body in CHANGELOG
+        ]
+    )
+    await db.execute(stmt.on_conflict_do_nothing(constraint="uq_notifications_user_dedup"))
     await db.commit()
 
     rows = await db.execute(

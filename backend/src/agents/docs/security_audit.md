@@ -42,6 +42,50 @@
 | `src/infrastructure/telegram/*` — ~340 строк с покрытием 0–29%, при этом бот принимает пользовательский ввод | `handlers.py`, `middleware.py`, `bot.py` | Юнит-тесты на парсинг ввода (паттерн уже есть: `test_telegram_helpers.py`) |
 | Pydantic class-based `Config` (deprecated) в `schemas/user.py` | `src/schemas/user.py:23,37` | Заменить на `ConfigDict` — уйдут warnings, готовность к Pydantic v3 |
 
+## Аудит 2026-07-22 (пред-деплойный, 3 read-only агента: backend / frontend / infra)
+
+Второй сквозной проход перед первой боевой выкаткой. Находки проверены вручную,
+сгруппированы по влиянию на деплой. Первоисточник — `docs/WORKLOG.md` (запись 2026-07-22).
+Статусы обновляются по мере починки: пусто → в работе, ✅ → исправлено и покрыто.
+
+### P0 — блокеры деплоя (прямое влияние на выкатку)
+
+| Находка | Где | Что делать |
+|---|---|---|
+| ✅ **[ИСПРАВЛЕНО 2026-07-27] nginx stale-DNS → 502** — `proxy_pass http://backend:8000` без `resolver`: nginx резолвит `backend` один раз на старте, при пересоздании контейнера (deploy) IP меняется → 502 на весь API до перезапуска nginx | `frontend/nginx.prod.conf` | Добавлен `resolver 127.0.0.11 valid=10s` (Docker DNS) + upstream в переменную, чтобы имя перечитывалось в рантайме |
+| ✅ **[ИСПРАВЛЕНО 2026-07-27] nginx: нет no-cache для `sw.js`/`registerSW.js`/`manifest.webmanifest`/`index.html`** — installed-PWA отдаёт старый код после деплоя (stale service worker, хуже обычного stale-кэша) | `frontend/nginx.prod.conf`, `frontend/vite.config.ts` | `Cache-Control: no-cache` на `sw.js`/`registerSW.js`/`manifest.webmanifest` и на оболочку (`location /`); ассеты с хешем (`/assets/`) остаются `immutable` |
+| ✅ **[ИСПРАВЛЕНО 2026-07-27] App.tsx: month-end баг** — на 31-х числах дефолтный период дашборда залезает на 2 месяца (`setMonth` переполняется: 31 июня → 1 июля) → неверные суммы доход/расход/баланс | `frontend/src/App.tsx:54-59` | `setDate(1)` перед `setMonth`, затем `setDate(0)` — последний день текущего месяца без переполнения |
+
+### P1 — надёжность / безопасность (код)
+
+| Находка | Где | Что делать |
+|---|---|---|
+| ✅ **[ИСПРАВЛЕНО 2026-07-27] Импорт-эндпоинты без rate-limit** — `/imports/statement` и `/transactions/import` дёргают ARQ-воркер (OCR/парсинг) без ограничений → DoS воркера | `src/api/v1/imports.py`, `src/api/v1/transactions.py` | `@limiter.limit("10/minute")` + `request: Request` на оба (закрывает и P2-находку аудита 2026-07-04) |
+| ✅ **[ИСПРАВЛЕНО 2026-07-27] Idempotency-дубль без `category_name`** — ни ветка дубля, ни свежий INSERT не проставляли `category_name` (в отличие от list/update) → пустая категория в ответе | `src/services/transaction_service.py` | `_ensure_category_owned` теперь возвращает имя категории; `create_transaction` заполняет `category_name` на обоих путях (INSERT и дубль) |
+| ✅ **[ИСПРАВЛЕНО 2026-07-27] Сырой `errorBody.detail` в тостах** — на 422 (ошибки импорта) объект попадает в UI как «[object Object]»; повторный 401 не редиректил на логин | `frontend/src/api/client.ts` | Все прямые `apiFetch`-пути (import/upload/export/delete) прогнаны через `humanizeDetail`; в `apiFetch` повторный 401 (после неудачного retry) теперь тоже редиректит на `/login` |
+| ✅ **[ИСПРАВЛЕНО 2026-07-27] QuickEntry без Idempotency-Key** — ручное сохранение транзакции без ключа → редкие дубли при ретраях | `frontend/src/components/dashboard/QuickEntry.tsx` | `crypto.randomUUID()` генерируется один раз на сабмит и прокидывается в `createTransaction`; ретрай не плодит дубли |
+| ✅ **[ИСПРАВЛЕНО 2026-07-27] SSE `JSON.parse` без try/catch** — битый/частичный/keepalive-кадр вешает импорт на ~90% | `frontend/src/components/dashboard/StatementImportModal.tsx` | `es.onmessage` оборачивает парс в try/catch, битый кадр пропускается (`return`) |
+| ✅ **[ИСПРАВЛЕНО 2026-07-27] `/admin/login` без rate-limit** — брутфорс пароля SQLAdmin | `src/admin.py` | `AdminAuth.login` — не route (декоратор не годится): ручной Redis-счётчик 5 попыток/60с на IP, fail-open при недоступном Redis, успешный вход обнуляет счётчик |
+
+### P2 — производительность / масштабируемость
+
+| Находка | Где | Что делать |
+|---|---|---|
+| ✅ **[ИСПРАВЛЕНО 2026-07-27] Синхронный парс PDF в async** — блокирует все 10 job воркера | `src/services/ai_vision_service.py` | Разбор pdfplumber вынесен в `_extract_text_from_pdf` + `asyncio.to_thread` (как Excel/OCR-пути рядом) |
+| ✅ **[ИСПРАВЛЕНО 2026-07-27] Крон seq scan** — `func.date(executed_at)` без `user_id` в `get_active_user_ids` → seq scan всей таблицы + сортировка под distinct | `src/services/cashflow_prep.py` | Полуоткрытый диапазон `executed_at >= start AND < end+1day` (sargable, использует b-tree; уходит и зависимость от серверной TZ) |
+| ✅ **[ИСПРАВЛЕНО 2026-07-27] Свой engine без PgBouncer-args** — `statement_cache_size=0` не задан → «prepared statement does not exist» на проде; engine не закрывается | `src/infrastructure/workers/insight_scheduler.py` | `startup` переиспользует общий `engine` из `src.database` (уже с PgBouncer-args); `shutdown` вызывает `engine.dispose()` |
+| ✅ **[ИСПРАВЛЕНО 2026-07-27] Колокольчик: 5 upsert на каждый опрос** — 5 round-trip'ов + WAL-churn на любое открытие ленты | `src/api/v1/notifications.py` | Один батч-`pg_insert(...).values([...])` с `ON CONFLICT DO NOTHING` вместо цикла, один commit |
+| ✅ **[ИСПРАВЛЕНО 2026-07-27] Offset без верхней границы** — deep-pagination O(offset) | `src/api/v1/transactions.py` | `offset: int = Query(0, ge=0, le=100_000)` — верхняя граница отсекает patho-offset (keyset — отдельная задача) |
+| ✅ **[ИСПРАВЛЕНО 2026-07-27] `func.date` в TZ сервера** — если Postgres не UTC, траты попадают в чужой день | `src/services/dashboard_service.py` | День бакетится в явном UTC: `func.date(func.timezone('UTC', executed_at))` в SELECT+GROUP BY (executed_at — timestamptz); совпадает с UTC-границами WHERE, day-guard оставлен подстраховкой |
+| ✅ **[ИСПРАВЛЕНО 2026-07-27] Currency-селектор без конвертации** — USD/EUR складывались в сумму как RUB | `frontend/src/components/dashboard/QuickEntry.tsx` | Запрет смешения: селектор ограничен `['RUB']` до появления FX-курсов (полноценная конвертация — отдельная фича) |
+
+### Инфра — требует решения владельца (не правится агентом молча)
+
+Мониторинг на `0.0.0.0` + Grafana `admin/admin`; пароль БД `electro_secret` в git и нет TLS до БД;
+нет mem/cpu-лимитов (OOM-риск на одном VPS); нет security-заголовков (HSTS/CSP), `real_ip` для
+Cloudflare, `limit_req` на `/api`; pgbouncer без healthcheck; CI деплой на `:latest` без
+rollback/бэкапа до миграции. Вынесено владельцу — см. `docs/WORKLOG.md`.
+
 ## Регламент аудита (повторяемый)
 
 ```bash
