@@ -90,9 +90,14 @@ async def get_linked_users_without_tx_on(
     Кандидаты на «умный пинг»: telegram_chat_id задан, но за `day` нет ни одной
     транзакции (NOT EXISTS по дате executed_at).
     """
+    # Sargable-диапазон вместо func.date(...) == day: функция над колонкой в
+    # коррелированном EXISTS не даёт использовать индекс (user_id, executed_at).
+    # Полуоткрытый интервал [day; day+1) эквивалентен «за этот день» и опирается
+    # на индекс (как в get_active_user_ids).
     has_tx_today = exists().where(
         Transaction.user_id == User.id,
-        func.date(Transaction.executed_at) == day,
+        Transaction.executed_at >= day,
+        Transaction.executed_at < day + timedelta(days=1),
     )
     stmt = (
         select(User.id, User.telegram_chat_id)
@@ -134,10 +139,12 @@ async def get_active_users_with_chat(
     и отдаёт chat_id тем же запросом — иначе рассылка делала SELECT на каждого
     пользователя в цикле (N+1).
     """
+    # Sargable-диапазон вместо func.date(...) в EXISTS: [start; end+1) использует
+    # индекс (user_id, executed_at), в отличие от функции над колонкой.
     has_tx = exists().where(
         Transaction.user_id == User.id,
-        func.date(Transaction.executed_at) >= start,
-        func.date(Transaction.executed_at) <= end,
+        Transaction.executed_at >= start,
+        Transaction.executed_at < end + timedelta(days=1),
     )
     stmt = (
         select(User.id, User.telegram_chat_id)
