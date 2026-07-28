@@ -221,35 +221,8 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ── 5. Непрерывный деплой → VPS ─────────────────────────────────────────────
-  # Требуемые GitHub Secrets: VPS_HOST, VPS_USER, VPS_SSH_KEY, VPS_PROJECT_DIR.
-  # Порядок внутри скрипта — expand-фаза zero-downtime деплоя:
-  # образы тянутся заранее, миграции (backward-compatible!) применяются НОВЫМ
-  # образом, пока старые контейнеры ещё обслуживают трафик, и только потом
-  # происходит переключение. Откат = pull предыдущего sha-тега + up -d.
-  deploy:
-    name: 🚀 Deploy to VPS
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [build]
-
-    steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script_stop: true
-          script: |
-            cd "${{ secrets.VPS_PROJECT_DIR }}"
-            git pull origin main
-            # 1. Готовый артефакт из GHCR (Immutable Infrastructure)
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml pull backend arq-worker telegram-bot
-            # 2. Миграции новым образом ДО переключения контейнеров
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm backend alembic upgrade head
-            # 3. Frontend — статика, собирается на месте (CI его образ не пушит)
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml build frontend
-            # 4. Переключение на новые контейнеры
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-            docker image prune -f
+  # Деплой — РУЧНОЙ, командами на сервере (SSH-ключей в CI нет по решению владельца).
+  # CI доводит до пуша образа в GHCR (sha- и latest-теги); дальше на сервере:
+  #   git pull → docker compose pull → alembic upgrade head → up -d
+  # Пиннинг версии/откат — через BACKEND_IMAGE_TAG в root .env (см. .env.example).
+  # Бэкап перед миграцией и команды отката — в backend/src/agents/docs/security_audit.md.
