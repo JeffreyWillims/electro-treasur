@@ -1,8 +1,14 @@
 # Оверлей мониторинга — Prometheus + Grafana + cAdvisor + экспортеры + Alertmanager.
 # Использование: docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
-# Grafana:      http://localhost:3000  (логин: admin / admin при первом запуске)
-# Prometheus:   http://localhost:9090
-# Alertmanager: http://localhost:9093
+#
+# ⚠️ Все UI/метрики публикуются ТОЛЬКО на loopback (127.0.0.1): наружу их нет.
+# Доступ с рабочей машины — через SSH-туннель, напр.:
+#   ssh -L 3000:127.0.0.1:3000 user@server   # затем http://localhost:3000
+# Prometheus скрапит экспортеры по внутренней docker-сети (по имени сервиса),
+# поэтому loopback-привязка публикуемых портов на scraping не влияет.
+#
+# Grafana: креды берутся из root .env (GRAFANA_ADMIN_USER/PASSWORD) — дефолта
+# admin/admin больше нет (пароль обязателен, иначе compose упадёт на старте).
 services:
   prometheus:
     image: prom/prometheus:v2.54.1
@@ -13,7 +19,7 @@ services:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.retention.time=15d
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     depends_on:
       - cadvisor
     restart: unless-stopped
@@ -29,7 +35,7 @@ services:
     command:
       - --config.file=/etc/alertmanager/alertmanager.yml
     ports:
-      - "9093:9093"
+      - "127.0.0.1:9093:9093"
     restart: unless-stopped
 
   grafana:
@@ -38,10 +44,14 @@ services:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
       - grafana_data:/var/lib/grafana
     environment:
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      # Обязательны из root .env — дефолта admin/admin больше нет. Регистрация
+      # новых пользователей и анонимный доступ выключены явно.
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:?set GRAFANA_ADMIN_USER in .env}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       - prometheus
     restart: unless-stopped
@@ -55,7 +65,7 @@ services:
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
     ports:
-      - "8081:8080"
+      - "127.0.0.1:8081:8080"
     restart: unless-stopped
 
   node-exporter:
@@ -65,15 +75,18 @@ services:
     volumes:
       - /:/host:ro,rslave
     ports:
-      - "9100:9100"
+      - "127.0.0.1:9100:9100"
     restart: unless-stopped
 
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0.16.0
     environment:
-      DATA_SOURCE_NAME: "postgresql://electro:electro_secret@postgres:5432/electro_treasur?sslmode=disable"
+      # Пароль БД из root .env — не хардкодим в git. sslmode=disable допустимо:
+      # соединение идёт по закрытой внутренней docker-сети (порт postgres наружу
+      # не публикуется).
+      DATA_SOURCE_NAME: "postgresql://electro:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/electro_treasur?sslmode=disable"
     ports:
-      - "9187:9187"
+      - "127.0.0.1:9187:9187"
     depends_on:
       - postgres
     restart: unless-stopped
@@ -83,7 +96,7 @@ services:
     environment:
       REDIS_ADDR: "redis://redis:6379"
     ports:
-      - "9121:9121"
+      - "127.0.0.1:9121:9121"
     depends_on:
       - redis
     restart: unless-stopped

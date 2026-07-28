@@ -79,12 +79,37 @@
 | ✅ **[ИСПРАВЛЕНО 2026-07-27] `func.date` в TZ сервера** — если Postgres не UTC, траты попадают в чужой день | `src/services/dashboard_service.py` | День бакетится в явном UTC: `func.date(func.timezone('UTC', executed_at))` в SELECT+GROUP BY (executed_at — timestamptz); совпадает с UTC-границами WHERE, day-guard оставлен подстраховкой |
 | ✅ **[ИСПРАВЛЕНО 2026-07-27] Currency-селектор без конвертации** — USD/EUR складывались в сумму как RUB | `frontend/src/components/dashboard/QuickEntry.tsx` | Запрет смешения: селектор ограничен `['RUB']` до появления FX-курсов (полноценная конвертация — отдельная фича) |
 
-### Инфра — требует решения владельца (не правится агентом молча)
+### Инфра (DevOps-агент, 2026-07-27)
 
-Мониторинг на `0.0.0.0` + Grafana `admin/admin`; пароль БД `electro_secret` в git и нет TLS до БД;
-нет mem/cpu-лимитов (OOM-риск на одном VPS); нет security-заголовков (HSTS/CSP), `real_ip` для
-Cloudflare, `limit_req` на `/api`; pgbouncer без healthcheck; CI деплой на `:latest` без
-rollback/бэкапа до миграции. Вынесено владельцу — см. `docs/WORKLOG.md`.
+| Находка | Где | Решение |
+|---|---|---|
+| ✅ **[ИСПРАВЛЕНО] Мониторинг на `0.0.0.0` + Grafana `admin/admin`** | `docker-compose.monitoring.yml` | Все публикуемые порты (Prometheus/Grafana/Alertmanager/cAdvisor/exporters) привязаны к `127.0.0.1` (доступ через SSH-туннель). Grafana-креды обязательны из `.env` (`:?`), дефолт admin/admin убран; `GF_USERS_ALLOW_SIGN_UP=false`, анонимный доступ выключен. Prometheus скрапит по внутренней сети — loopback не мешает |
+| ✅ **[ИСПРАВЛЕНО] Пароль БД `electro_secret` в git** | `docker-compose.yml`, `docker-compose.monitoring.yml`, root `.env.example` | Прод-пароль вынесен в `${POSTGRES_PASSWORD:?}` (postgres, pgbouncer, postgres-exporter) — читается из root `.env` (в `.gitignore`), fail-fast если не задан. `.env.example` с инструкцией. Дев/тест-дефолты (config.py, alembic.ini, CI test-БД) оставлены — это не прод-секрет |
+| ✅ **[ИСПРАВЛЕНО] Нет TLS/закрытости до БД** | `docker-compose.yml` | Порт postgres наружу НЕ публикуется — БД доступна только по внутренней docker-сети (закрытый периметр). Полный TLS до БД — отдельная задача (сейчас не нужен: трафик не выходит за пределы docker-сети хоста) |
+| ✅ **[ИСПРАВЛЕНО] Нет mem/cpu-лимитов (OOM-риск)** | `docker-compose.prod.yml` | `deploy.resources.limits` для backend (512M/1cpu), arq-worker (640M/1cpu — OCR прожорлив), telegram-bot (256M), postgres (512M), pgbouncer (128M) + reservations. Один сервис больше не съест всю память VPS |
+| ✅ **[ИСПРАВЛЕНО] Нет security-заголовков / real_ip / limit_req** | `frontend/nginx.prod.conf` | HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy (на server + продублированы в `location /` из-за non-inheritance add_header); `set_real_ip_from` диапазоны Cloudflare + `real_ip_header CF-Connecting-IP`; `limit_req_zone` + `limit_req` (20r/s, burst 40) на `/api/` |
+| ✅ **[ИСПРАВЛЕНО] pgbouncer без healthcheck** | `docker-compose.yml` | `pg_isready -h 127.0.0.1 -p 6432` (проверяет, что пулер реально принимает соединения) |
+| ✅ **[ИСПРАВЛЕНО] CI деплой на `:latest` без rollback** | `docker-compose.prod.yml`, root `.env.example` | Тег образа параметризован `${BACKEND_IMAGE_TAG:-latest}`. Откат = указать предыдущий `sha-XXXXXXX` в `.env` и `up -d` (каждая CI-сборка пушит и sha-тег). Механизм совместим с ручным деплоем командами |
+
+**Ручные ops-команды** (деплой руками, без deploy.sh / SSH-ключей в CI):
+
+```bash
+# Бэкап БД ПЕРЕД миграциями (official postgres: локальный сокет = trust, пароль не нужен)
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres \
+  pg_dump -U electro electro_treasur > backup_$(date +%Y%m%d_%H%M%S).sql
+
+# Обычный деплой конкретной версии (не latest)
+BACKEND_IMAGE_TAG=sha-1a2b3c4  # в root .env
+docker compose -f docker-compose.yml -f docker-compose.prod.yml pull backend arq-worker telegram-bot
+docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm backend alembic upgrade head
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+# ОТКАТ: вернуть предыдущий sha в root .env → up -d (образ неизменяем, миграции backward-compatible)
+```
+
+Остаётся владельцу (не автоматизировано намеренно): полноценный TLS до БД (при выносе БД за пределы
+хоста), nonce-CSP вместо `'unsafe-inline'`, ротация реального `POSTGRES_PASSWORD` на проде через
+`ALTER USER` (переменная задаёт пароль лишь при первой инициализации тома).
 
 ## Регламент аудита (повторяемый)
 

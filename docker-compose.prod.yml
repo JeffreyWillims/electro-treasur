@@ -4,21 +4,62 @@
 # Прод:     docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 #
 # Immutable Infrastructure: три Python-сервиса используют ОДИН образ, собранный
-# CI и запушенный в GHCR (тегами :latest и :sha-XXXXXXX). Прод не компилирует
-# ничего сам → откат = `docker compose pull` предыдущего sha-тега.
+# CI и запушенный в GHCR. Тег управляется переменной BACKEND_IMAGE_TAG (root .env),
+# по умолчанию latest. Прод не компилирует ничего сам.
+#   ОТКАТ: BACKEND_IMAGE_TAG=sha-XXXXXXX (предыдущая сборка) → `... up -d`.
+#   Каждая CI-сборка пушит и sha-тег, и latest — sha даёт неизменяемую точку отката.
 # Frontend пока собирается на месте (CI не пушит его образ) — только статика.
+#
+# deploy.resources.limits — потолки RAM/CPU, чтобы один сервис (напр. OCR в
+# arq-worker) не съел всю память VPS и не устроил OOM соседям. Значения
+# рассчитаны на скромный VPS; правь под свой сервер.
 services:
   backend:
-    image: ghcr.io/jeffreywillims/electro-treasur/backend:latest
+    image: ghcr.io/jeffreywillims/electro-treasur/backend:${BACKEND_IMAGE_TAG:-latest}
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          memory: 256M
 
   arq-worker:
-    image: ghcr.io/jeffreywillims/electro-treasur/backend:latest
+    image: ghcr.io/jeffreywillims/electro-treasur/backend:${BACKEND_IMAGE_TAG:-latest}
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 640M   # OCR/pdfplumber прожорливее — потолок выше
+        reservations:
+          memory: 256M
 
   telegram-bot:
-    image: ghcr.io/jeffreywillims/electro-treasur/backend:latest
+    image: ghcr.io/jeffreywillims/electro-treasur/backend:${BACKEND_IMAGE_TAG:-latest}
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  postgres:
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  pgbouncer:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
 
   frontend:
     volumes:

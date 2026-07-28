@@ -3,7 +3,11 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: electro
-      POSTGRES_PASSWORD: electro_secret
+      # Пароль берётся из root .env (см. .env.example) — в git не хардкодим.
+      # ВНИМАНИЕ: POSTGRES_PASSWORD применяется только при ПЕРВОЙ инициализации
+      # пустого тома pg_data. Для уже существующей БД пароль в томе не меняется —
+      # менять его надо через ALTER USER. Задать до первого прод-деплоя.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: electro_treasur
 
     volumes:
@@ -20,7 +24,7 @@ services:
     environment:
       LISTEN_PORT: 6432
       DB_USER: electro
-      DB_PASSWORD: electro_secret
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       DB_HOST: postgres
       DATABASES: "electro_treasur=host=postgres port=5432 auth_user=electro"
       POOL_MODE: transaction
@@ -31,6 +35,15 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    # Проверяем, что пулер реально принимает соединения на 6432 (а не просто
+    # что процесс жив). pg_isready есть в образе (libpq). Пароль не нужен —
+    # проверяется только доступность listener'а.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 -U electro || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   redis:
     image: redis:7-alpine
